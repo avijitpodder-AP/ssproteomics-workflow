@@ -1,0 +1,1561 @@
+<html>
+
+<head>
+<style type="text/css">
+.inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.sng {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.def {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+<title>Avijit Podder Date: Feb 26, 2025</title>
+
+<head color="blue">
+
+<h1><font color="blue">Clinical Parameter's Correlation with the Subdomain-specific Zscore (TMT Proteomics) for the Samples from ROSMAP Cohort</font></h1>
+
+</head>
+
+<body>
+
+<p>Metadata from ROSMAP Samples</p>
+
+<div class="chunk" id="unnamed-chunk-1"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(stringr)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'dplyr'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(viridis)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## Loading required package: viridisLite
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(gplots)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'gplots'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:stats':
+## 
+##     lowess
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: package 'ggplot2' was built under R version 4.5.2
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(reshape2)</span>
+<span class="hl kwd">library</span><span class="hl def">(RColorBrewer)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggrepel)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'tidyr'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:reshape2':
+## 
+##     smiths
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(DT)</span>
+<span class="hl kwd">library</span><span class="hl def">(patchwork)</span>
+<span class="hl kwd">library</span><span class="hl def">(corrplot)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## corrplot 0.95 loaded
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(plotly)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'plotly'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:ggplot2':
+## 
+##     last_plot
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:stats':
+## 
+##     filter
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:graphics':
+## 
+##     layout
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(htmlwidgets)</span>
+<span class="hl kwd">library</span><span class="hl def">(qvalue)</span>
+
+
+<span class="hl com"># Open sample information file as &quot;sample_data&quot; for TMT specific 610 samples (round 1 and round2)</span>
+<span class="hl def">sample_data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;2c.traits-ROSMAP610.R1+R2-2xTAMPORcorrected.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 610  40
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">head</span><span class="hl def">(sample_data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   batch.channel projid.ROSMAP study.ROSMAP scaled_to.ROSMAP apoe_genotype
+## 1      b01.127N      20271359         ROS            ROSMAP           e33
+## 2      b01.127C      33477756         MAP            ROSMAP           e33
+## 3      b01.128N      38967303         MAP            ROSMAP           e33
+## 4      b01.128C      10100736         ROS            ROSMAP           e34
+## 5      b01.129N      10298957         ROS            ROSMAP           e33
+## 6      b01.129C      46291609         MAP            ROSMAP           e33
+##   ApoE4.Dose ApoE.Risk age_first_ad_dx cogdx cogdx_stroke dxpark cogn_global_lv
+## 1          0         0           90.00     4            2      2          -0.36
+## 2          0         0              NA     1            2      2           0.00
+## 3          0         0              NA     1            1      2           0.45
+## 4          1         1              NA     1            2      2           0.39
+## 5          0         0           81.65     4            2      1          -1.63
+## 6          0         0              NA     2            2      2          -0.08
+##   cts_mmse30_lv age_death educ msex race7 braaksc ceradsc_RADCnonStd gpath
+## 1            25     90.00   18    0     1       4                  2  0.24
+## 2            28     90.00   16    0     1       3                  2  0.71
+## 3            28     84.83   11    0     1       3                  4  0.09
+## 4            28     90.00   14    1     1       4                  3  0.34
+## 5            10     82.37   24    1     1       3                  2  0.85
+## 6            24     87.59   14    0     1       4                  2  0.89
+##   niareagansc   pmi amyloid amyloid_mf dlbdx mglia123_mf mglia23_mf mglia3_mf
+## 1           2 18.33    1.17       1.42     2          NA         NA        NA
+## 2           2  4.77    5.40       7.87     2          NA         NA        NA
+## 3           3  6.50    0.00       0.00     0      170.35       3.91         0
+## 4           3 15.17    2.47       5.06     0          NA         NA        NA
+## 5           2  3.93    8.49      13.82     3          NA         NA        NA
+## 6           2  7.42    7.78      18.42     0          NA         NA        NA
+##    nft tangles tangles_mf tdp_cs_6reg tdp_st4 brainwt CERAD JohnsonDx
+## 1 0.44    3.55       0.02        1.83       2    1138     2    AsymAD
+## 2 0.17    2.07       0.00        0.67       1    1110     2    AsymAD
+## 3 0.28    3.02       0.00        0.17       1    1250     0   Control
+## 4 0.71    4.95       0.00        0.00       0    1130     1    AsymAD
+## 5 0.43    5.12       0.00        0.00       0    1300     2        AD
+## 6 0.48    3.40       0.03        0.00       0    1192     2    AsymAD
+##           Batch  GIS BatchColor                         tissue
+## 1 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex
+## 2 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex
+## 3 ROSMAP.R1.400  GIS  turquoise dorsolateral prefrontal cortex
+## 4 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex
+## 5 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex
+## 6 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Define the sex_type (sex) based on the msex value</span>
+<span class="hl def">sample_data</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">with</span><span class="hl def">(sample_data,</span> <span class="hl kwd">ifelse</span><span class="hl def">(msex</span> <span class="hl opt">==</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl sng">&quot;female&quot;</span><span class="hl def">,</span>
+                                <span class="hl kwd">ifelse</span><span class="hl def">(msex</span> <span class="hl opt">==</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;NA&quot;</span><span class="hl def">)))</span>
+
+<span class="hl com"># Create a new categorical column based on cts_mmse30_lv</span>
+<span class="hl def">sample_data</span><span class="hl opt">$</span><span class="hl def">cts_mmse30_cat</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">ifelse</span><span class="hl def">(sample_data</span><span class="hl opt">$</span><span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&lt;=</span> <span class="hl num">23</span><span class="hl def">,</span> <span class="hl sng">&quot;0&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;1&quot;</span><span class="hl def">)</span>
+
+
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 610  42
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">head</span><span class="hl def">(sample_data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   batch.channel projid.ROSMAP study.ROSMAP scaled_to.ROSMAP apoe_genotype
+## 1      b01.127N      20271359         ROS            ROSMAP           e33
+## 2      b01.127C      33477756         MAP            ROSMAP           e33
+## 3      b01.128N      38967303         MAP            ROSMAP           e33
+## 4      b01.128C      10100736         ROS            ROSMAP           e34
+## 5      b01.129N      10298957         ROS            ROSMAP           e33
+## 6      b01.129C      46291609         MAP            ROSMAP           e33
+##   ApoE4.Dose ApoE.Risk age_first_ad_dx cogdx cogdx_stroke dxpark cogn_global_lv
+## 1          0         0           90.00     4            2      2          -0.36
+## 2          0         0              NA     1            2      2           0.00
+## 3          0         0              NA     1            1      2           0.45
+## 4          1         1              NA     1            2      2           0.39
+## 5          0         0           81.65     4            2      1          -1.63
+## 6          0         0              NA     2            2      2          -0.08
+##   cts_mmse30_lv age_death educ msex race7 braaksc ceradsc_RADCnonStd gpath
+## 1            25     90.00   18    0     1       4                  2  0.24
+## 2            28     90.00   16    0     1       3                  2  0.71
+## 3            28     84.83   11    0     1       3                  4  0.09
+## 4            28     90.00   14    1     1       4                  3  0.34
+## 5            10     82.37   24    1     1       3                  2  0.85
+## 6            24     87.59   14    0     1       4                  2  0.89
+##   niareagansc   pmi amyloid amyloid_mf dlbdx mglia123_mf mglia23_mf mglia3_mf
+## 1           2 18.33    1.17       1.42     2          NA         NA        NA
+## 2           2  4.77    5.40       7.87     2          NA         NA        NA
+## 3           3  6.50    0.00       0.00     0      170.35       3.91         0
+## 4           3 15.17    2.47       5.06     0          NA         NA        NA
+## 5           2  3.93    8.49      13.82     3          NA         NA        NA
+## 6           2  7.42    7.78      18.42     0          NA         NA        NA
+##    nft tangles tangles_mf tdp_cs_6reg tdp_st4 brainwt CERAD JohnsonDx
+## 1 0.44    3.55       0.02        1.83       2    1138     2    AsymAD
+## 2 0.17    2.07       0.00        0.67       1    1110     2    AsymAD
+## 3 0.28    3.02       0.00        0.17       1    1250     0   Control
+## 4 0.71    4.95       0.00        0.00       0    1130     1    AsymAD
+## 5 0.43    5.12       0.00        0.00       0    1300     2        AD
+## 6 0.48    3.40       0.03        0.00       0    1192     2    AsymAD
+##           Batch  GIS BatchColor                         tissue    sex
+## 1 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex female
+## 2 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex female
+## 3 ROSMAP.R1.400  GIS  turquoise dorsolateral prefrontal cortex female
+## 4 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex   male
+## 5 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex   male
+## 6 ROSMAP.R1.400 &lt;NA&gt;  turquoise dorsolateral prefrontal cortex female
+##   cts_mmse30_cat
+## 1              1
+## 2              1
+## 3              1
+## 4              1
+## 5              0
+## 6              1
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Select a sub-set of the sample (Tissue: DLPFC) from sample_data file</span>
+<span class="hl def">sample_data_DLPFC</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">filter</span><span class="hl def">(sample_data, tissue</span> <span class="hl opt">==</span> <span class="hl sng">&quot;dorsolateral prefrontal cortex&quot;</span><span class="hl def">)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 610  42
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Read the outliers file</span>
+<span class="hl def">outliers</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.table</span><span class="hl def">(</span><span class="hl sng">&quot;outliers.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span>
+
+<span class="hl com"># Extract the IDs to be removed</span>
+<span class="hl def">ids_to_remove</span> <span class="hl kwb">&lt;-</span> <span class="hl def">outliers</span><span class="hl opt">$</span><span class="hl def">Outliers</span>
+
+<span class="hl def">ids_to_remove</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] "b22.130N" "b52.130N"
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Use the 'subset' function to remove rows with specified IDs (outliers) from the sample description file with CT samples</span>
+<span class="hl def">sample_data_DLPFC</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">subset</span><span class="hl def">(sample_data_DLPFC,</span> <span class="hl opt">!</span><span class="hl def">(batch.channel</span> <span class="hl opt">%in%</span> <span class="hl def">ids_to_remove))</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 608  42
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Create a subset of the DLPFC sample description file with control samples only</span>
+<span class="hl def">sample_data_DLPFC_contorl</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span><span class="hl def">, sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx), ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_contorl)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 114  42
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the control sample description file with female samples only</span>
+<span class="hl com">#sample_data_DLPFC_contorl_female &lt;- sample_data_DLPFC_contorl[grep(&quot;female&quot;, sample_data_DLPFC_contorl$sex), ]</span>
+
+<span class="hl com">#dim(sample_data_DLPFC_contorl_female)</span>
+
+
+<span class="hl com"># Create a subset of the control sample description file with male samples only</span>
+<span class="hl com">#sample_data_DLPFC_contorl_male &lt;- sample_data_DLPFC_contorl[sample_data_DLPFC_contorl$sex == &quot;male&quot;, ]</span>
+
+<span class="hl com">#dim(sample_data_DLPFC_contorl_male)</span>
+
+<span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Create a subset of the DLPFC sample description file with AD samples only</span>
+<span class="hl def">sample_data_DLPFC_AD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_AD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 175  42
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the AD sample description file with female samples only</span>
+<span class="hl com">#sample_data_DLPFC_AD_female &lt;- sample_data_DLPFC_AD[grep(&quot;female&quot;, sample_data_DLPFC_AD$sex), ]</span>
+
+<span class="hl com">#dim(sample_data_DLPFC_AD_female)</span>
+
+
+<span class="hl com"># Create a subset of the AD sample description file with male samples only</span>
+<span class="hl com">#sample_data_DLPFC_AD_male &lt;- sample_data_DLPFC_AD[sample_data_DLPFC_AD$sex == &quot;male&quot;, ]</span>
+
+<span class="hl com">#dim(sample_data_DLPFC_AD_male)</span>
+
+<span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Create a subset of the DLPFC sample description file with AsymAD samples only</span>
+<span class="hl def">sample_data_DLPFC_AsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">, sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx), ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_AsymAD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 220  42
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the AD sample description file with female samples only</span>
+<span class="hl com">#sample_data_DLPFC_AsymAD_female &lt;- sample_data_DLPFC_AsymAD[grep(&quot;female&quot;, sample_data_DLPFC_AsymAD$sex), ]</span>
+
+<span class="hl com">#dim(sample_data_DLPFC_AsymAD_female)</span>
+
+
+<span class="hl com"># Create a subset of the AD sample description file with male samples only</span>
+<span class="hl com">#sample_data_DLPFC_AsymAD_male &lt;- sample_data_DLPFC_AsymAD[sample_data_DLPFC_AsymAD$sex == &quot;male&quot;, ]</span>
+
+<span class="hl com">#dim(sample_data_DLPFC_AsymAD_male)</span>
+
+<span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Merge both datasets by stacking rows</span>
+<span class="hl def">sample_data_DLPFC_cases</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rbind</span><span class="hl def">(sample_data_DLPFC_AD, sample_data_DLPFC_AsymAD)</span>
+
+<span class="hl com"># Check the dimensions to ensure it merged correctly</span>
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_cases)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 395  42
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Merge CT, AD and AsymAD altogether</span>
+<span class="hl def">sample_data_DLPFC_CTADAsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rbind</span><span class="hl def">(sample_data_DLPFC_contorl, sample_data_DLPFC_cases)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_CTADAsymAD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 509  42
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">head</span><span class="hl def">(sample_data_DLPFC_CTADAsymAD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##    batch.channel projid.ROSMAP study.ROSMAP scaled_to.ROSMAP apoe_genotype
+## 3       b01.128N      38967303         MAP            ROSMAP           e33
+## 8       b01.130C      65736039         MAP            ROSMAP           e33
+## 12      b02.128C      67185070         MAP            ROSMAP           e23
+## 23      b03.130N      39484737         MAP            ROSMAP           e33
+## 28      b04.128C      70625336         MAP            ROSMAP           e34
+## 34      b05.127C      21001771         ROS            ROSMAP           e23
+##    ApoE4.Dose ApoE.Risk age_first_ad_dx cogdx cogdx_stroke dxpark
+## 3           0         0              NA     1            1      2
+## 8           0         0              NA     2            2      2
+## 12          0        -1              NA     1            2      2
+## 23          0         0              NA     3            2      2
+## 28          1         1              NA     1            1      2
+## 34          0        -1              NA     1            2      2
+##    cogn_global_lv cts_mmse30_lv age_death educ msex race7 braaksc
+## 3            0.45            28     84.83   11    0     1       3
+## 8           -0.64            27     90.00   17    1     1       3
+## 12           0.42            28     77.80   12    0     1       3
+## 23          -0.52            27     86.29   13    1     1       1
+## 28          -0.32            28     81.50   11    0     1       2
+## 34           0.43            30     77.31   21    0     1       1
+##    ceradsc_RADCnonStd gpath niareagansc  pmi amyloid amyloid_mf dlbdx
+## 3                   4  0.09           3 6.50    0.00        0.0     0
+## 8                   4  0.07           3 7.75    0.40        0.0     2
+## 12                  4  0.03           3 9.83    0.15        0.0     0
+## 23                  3  0.04           3 8.73    0.16        1.3     0
+## 28                  4  0.01           3 3.65    0.00        0.0     0
+## 34                  4  0.01           3 5.83    0.00        0.0     0
+##    mglia123_mf mglia23_mf mglia3_mf  nft tangles tangles_mf tdp_cs_6reg tdp_st4
+## 3       170.35       3.91      0.00 0.28    3.02          0        0.17       1
+## 8       151.93       0.00      0.00 0.21    1.45          0        0.83       1
+## 12          NA         NA        NA 0.08    0.63          0        0.00       0
+## 23      203.15       4.67      0.51 0.03    0.38          0        0.00       0
+## 28      162.53      10.14      1.39 0.04    0.47          0        0.50       2
+## 34          NA         NA        NA 0.02    2.20          0        0.00       0
+##    brainwt CERAD JohnsonDx         Batch GIS BatchColor
+## 3     1250     0   Control ROSMAP.R1.400 GIS  turquoise
+## 8     1103     0   Control ROSMAP.R1.400 GIS  turquoise
+## 12    1325     0   Control ROSMAP.R1.400 GIS  turquoise
+## 23     999     1   Control ROSMAP.R1.400 GIS  turquoise
+## 28    1146     0   Control ROSMAP.R1.400 GIS  turquoise
+## 34    1204     0   Control ROSMAP.R1.400 GIS  turquoise
+##                            tissue    sex cts_mmse30_cat
+## 3  dorsolateral prefrontal cortex female              1
+## 8  dorsolateral prefrontal cortex   male              1
+## 12 dorsolateral prefrontal cortex female              1
+## 23 dorsolateral prefrontal cortex   male              1
+## 28 dorsolateral prefrontal cortex female              1
+## 34 dorsolateral prefrontal cortex female              1
+</pre></div>
+</div></div>
+
+<p>Open Subdomain-specific Zscore for CT, AD and AsymAD Individuals (Male and Female Separately):</p>
+
+<div class="chunk" id="unnamed-chunk-2"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">## CT</span>
+
+<span class="hl com"># Open Subdomain-specific Zscore distribution files for CT male</span>
+<span class="hl def">Subdomain_zscore_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.delim</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/subdomain_zscore_CT_male_summary.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">);</span>
+
+<span class="hl com">#Subdomain_zscore_CT_male &lt;- read.delim(&quot;/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/sig_Subdomain_CT_male.txt&quot;, header = TRUE, sep = &quot;\t&quot;);</span>
+
+<span class="hl com"># Ensure column names to` match `IDs` in `zscore_` files</span>
+<span class="hl def">Subdomain_zscore_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">Subdomain_zscore_CT_male</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">rename_with</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl kwd">gsub</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">, .),</span> <span class="hl kwd">starts_with</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">))</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_CT_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1]  46 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Open Subdomain-specific Zscore distribution files for CT male</span>
+<span class="hl def">Subdomain_zscore_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.delim</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_CT_female_summary.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">);</span>
+
+<span class="hl com">#Subdomain_zscore_CT_female &lt;- read.delim(&quot;/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_CT_female.txt&quot;, header = TRUE, sep = &quot;\t&quot;);</span>
+
+<span class="hl com"># Ensure column names to` match `IDs` in `zscore_` files</span>
+<span class="hl def">Subdomain_zscore_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">Subdomain_zscore_CT_female</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">rename_with</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl kwd">gsub</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">, .),</span> <span class="hl kwd">starts_with</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">))</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_CT_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1]  68 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Merge both datasets by stacking rows</span>
+<span class="hl def">Subdomain_zscore_CT</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rbind</span><span class="hl def">(Subdomain_zscore_CT_male, Subdomain_zscore_CT_female)</span>
+
+<span class="hl com"># Check the dimensions to ensure it merged correctly</span>
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_CT)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 114 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">## AD</span>
+
+<span class="hl com"># Open Subdomain-specific Zscore distribution files for AD male</span>
+<span class="hl def">Subdomain_zscore_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.delim</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_AD_male_summary.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">);</span>
+
+<span class="hl com">#Subdomain_zscore_AD_male &lt;- read.delim(&quot;/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_CT_male.txt&quot;, header = TRUE, sep = &quot;\t&quot;);</span>
+
+<span class="hl com"># Ensure column names to` match `IDs` in `zscore_` files</span>
+<span class="hl def">Subdomain_zscore_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">Subdomain_zscore_AD_male</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">rename_with</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl kwd">gsub</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">, .),</span> <span class="hl kwd">starts_with</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">))</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_AD_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1]  47 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Open Subdomain-specific Zscore distribution files for AD male</span>
+<span class="hl def">Subdomain_zscore_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.delim</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_AD_female_summary.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">);</span>
+
+<span class="hl com">#Subdomain_zscore_AD_female &lt;- read.delim(&quot;/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_CT_female.txt&quot;, header = TRUE, sep = &quot;\t&quot;);</span>
+
+<span class="hl com"># Ensure column names to` match `IDs` in `zscore_` files</span>
+<span class="hl def">Subdomain_zscore_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">Subdomain_zscore_AD_female</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">rename_with</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl kwd">gsub</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">, .),</span> <span class="hl kwd">starts_with</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">))</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_AD_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 127 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Merge both datasets by stacking rows</span>
+<span class="hl def">Subdomain_zscore_AD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rbind</span><span class="hl def">(Subdomain_zscore_AD_male, Subdomain_zscore_AD_female)</span>
+
+<span class="hl com"># Check the dimensions to ensure it merged correctly</span>
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_AD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 174 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">## AsymAD</span>
+
+<span class="hl com"># Open Subdomain-specific Zscore distribution files for AD male</span>
+<span class="hl def">Subdomain_zscore_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.delim</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_AsymAD_male_summary.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">);</span>
+
+<span class="hl com">#Subdomain_zscore_AsymAD_male &lt;- read.delim(&quot;/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_AsymAD_male.txt&quot;, header = TRUE, sep = &quot;\t&quot;);</span>
+
+<span class="hl com"># Ensure column names to` match `IDs` in `zscore_` files</span>
+<span class="hl def">Subdomain_zscore_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">Subdomain_zscore_AsymAD_male</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">rename_with</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl kwd">gsub</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">, .),</span> <span class="hl kwd">starts_with</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">))</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_AsymAD_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1]  61 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Open Subdomain-specific Zscore distribution files for AsymAD male</span>
+<span class="hl def">Subdomain_zscore_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.delim</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_AsymAD_female_summary.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">);</span>
+
+<span class="hl com">#Subdomain_zscore_AsymAD_female &lt;- read.delim(&quot;/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_AsymAD_female.txt&quot;, header = TRUE, sep = &quot;\t&quot;);</span>
+
+<span class="hl com"># Ensure column names to` match `IDs` in `zscore_` files</span>
+<span class="hl def">Subdomain_zscore_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">Subdomain_zscore_AsymAD_female</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">rename_with</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl kwd">gsub</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">, .),</span> <span class="hl kwd">starts_with</span><span class="hl def">(</span><span class="hl sng">&quot;X&quot;</span><span class="hl def">))</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_AsymAD_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 159 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Merge both datasets by stacking rows</span>
+<span class="hl def">Subdomain_zscore_AsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rbind</span><span class="hl def">(Subdomain_zscore_AsymAD_male, Subdomain_zscore_AsymAD_female)</span>
+
+<span class="hl com"># Check the dimensions to ensure it merged correctly</span>
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_AsymAD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 220 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">## Cases - AD + AsymAD</span>
+
+<span class="hl com"># Merge both datasets by stacking rows</span>
+<span class="hl def">Subdomain_zscore_cases</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rbind</span><span class="hl def">(Subdomain_zscore_AD, Subdomain_zscore_AsymAD)</span>
+
+<span class="hl com"># Check the dimensions to ensure it merged correctly</span>
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_cases)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 394 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Merge CT, AD and AsymAD specific Z scores all together</span>
+<span class="hl def">Subdomain_zscore_CTADAsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rbind</span><span class="hl def">(Subdomain_zscore_CT, Subdomain_zscore_cases)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(Subdomain_zscore_CTADAsymAD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 508 129
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#head(Subdomain_zscore_CTADAsymAD)</span>
+</pre></div>
+</div></div>
+
+##################################################################################################################################################
+##################################################################################################################################################
+
+<p>Correlation of Clinical Features with Subdomain-specific Zscore  (CT, AD and AsymAD all together):</p>
+
+<div class="chunk" id="unnamed-chunk-3"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(viridis)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggpubr)</span>
+<span class="hl kwd">theme_set</span><span class="hl def">(</span><span class="hl kwd">theme_pubr</span><span class="hl def">())</span>
+
+
+<span class="hl com"># Merge CT, AD and AsymAD specific Z scores and clinical parameters altogether</span>
+<span class="hl def">merged_data_CTADAsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">Subdomain_zscore_CTADAsymAD</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">inner_join</span><span class="hl def">(sample_data_DLPFC_CTADAsymAD</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">select</span><span class="hl def">(batch.channel, ApoE4.Dose, braaksc, ceradsc_RADCnonStd, cts_mmse30_lv, cts_mmse30_cat, JohnsonDx, sex),</span>
+               <span class="hl kwc">by</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Sample_ID&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;batch.channel&quot;</span><span class="hl def">))</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">Group</span> <span class="hl def">=</span> <span class="hl kwd">paste</span><span class="hl def">(JohnsonDx, sex,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;_&quot;</span><span class="hl def">))</span>  <span class="hl com"># Combine JohnsonDx and sex</span>
+
+
+<span class="hl kwd">dim</span><span class="hl def">(merged_data_CTADAsymAD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 508 137
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">write.table</span><span class="hl def">(merged_data_CTADAsymAD,</span> <span class="hl sng">&quot;merged_data_CTADAsymAD.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span> <span class="hl kwc">quote</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl com">#head(merged_data_CTADAsymAD)</span>
+
+<span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Define custom colors for each group</span>
+<span class="hl def">group_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;mediumblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;tomato&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;dodgerblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;coral&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Control_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;skyblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Control_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightpink&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Calculate 1st and 99th percentile from CT_male and CT_female</span>
+<span class="hl com">#ct_values &lt;- merged_data_CTADAsymAD %&gt;%</span>
+    <span class="hl com">#filter(Group %in% c(&quot;CT_male&quot;, &quot;CT_female&quot;)) %&gt;%</span>
+    <span class="hl com">#pull(AM_ac_4_Zscore)</span>
+
+<span class="hl com">#percentile_1 &lt;- quantile(ct_values, probs = 0.01, na.rm = TRUE)  # 1st percentile</span>
+<span class="hl com">#percentile_99 &lt;- quantile(ct_values, probs = 0.99, na.rm = TRUE)  # 99th percentile</span>
+
+
+<span class="hl com"># Create the box plot for Braak Stage</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(merged_data_CTADAsymAD,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(braaksc),</span> <span class="hl kwc">y</span> <span class="hl def">= AM_ac_4_Zscore,</span> <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl kwd">as.numeric</span><span class="hl def">(braaksc)))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_boxplot</span><span class="hl def">(</span><span class="hl kwc">outlier.shape</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.7</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Box plot with transparent fill</span>
+    <span class="hl kwd">geom_jitter</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Group),</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.2</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Jittered points</span>
+    <span class="hl com">#geom_hline(yintercept = percentile_1, linetype = &quot;dashed&quot;, color = &quot;black&quot;, size = 1) +  # 1st percentile line</span>
+    <span class="hl com">#geom_hline(yintercept = percentile_99, linetype = &quot;dashed&quot;, color = &quot;black&quot;, size = 1) +  # 99th percentile line</span>
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= group_colors)</span> <span class="hl opt">+</span>  <span class="hl com"># Assign custom colors to Group</span>
+    <span class="hl kwd">scale_fill_gradient</span><span class="hl def">(</span><span class="hl kwc">low</span> <span class="hl def">=</span> <span class="hl sng">&quot;#D8BFD8&quot;</span><span class="hl def">,</span> <span class="hl kwc">high</span> <span class="hl def">=</span> <span class="hl sng">&quot;#4B0082&quot;</span><span class="hl def">,</span> <span class="hl kwc">guide</span> <span class="hl def">=</span> <span class="hl kwd">guide_colorbar</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Braak&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>  <span class="hl com"># Purple gradient +</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;APP Metabolism: amyloid-beta clearance Zscore Distribution by Braak Stage&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;BRAAK&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Z-score&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;BRAAK&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span>
+    <span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-3-1.png" alt="plot of chunk unnamed-chunk-3" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">################################################################################</span>
+
+<span class="hl com">#  Fit a Linear Model (Numeric BRAAK as Continuous Proxy)</span>
+
+<span class="hl def">lm_model</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">lm</span><span class="hl def">(AM_ac_4_Zscore</span> <span class="hl opt">~</span> <span class="hl kwd">as.numeric</span><span class="hl def">(braaksc),</span> <span class="hl kwc">data</span> <span class="hl def">= merged_data_CTADAsymAD)</span>
+
+
+<span class="hl kwd">summary</span><span class="hl def">(lm_model)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## 
+## Call:
+## lm(formula = AM_ac_4_Zscore ~ as.numeric(braaksc), data = merged_data_CTADAsymAD)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -5.2396 -1.1840 -0.0376  0.9991 10.9946 
+## 
+## Coefficients:
+##                     Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)         -0.96475    0.26481  -3.643 0.000297 ***
+## as.numeric(braaksc)  0.51475    0.06871   7.492 3.05e-13 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 1.826 on 506 degrees of freedom
+## Multiple R-squared:  0.09985,	Adjusted R-squared:  0.09807 
+## F-statistic: 56.13 on 1 and 506 DF,  p-value: 3.05e-13
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># To get the correlation coefficient from R²</span>
+<span class="hl com">#sqrt(0.09614)  # ≈ 0.310</span>
+
+<span class="hl com">#Since the slope is positive, the correlation is:</span>
+
+ <span class="hl com"># correlation ≈ 0.310</span>
+
+<span class="hl com">################################################################################</span>
+
+<span class="hl com"># Create the box plot for ApoE4.Dose Stage</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(</span>
+    <span class="hl def">merged_data_CTADAsymAD</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">filter</span><span class="hl def">(</span><span class="hl opt">!</span><span class="hl kwd">is.na</span><span class="hl def">(ApoE4.Dose)),</span>  <span class="hl com"># ⬅️ Exclude NA ApoE4.Dose</span>
+    <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(ApoE4.Dose),</span> <span class="hl kwc">y</span> <span class="hl def">= AM_ac_4_Zscore,</span> <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl kwd">as.numeric</span><span class="hl def">(ApoE4.Dose)))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_boxplot</span><span class="hl def">(</span><span class="hl kwc">outlier.shape</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.7</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Box plot with transparent fill</span>
+    <span class="hl kwd">geom_jitter</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Group),</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.2</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Jittered points</span>
+    <span class="hl com">#geom_hline(yintercept = percentile_1, linetype = &quot;dashed&quot;, color = &quot;black&quot;, size = 1) +  # 1st percentile line</span>
+    <span class="hl com">#geom_hline(yintercept = percentile_99, linetype = &quot;dashed&quot;, color = &quot;black&quot;, size = 1) +  # 99th percentile line</span>
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= group_colors)</span> <span class="hl opt">+</span>  <span class="hl com"># Assign custom colors to Group</span>
+    <span class="hl kwd">scale_fill_gradient</span><span class="hl def">(</span><span class="hl kwc">low</span> <span class="hl def">=</span> <span class="hl sng">&quot;#D8BFD8&quot;</span><span class="hl def">,</span> <span class="hl kwc">high</span> <span class="hl def">=</span> <span class="hl sng">&quot;#4B0082&quot;</span><span class="hl def">,</span> <span class="hl kwc">guide</span> <span class="hl def">=</span> <span class="hl kwd">guide_colorbar</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;ApoE4&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>  <span class="hl com"># Purple gradient +</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;APP Metabolism: amyloid-beta clearance Zscore Distribution by ApoE4 Dose&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;APOE4&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Z-score&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;ApoE4&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span>
+    <span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-3-2.png" alt="plot of chunk unnamed-chunk-3" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">################################################################################</span>
+
+<span class="hl com"># Create the box plot for ceradsc_RADCnonStd</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(merged_data_CTADAsymAD,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(ceradsc_RADCnonStd),</span> <span class="hl kwc">y</span> <span class="hl def">= AM_ac_4_Zscore,</span> <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl kwd">as.numeric</span><span class="hl def">(ceradsc_RADCnonStd)))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_boxplot</span><span class="hl def">(</span><span class="hl kwc">outlier.shape</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.7</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Box plot with transparent fill</span>
+    <span class="hl kwd">geom_jitter</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Group),</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.2</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Jittered points</span>
+    <span class="hl com">#geom_hline(yintercept = percentile_1, linetype = &quot;dashed&quot;, color = &quot;black&quot;, size = 1) +  # 1st percentile line</span>
+    <span class="hl com">#geom_hline(yintercept = percentile_99, linetype = &quot;dashed&quot;, color = &quot;black&quot;, size = 1) +  # 99th percentile line</span>
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= group_colors)</span> <span class="hl opt">+</span>  <span class="hl com"># Assign custom colors to Group</span>
+    <span class="hl kwd">scale_fill_gradient</span><span class="hl def">(</span><span class="hl kwc">high</span> <span class="hl def">=</span> <span class="hl sng">&quot;#D8BFD8&quot;</span><span class="hl def">,</span> <span class="hl kwc">low</span> <span class="hl def">=</span> <span class="hl sng">&quot;#4B0082&quot;</span><span class="hl def">,</span> <span class="hl kwc">guide</span> <span class="hl def">=</span> <span class="hl kwd">guide_colorbar</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;CERAD&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>  <span class="hl com"># Purple gradient +</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;APP Metabolism: amyloid-beta clearance Zscore by ceradsc_RADCnonStd&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;CERAD&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Z-score&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;CERAD&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span>
+    <span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-3-3.png" alt="plot of chunk unnamed-chunk-3" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">################################################################################</span>
+
+
+<span class="hl com"># Step 1: Rename only selected Metadata values, leave others unchanged</span>
+<span class="hl def">merged_data_CTADAsymAD</span><span class="hl opt">$</span><span class="hl def">cts_mmse30_cat</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">recode</span><span class="hl def">(merged_data_CTADAsymAD</span><span class="hl opt">$</span><span class="hl def">cts_mmse30_cat,</span>
+                        <span class="hl sng">&quot;0&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;[0-23]&quot;</span><span class="hl def">,</span>
+                        <span class="hl sng">&quot;1&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;&gt;23&quot;</span>
+                        <span class="hl def">)</span>
+
+<span class="hl com"># Define fill colors using the recoded levels</span>
+<span class="hl def">fill_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;[0-23]&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#4B0082&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;&gt;23&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#D8BFD8&quot;</span><span class="hl def">)</span>
+
+<span class="hl kwd">ggplot</span><span class="hl def">(merged_data_CTADAsymAD,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(cts_mmse30_cat),</span> <span class="hl kwc">y</span> <span class="hl def">= AM_ac_4_Zscore,</span> <span class="hl kwc">fill</span> <span class="hl def">= cts_mmse30_cat))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_boxplot</span><span class="hl def">(</span><span class="hl kwc">outlier.shape</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.7</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_jitter</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Group),</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.2</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= group_colors)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= fill_colors,</span> <span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;MMSE Category&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;APP Metabolism: amyloid-beta clearance Z-score Distribution by MMSE Category&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;MMSE Category&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Z-score&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span>
+    <span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-3-4.png" alt="plot of chunk unnamed-chunk-3" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">################################################################################</span>
+<span class="hl com"># Prepare figures for manuscript</span>
+
+<span class="hl com">#ggarrange(P2, P3, P4, P5,</span>
+          <span class="hl com">#labels = c(&quot;B&quot;, &quot;C&quot;, &quot;D&quot;, &quot;E&quot;),</span>
+          <span class="hl com">#font.label = list(size = 20))  # Adjust size as needed</span>
+
+<span class="hl com">##################################################################################################################################################</span>
+<span class="hl com">##################################################################################################################################################</span>
+</pre></div>
+</div></div>
+
+<p>Correlation of Clinical Features with Subdomain-specific Zscore  (AD and AsymAD all together):</p>
+
+<div class="chunk" id="unnamed-chunk-4"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl com">## Cases (AD + AsymAD)</span>
+
+<span class="hl com"># Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)</span>
+<span class="hl def">merged_data_cases</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">merge</span><span class="hl def">(Subdomain_zscore_cases, sample_data_DLPFC_cases,</span> <span class="hl kwc">by.x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Sample_ID&quot;</span><span class="hl def">,</span> <span class="hl kwc">by.y</span> <span class="hl def">=</span> <span class="hl sng">&quot;batch.channel&quot;</span><span class="hl def">)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(merged_data_cases)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 394 170
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Replace NA values with 0 (or any other specific value)</span>
+<span class="hl def">merged_data_cases[</span><span class="hl kwd">is.na</span><span class="hl def">(merged_data_cases)]</span> <span class="hl kwb">&lt;-</span> <span class="hl num">0</span>
+
+
+<span class="hl kwd">write.table</span><span class="hl def">(merged_data_cases,</span> <span class="hl sng">&quot;merged_data_cases.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span> <span class="hl kwc">quote</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com"># Function to compute correlation or Kruskal-Wallis test based on variable type</span>
+<span class="hl def">correlation_and_kw_test</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">Subdomain_col</span><span class="hl def">,</span> <span class="hl kwc">metadata_col</span><span class="hl def">,</span> <span class="hl kwc">is_categorical</span><span class="hl def">) {</span>
+  <span class="hl kwa">if</span> <span class="hl def">(is_categorical) {</span>
+    <span class="hl com"># Perform Kruskal-Wallis test for categorical variables</span>
+    <span class="hl def">test</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">kruskal.test</span><span class="hl def">(Subdomain_col</span> <span class="hl opt">~</span> <span class="hl kwd">as.factor</span><span class="hl def">(metadata_col))</span>
+    <span class="hl kwd">return</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl kwc">statistic</span> <span class="hl def">= test</span><span class="hl opt">$</span><span class="hl def">statistic,</span> <span class="hl kwc">p_value</span> <span class="hl def">= test</span><span class="hl opt">$</span><span class="hl def">p.value,</span> <span class="hl kwc">test_type</span> <span class="hl def">=</span> <span class="hl sng">&quot;Kruskal-Wallis&quot;</span><span class="hl def">))</span>
+  <span class="hl def">}</span> <span class="hl kwa">else</span> <span class="hl def">{</span>
+    <span class="hl com"># Perform Pearson correlation for continuous variables</span>
+    <span class="hl def">test</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cor.test</span><span class="hl def">(Subdomain_col, metadata_col,</span> <span class="hl kwc">use</span> <span class="hl def">=</span> <span class="hl sng">&quot;complete.obs&quot;</span><span class="hl def">)</span>
+    <span class="hl kwd">return</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl kwc">correlation</span> <span class="hl def">= test</span><span class="hl opt">$</span><span class="hl def">estimate,</span> <span class="hl kwc">p_value</span> <span class="hl def">= test</span><span class="hl opt">$</span><span class="hl def">p.value,</span> <span class="hl kwc">test_type</span> <span class="hl def">=</span> <span class="hl sng">&quot;Pearson&quot;</span><span class="hl def">))</span>
+  <span class="hl def">}</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Identify categorical and continuous metadata columns</span>
+<span class="hl def">categorical_cols</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">134</span><span class="hl def">,</span> <span class="hl num">146</span><span class="hl def">,</span> <span class="hl num">147</span><span class="hl def">)</span>  <span class="hl com"># Indices of categorical metadata columns</span>
+<span class="hl def">continuous_cols</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">141</span><span class="hl def">)</span>  <span class="hl com"># Indices of continuous metadata columns</span>
+
+<span class="hl com"># Compute correlations or Kruskal-Wallis results for each subdomain-metadata pair</span>
+<span class="hl def">correlation_results_cases</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">lapply</span><span class="hl def">(merged_data_cases[,</span> <span class="hl num">2</span><span class="hl opt">:</span><span class="hl num">129</span><span class="hl def">],</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">Subdomain_col</span><span class="hl def">) {</span>
+  <span class="hl com"># Combine results for categorical and continuous metadata columns</span>
+  <span class="hl def">results</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">list</span><span class="hl def">()</span>
+
+  <span class="hl com"># Process categorical variables</span>
+  <span class="hl kwa">for</span> <span class="hl def">(cat_col</span> <span class="hl kwa">in</span> <span class="hl def">categorical_cols) {</span>
+    <span class="hl def">metadata_col</span> <span class="hl kwb">&lt;-</span> <span class="hl def">merged_data_cases[[cat_col]]</span>
+    <span class="hl def">results[[</span><span class="hl kwd">colnames</span><span class="hl def">(merged_data_cases)[cat_col]]]</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">correlation_and_kw_test</span><span class="hl def">(Subdomain_col, metadata_col,</span> <span class="hl kwc">is_categorical</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span>
+  <span class="hl def">}</span>
+
+  <span class="hl com"># Process continuous variables</span>
+  <span class="hl kwa">for</span> <span class="hl def">(cont_col</span> <span class="hl kwa">in</span> <span class="hl def">continuous_cols) {</span>
+    <span class="hl def">metadata_col</span> <span class="hl kwb">&lt;-</span> <span class="hl def">merged_data_cases[[cont_col]]</span>
+    <span class="hl def">results[[</span><span class="hl kwd">colnames</span><span class="hl def">(merged_data_cases)[cont_col]]]</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">correlation_and_kw_test</span><span class="hl def">(Subdomain_col, metadata_col,</span> <span class="hl kwc">is_categorical</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+  <span class="hl def">}</span>
+
+  <span class="hl kwd">return</span><span class="hl def">(results)</span>
+<span class="hl def">})</span>
+
+<span class="hl com"># Combine the results into a single data frame</span>
+<span class="hl def">correlation_cases</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">do.call</span><span class="hl def">(rbind,</span> <span class="hl kwd">lapply</span><span class="hl def">(</span><span class="hl kwd">names</span><span class="hl def">(correlation_results_cases),</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">Subdomain_name</span><span class="hl def">) {</span>
+  <span class="hl def">subdomain_results</span> <span class="hl kwb">&lt;-</span> <span class="hl def">correlation_results_cases[[Subdomain_name]]</span>
+  <span class="hl kwd">data.frame</span><span class="hl def">(</span>
+    <span class="hl kwc">Subdomain</span> <span class="hl def">= Subdomain_name,</span>
+    <span class="hl kwc">Metadata</span> <span class="hl def">=</span> <span class="hl kwd">names</span><span class="hl def">(subdomain_results),</span>
+    <span class="hl kwd">do.call</span><span class="hl def">(rbind, subdomain_results)</span>
+  <span class="hl def">)</span>
+<span class="hl def">}))</span>
+
+<span class="hl com"># Apply BY correction</span>
+<span class="hl def">correlation_cases</span><span class="hl opt">$</span><span class="hl def">FDR_p_value</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">p.adjust</span><span class="hl def">(correlation_cases</span><span class="hl opt">$</span><span class="hl def">p_value,</span> <span class="hl kwc">method</span> <span class="hl def">=</span> <span class="hl sng">&quot;fdr&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># View results</span>
+<span class="hl kwd">head</span><span class="hl def">(correlation_cases)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##                            Subdomain           Metadata
+## ApoE4.Dose           Ap_amc_2_Zscore         ApoE4.Dose
+## braaksc              Ap_amc_2_Zscore            braaksc
+## ceradsc_RADCnonStd   Ap_amc_2_Zscore ceradsc_RADCnonStd
+## cts_mmse30_lv        Ap_amc_2_Zscore      cts_mmse30_lv
+## ApoE4.Dose1        Ap_apiid_3_Zscore         ApoE4.Dose
+## braaksc1           Ap_apiid_3_Zscore            braaksc
+##                    statistic.Kruskal.Wallis.chi.squared              p_value
+## ApoE4.Dose                             3.29625219989816    0.192410128356779
+## braaksc                                10.4633140536234    0.015011835317496
+## ceradsc_RADCnonStd                     7.61385406281352   0.0222163442967026
+## cts_mmse30_lv                         0.173537572611033 0.000540244139297383
+## ApoE4.Dose1                            1.97127067753308    0.373202041873252
+## braaksc1                              0.426273090117775    0.934763179805741
+##                         test_type FDR_p_value
+## ApoE4.Dose         Kruskal-Wallis  0.35823268
+## braaksc            Kruskal-Wallis  0.09150071
+## ceradsc_RADCnonStd Kruskal-Wallis  0.11477945
+## cts_mmse30_lv             Pearson  0.01627088
+## ApoE4.Dose1        Kruskal-Wallis  0.53977244
+## braaksc1           Kruskal-Wallis  0.95528692
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Write the result to a file</span>
+<span class="hl kwd">write.table</span><span class="hl def">(correlation_cases,</span> <span class="hl sng">&quot;correlation_cases_with_FDR_pvalues.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span> <span class="hl kwc">quote</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl com">##################################################################################################################################################</span>
+
+<span class="hl com">## Control + Cases (CT + AD + AsymAD)</span>
+
+<span class="hl com">#head(merged_data_CTADAsymAD)</span>
+
+
+<span class="hl kwd">dim</span><span class="hl def">(merged_data_CTADAsymAD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 508 137
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Function to compute correlation or Kruskal-Wallis test based on variable type</span>
+<span class="hl def">correlation_and_kw_test</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">Subdomain_col</span><span class="hl def">,</span> <span class="hl kwc">metadata_col</span><span class="hl def">,</span> <span class="hl kwc">is_categorical</span><span class="hl def">) {</span>
+  <span class="hl kwa">if</span> <span class="hl def">(is_categorical) {</span>
+    <span class="hl com"># Perform Kruskal-Wallis test for categorical variables</span>
+    <span class="hl def">test</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">kruskal.test</span><span class="hl def">(Subdomain_col</span> <span class="hl opt">~</span> <span class="hl kwd">as.factor</span><span class="hl def">(metadata_col))</span>
+    <span class="hl kwd">return</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl kwc">statistic</span> <span class="hl def">= test</span><span class="hl opt">$</span><span class="hl def">statistic,</span> <span class="hl kwc">p_value</span> <span class="hl def">= test</span><span class="hl opt">$</span><span class="hl def">p.value,</span> <span class="hl kwc">test_type</span> <span class="hl def">=</span> <span class="hl sng">&quot;Kruskal-Wallis&quot;</span><span class="hl def">))</span>
+  <span class="hl def">}</span> <span class="hl kwa">else</span> <span class="hl def">{</span>
+    <span class="hl com"># Perform Pearson correlation for continuous variables</span>
+    <span class="hl def">test</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cor.test</span><span class="hl def">(Subdomain_col, metadata_col,</span> <span class="hl kwc">use</span> <span class="hl def">=</span> <span class="hl sng">&quot;complete.obs&quot;</span><span class="hl def">)</span>
+    <span class="hl kwd">return</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl kwc">correlation</span> <span class="hl def">= test</span><span class="hl opt">$</span><span class="hl def">estimate,</span> <span class="hl kwc">p_value</span> <span class="hl def">= test</span><span class="hl opt">$</span><span class="hl def">p.value,</span> <span class="hl kwc">test_type</span> <span class="hl def">=</span> <span class="hl sng">&quot;Pearson&quot;</span><span class="hl def">))</span>
+  <span class="hl def">}</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Identify categorical and continuous metadata columns</span>
+<span class="hl def">categorical_cols</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">130</span><span class="hl def">,</span> <span class="hl num">131</span><span class="hl def">,</span> <span class="hl num">132</span><span class="hl def">)</span>  <span class="hl com"># Indices of categorical metadata columns</span>
+<span class="hl def">continuous_cols</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">133</span><span class="hl def">)</span>  <span class="hl com"># Indices of continuous metadata columns</span>
+
+<span class="hl com"># Compute correlations or Kruskal-Wallis results for each subdomain-metadata pair</span>
+<span class="hl def">correlation_results_all</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">lapply</span><span class="hl def">(merged_data_CTADAsymAD[,</span> <span class="hl num">2</span><span class="hl opt">:</span><span class="hl num">129</span><span class="hl def">],</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">Subdomain_col</span><span class="hl def">) {</span>
+  <span class="hl com"># Combine results for categorical and continuous metadata columns</span>
+  <span class="hl def">results</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">list</span><span class="hl def">()</span>
+
+  <span class="hl com"># Process categorical variables</span>
+  <span class="hl kwa">for</span> <span class="hl def">(cat_col</span> <span class="hl kwa">in</span> <span class="hl def">categorical_cols) {</span>
+    <span class="hl def">metadata_col</span> <span class="hl kwb">&lt;-</span> <span class="hl def">merged_data_CTADAsymAD[[cat_col]]</span>
+    <span class="hl def">results[[</span><span class="hl kwd">colnames</span><span class="hl def">(merged_data_CTADAsymAD)[cat_col]]]</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">correlation_and_kw_test</span><span class="hl def">(Subdomain_col, metadata_col,</span> <span class="hl kwc">is_categorical</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span>
+  <span class="hl def">}</span>
+
+  <span class="hl com"># Process continuous variables</span>
+  <span class="hl kwa">for</span> <span class="hl def">(cont_col</span> <span class="hl kwa">in</span> <span class="hl def">continuous_cols) {</span>
+    <span class="hl def">metadata_col</span> <span class="hl kwb">&lt;-</span> <span class="hl def">merged_data_CTADAsymAD[[cont_col]]</span>
+    <span class="hl def">results[[</span><span class="hl kwd">colnames</span><span class="hl def">(merged_data_CTADAsymAD)[cont_col]]]</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">correlation_and_kw_test</span><span class="hl def">(Subdomain_col, metadata_col,</span> <span class="hl kwc">is_categorical</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+  <span class="hl def">}</span>
+
+  <span class="hl kwd">return</span><span class="hl def">(results)</span>
+<span class="hl def">})</span>
+
+<span class="hl com"># Combine the results into a single data frame</span>
+<span class="hl def">correlation_all</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">do.call</span><span class="hl def">(rbind,</span> <span class="hl kwd">lapply</span><span class="hl def">(</span><span class="hl kwd">names</span><span class="hl def">(correlation_results_all),</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">Subdomain_name</span><span class="hl def">) {</span>
+  <span class="hl def">subdomain_results</span> <span class="hl kwb">&lt;-</span> <span class="hl def">correlation_results_all[[Subdomain_name]]</span>
+  <span class="hl kwd">data.frame</span><span class="hl def">(</span>
+    <span class="hl kwc">Subdomain</span> <span class="hl def">= Subdomain_name,</span>
+    <span class="hl kwc">Metadata</span> <span class="hl def">=</span> <span class="hl kwd">names</span><span class="hl def">(subdomain_results),</span>
+    <span class="hl kwd">do.call</span><span class="hl def">(rbind, subdomain_results)</span>
+  <span class="hl def">)</span>
+<span class="hl def">}))</span>
+
+<span class="hl com"># Apply BY correction</span>
+<span class="hl def">correlation_all</span><span class="hl opt">$</span><span class="hl def">FDR_p_value</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">p.adjust</span><span class="hl def">(correlation_all</span><span class="hl opt">$</span><span class="hl def">p_value,</span> <span class="hl kwc">method</span> <span class="hl def">=</span> <span class="hl sng">&quot;fdr&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># View results</span>
+<span class="hl kwd">head</span><span class="hl def">(correlation_all)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##                            Subdomain           Metadata
+## ApoE4.Dose           Ap_amc_2_Zscore         ApoE4.Dose
+## braaksc              Ap_amc_2_Zscore            braaksc
+## ceradsc_RADCnonStd   Ap_amc_2_Zscore ceradsc_RADCnonStd
+## cts_mmse30_lv        Ap_amc_2_Zscore      cts_mmse30_lv
+## ApoE4.Dose1        Ap_apiid_3_Zscore         ApoE4.Dose
+## braaksc1           Ap_apiid_3_Zscore            braaksc
+##                    statistic.Kruskal.Wallis.chi.squared              p_value
+## ApoE4.Dose                             3.64494660168111    0.161625507672932
+## braaksc                                14.2469388230688   0.0269961244244145
+## ceradsc_RADCnonStd                     13.6952377817797  0.00335075129966468
+## cts_mmse30_lv                         0.188405240783301 1.91725642214584e-05
+## ApoE4.Dose1                            1.92267619302265    0.382380880972626
+## braaksc1                                2.6598001197392    0.850172309683564
+##                         test_type  FDR_p_value
+## ApoE4.Dose         Kruskal-Wallis 0.3021183508
+## braaksc            Kruskal-Wallis 0.0933919980
+## ceradsc_RADCnonStd Kruskal-Wallis 0.0256057413
+## cts_mmse30_lv             Pearson 0.0005774325
+## ApoE4.Dose1        Kruskal-Wallis 0.5305664256
+## braaksc1           Kruskal-Wallis 0.9012178521
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Write the result to a file</span>
+<span class="hl kwd">write.table</span><span class="hl def">(correlation_all,</span> <span class="hl sng">&quot;correlation_all_with_FDR_pvalues.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span> <span class="hl kwc">quote</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+</pre></div>
+</div></div>
+
+
+# Updated function: Spearman correlation with safe numeric coercion
+safe_spearman_test <- function(Subdomain_col, metadata_col) {
+  # Try to coerce metadata to numeric
+  metadata_col <- suppressWarnings(as.numeric(as.character(metadata_col)))
+  
+  # Skip if metadata_col is still not numeric or all NA
+  if (all(is.na(metadata_col))) {
+    return(c(correlation = NA, p_value = NA, test_type = "Spearman"))
+  }
+
+  # Perform Spearman correlation
+  test <- suppressWarnings(cor.test(Subdomain_col, metadata_col, method = "spearman", use = "complete.obs"))
+  return(c(correlation = test$estimate, p_value = test$p.value, test_type = "Spearman"))
+}
+
+# Columns to test
+metadata_cols <- c(134, 141, 146, 147, 170)
+
+# Compute Spearman correlations
+correlation_results_cases <- lapply(merged_data_cases[, 2:129], function(Subdomain_col) {
+  results <- list()
+  for (meta_col in metadata_cols) {
+    metadata_col <- merged_data_cases[[meta_col]]
+    results[[colnames(merged_data_cases)[meta_col]]] <- safe_spearman_test(Subdomain_col, metadata_col)
+  }
+  return(results)
+})
+
+# Combine results into data frame
+correlation_cases <- do.call(rbind, lapply(names(correlation_results_cases), function(Subdomain_name) {
+  subdomain_results <- correlation_results_cases[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+# FDR correction
+correlation_cases$FDR_p_value <- p.adjust(as.numeric(correlation_cases$p_value), method = "fdr")
+
+# Save to CSV
+write.csv(correlation_cases, "Spearman_correlation_results.csv", row.names = FALSE)
+
+# View top of result
+head(correlation_cases)
+
+##################################################################################################################################################
+end.rcode-->
+
+<p>Correlation of Clinical Features with Subdomain-specific Zscore  (CT, AD and AsymAD Separately):</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(ggplot2)
+library(dplyr)
+
+##################################################################################################################################################
+## CT
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_CT <- merge(Subdomain_zscore_CT, sample_data_DLPFC_contorl, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_CT)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_CT[is.na(merged_data_CT)] <- 0
+
+#write.table(merged_data_CT_male, "merged_data_CT_male.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+##################################################################################################################################################
+
+set.seed(123)  # For reproducibility
+
+# Define categorical and continuous metadata columns (Update these indices as per your dataset)
+categorical_cols <- c(134, 146, 147)  # Column indices for categorical variables
+continuous_cols <- c(141)  # Column index for continuous variables
+
+# Function to perform permutation-based correction
+perform_permutation_test <- function(Subdomain_col, metadata_col, is_categorical, n_permutations = 1000) {
+  observed_p <- if (is_categorical) {
+    kruskal.test(Subdomain_col ~ as.factor(metadata_col))$p.value
+  } else {
+    cor.test(Subdomain_col, metadata_col, use = "complete.obs")$p.value
+  }
+
+  # Generate null distribution by shuffling metadata
+  permuted_p_values <- replicate(n_permutations, {
+    permuted_metadata <- sample(metadata_col)  # Shuffle labels
+    if (is_categorical) {
+      kruskal.test(Subdomain_col ~ as.factor(permuted_metadata))$p.value
+    } else {
+      cor.test(Subdomain_col, permuted_metadata, use = "complete.obs")$p.value
+    }
+  })
+
+  # Compute empirical p-value
+  empirical_p <- mean(permuted_p_values <= observed_p)
+
+  return(c(observed_p = observed_p, empirical_p = empirical_p))
+}
+
+# Apply permutation test to all subdomains (columns 2 to 129)
+permutation_results <- lapply(merged_data_CT[, 2:129], function(Subdomain_col) {
+  results <- list()
+
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_CT[[cat_col]]
+    results[[colnames(merged_data_CT)[cat_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_CT[[cont_col]]
+    results[[colnames(merged_data_CT)[cont_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+
+  return(results)
+})
+
+# Combine results into a dataframe
+correlation_CT<- do.call(rbind, lapply(names(permutation_results), function(Subdomain_name) {
+  subdomain_results <- permutation_results[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+
+# View results
+head(correlation_CT)
+
+# Write the result to a file
+write.table(correlation_CT, "correlation_CT_with_empirical_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+##################################################################################################################################################
+##################################################################################################################################################
+## AD
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_AD <- merge(Subdomain_zscore_AD, sample_data_DLPFC_AD, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_AD)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_AD[is.na(merged_data_AD)] <- 0
+
+##################################################################################################################################################
+
+set.seed(123)  # For reproducibility
+
+# Define categorical and continuous metadata columns (Update these indices as per your dataset)
+categorical_cols <- c(134, 146, 147)  # Column indices for categorical variables
+continuous_cols <- c(141)  # Column index for continuous variables
+
+# Function to perform permutation-based correction
+perform_permutation_test <- function(Subdomain_col, metadata_col, is_categorical, n_permutations = 1000) {
+  observed_p <- if (is_categorical) {
+    kruskal.test(Subdomain_col ~ as.factor(metadata_col))$p.value
+  } else {
+    cor.test(Subdomain_col, metadata_col, use = "complete.obs")$p.value
+  }
+
+  # Generate null distribution by shuffling metadata
+  permuted_p_values <- replicate(n_permutations, {
+    permuted_metadata <- sample(metadata_col)  # Shuffle labels
+    if (is_categorical) {
+      kruskal.test(Subdomain_col ~ as.factor(permuted_metadata))$p.value
+    } else {
+      cor.test(Subdomain_col, permuted_metadata, use = "complete.obs")$p.value
+    }
+  })
+
+  # Compute empirical p-value
+  empirical_p <- mean(permuted_p_values <= observed_p)
+
+  return(c(observed_p = observed_p, empirical_p = empirical_p))
+}
+
+# Apply permutation test to all subdomains (columns 2 to 129)
+permutation_results <- lapply(merged_data_AD[, 2:129], function(Subdomain_col) {
+  results <- list()
+
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_AD[[cat_col]]
+    results[[colnames(merged_data_AD)[cat_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_AD[[cont_col]]
+    results[[colnames(merged_data_AD)[cont_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+
+  return(results)
+})
+
+# Combine results into a dataframe
+correlation_AD <- do.call(rbind, lapply(names(permutation_results), function(Subdomain_name) {
+  subdomain_results <- permutation_results[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+# View results
+head(correlation_AD)
+
+# Write the result to a file
+write.table(correlation_AD, "correlation_AD_with_empirical_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+##################################################################################################################################################
+##################################################################################################################################################
+## AsymAD
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_AsymAD <- merge(Subdomain_zscore_AsymAD, sample_data_DLPFC_AsymAD, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_AsymAD)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_AsymAD[is.na(merged_data_AsymAD)] <- 0
+
+
+##################################################################################################################################################
+
+set.seed(123)  # For reproducibility
+
+# Define categorical and continuous metadata columns (Update these indices as per your dataset)
+categorical_cols <- c(134, 146, 147)  # Column indices for categorical variables
+continuous_cols <- c(141)  # Column index for continuous variables
+
+# Function to perform permutation-based correction
+perform_permutation_test <- function(Subdomain_col, metadata_col, is_categorical, n_permutations = 1000) {
+  observed_p <- if (is_categorical) {
+    kruskal.test(Subdomain_col ~ as.factor(metadata_col))$p.value
+  } else {
+    cor.test(Subdomain_col, metadata_col, use = "complete.obs")$p.value
+  }
+
+  # Generate null distribution by shuffling metadata
+  permuted_p_values <- replicate(n_permutations, {
+    permuted_metadata <- sample(metadata_col)  # Shuffle labels
+    if (is_categorical) {
+      kruskal.test(Subdomain_col ~ as.factor(permuted_metadata))$p.value
+    } else {
+      cor.test(Subdomain_col, permuted_metadata, use = "complete.obs")$p.value
+    }
+  })
+
+  # Compute empirical p-value
+  empirical_p <- mean(permuted_p_values <= observed_p)
+
+  return(c(observed_p = observed_p, empirical_p = empirical_p))
+}
+
+# Apply permutation test to all subdomains (columns 2 to 129)
+permutation_results <- lapply(merged_data_AsymAD[, 2:129], function(Subdomain_col) {
+  results <- list()
+
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_AsymAD[[cat_col]]
+    results[[colnames(merged_data_AsymAD)[cat_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_AsymAD[[cont_col]]
+    results[[colnames(merged_data_AsymAD)[cont_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+
+  return(results)
+})
+
+# Combine results into a dataframe
+correlation_AsymAD<- do.call(rbind, lapply(names(permutation_results), function(Subdomain_name) {
+  subdomain_results <- permutation_results[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+
+# View results
+head(correlation_AsymAD)
+
+# Write the result to a file
+write.table(correlation_AsymAD, "correlation_AsymAD_with_empirical_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+##################################################################################################################################################
+##################################################################################################################################################
+## Cases (AD + AsymAD)
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_cases <- merge(Subdomain_zscore_cases, sample_data_DLPFC_cases, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_cases)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_cases[is.na(merged_data_cases)] <- 0
+
+
+##################################################################################################################################################
+
+# Function to compute correlation or Kruskal-Wallis test based on variable type
+correlation_and_kw_test <- function(Subdomain_col, metadata_col, is_categorical) {
+  if (is_categorical) {
+    # Perform Kruskal-Wallis test for categorical variables
+    test <- kruskal.test(Subdomain_col ~ as.factor(metadata_col))
+    return(c(statistic = test$statistic, p_value = test$p.value, test_type = "Kruskal-Wallis"))
+  } else {
+    # Perform Pearson correlation for continuous variables
+    test <- cor.test(Subdomain_col, metadata_col, use = "complete.obs")
+    return(c(correlation = test$estimate, p_value = test$p.value, test_type = "Pearson"))
+  }
+}
+
+# Identify categorical and continuous metadata columns
+categorical_cols <- c(134, 146, 147)  # Indices of categorical metadata columns
+continuous_cols <- c(141)  # Indices of continuous metadata columns
+
+# Compute correlations or Kruskal-Wallis results for each subdomain-metadata pair
+correlation_results_cases <- lapply(merged_data_cases[, 2:129], function(Subdomain_col) {
+  # Combine results for categorical and continuous metadata columns
+  results <- list()
+  
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_cases[[cat_col]]
+    results[[colnames(merged_data_cases)[cat_col]]] <- correlation_and_kw_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+  
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_cases[[cont_col]]
+    results[[colnames(merged_data_cases)[cont_col]]] <- correlation_and_kw_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+  
+  return(results)
+})
+
+# Combine the results into a single data frame
+correlation_cases <- do.call(rbind, lapply(names(correlation_results_cases), function(Subdomain_name) {
+  subdomain_results <- correlation_results_cases[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+# Apply BY correction
+correlation_cases$FDR_p_value <- p.adjust(correlation_cases$p_value, method = "fdr")
+
+
+# View results
+head(correlation_cases)
+
+# Write the result to a file
+write.table(correlation_cases, "correlation_cases_with_FDR_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+end.rcode-->
+
+<p>Plot the correlation between clinical parameters and individual Subdomain for each group</p>
+
+<div class="chunk" id="unnamed-chunk-5"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(stringr)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggnewscale)</span>
+
+
+<span class="hl com"># Open the merged clinical parameter correlation table for the sigificant subdomain in each catagory (P value &lt; 0.05)</span>
+
+<span class="hl def">data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;clinical_parameter_correlation_all_FDR_062325.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com">#data &lt;- read.csv(&quot;clinical_parameter_correlation_spearman.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+
+
+<span class="hl kwd">head</span><span class="hl def">(data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Sno  Subdomain_initial   unique_id                Biodomain
+## 1   1     AM_ac_4_Zscore     AM_ac_4           APP Metabolism
+## 2   2  IR_aoiir_2_Zscore  IR_aoiir_2          Immune Response
+## 3   3 Ep_others_2_Zscore Ep_others_2               Epigenetic
+## 4   4   Ep_Dtfb_1_Zscore   Ep_Dtfb_1               Epigenetic
+## 5   5    MM_mmo_7_Zscore    MM_mmo_7 Mitochondrial Metabolism
+## 6   6   Ep_mpgs_4_Zscore   Ep_mpgs_4               Epigenetic
+##                                            Subdomain
+## 1                             amyloid-beta clearance
+## 2               activation of innate immune response
+## 3                                  Epigenetic_others
+## 4           DNA-binding transcription factor binding
+## 5                mitochondrial membrane organization
+## 6 miRNA-mediated post-transcriptional gene silencing
+##                                             Biodomain_Subdomain   Metadata
+## 1                         APP Metabolism_amyloid-beta clearance ApoE4.Dose
+## 2          Immune Response_activation of innate immune response ApoE4.Dose
+## 3                                             Epigenetic_others ApoE4.Dose
+## 4           Epigenetic_DNA-binding transcription factor binding ApoE4.Dose
+## 5  Mitochondrial Metabolism_mitochondrial membrane organization ApoE4.Dose
+## 6 Epigenetic_miRNA-mediated post-transcriptional gene silencing ApoE4.Dose
+##   correlation     p_value      test_type FDR_p_value nl10_FDR_p_value
+## 1   0.2011072 0.000004720 Kruskal-Wallis 0.000197511         3.704408
+## 2   0.1763931 0.000192538 Kruskal-Wallis 0.003757289         2.425125
+## 3   0.1730732 0.000405195 Kruskal-Wallis 0.005762772         2.239369
+## 4   0.1581276 0.001211797 Kruskal-Wallis 0.011931540         1.923303
+## 5  -0.1366433 0.001435520 Kruskal-Wallis 0.013124754         1.881909
+## 6   0.1288321 0.001643482 Kruskal-Wallis 0.014507981         1.838393
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Define the color code for each Biodomain</span>
+<span class="hl def">custom_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Apoptosis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#673399&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;APP Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#fe6500&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Autophagy&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#9931fd&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Cell Cycle&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#18857f&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DNA Repair&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#f451ad&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Endolysosome&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#3466cc&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Epigenetic&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cb3233&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Immune Response&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#9ccdcc&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Lipid Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#989898&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Metal Binding and Homeostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#4b0d20&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Mitochondrial Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#97cb98&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Myelination&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#996735&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Oxidative Stress&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#ffcd66&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Proteostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#c8b269&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;RNA Spliceosome&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#0c9aff&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Structural Stabilization&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#ff9a9a&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Synapse&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#329a33&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Tau Homeostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cb97cb&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Vasculature&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cecd02&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;none&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#7f7f7f&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Wrap long Biodomain_Subdomain names</span>
+<span class="hl com">#data &lt;- data %&gt;%</span>
+  <span class="hl com">#mutate(Biodomain_Subdomain_wrapped = str_wrap(Biodomain_Subdomain, width = 40))</span>
+
+
+<span class="hl com"># Truncate long Biodomain_Subdomain names to 40 characters</span>
+<span class="hl com">#data &lt;- data %&gt;%</span>
+  <span class="hl com">#mutate(Biodomain_Subdomain_short = str_trunc(Biodomain_Subdomain, width = 40))</span>
+
+
+<span class="hl com"># Step 1: Rename only selected Metadata values, leave others unchanged</span>
+<span class="hl def">data</span><span class="hl opt">$</span><span class="hl def">Metadata</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">recode</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Metadata,</span>
+                        <span class="hl sng">&quot;ApoE4.Dose&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;APOE4&quot;</span><span class="hl def">,</span>
+                        <span class="hl sng">&quot;braaksc&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;BRAAK&quot;</span><span class="hl def">,</span>
+                        <span class="hl sng">&quot;ceradsc_RADCnonStd&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;CERAD&quot;</span><span class="hl def">,</span>
+                        <span class="hl sng">&quot;cts_mmse30_lv&quot;</span><span class="hl def">=</span> <span class="hl sng">&quot;MMSE&quot;</span>
+                        <span class="hl def">)</span>
+
+<span class="hl com"># Step 2: Reorder Metadata as factor with desired order</span>
+<span class="hl def">data</span><span class="hl opt">$</span><span class="hl def">Metadata</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Metadata,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;APOE4&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;CERAD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;BRAAK&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;MMSE&quot;</span><span class="hl def">))</span>
+
+
+<span class="hl com"># Step 3: Identify Biodomain_Subdomain values that appear in more than one Metadata</span>
+<span class="hl com">#common_subdomains &lt;- data %&gt;%</span>
+  <span class="hl com">#group_by(Biodomain_Subdomain) %&gt;%</span>
+  <span class="hl com">#summarise(n_metadata = n_distinct(Metadata)) %&gt;%</span>
+  <span class="hl com">#filter(n_metadata &gt; 1) %&gt;%</span>
+  <span class="hl com">#pull(Biodomain_Subdomain)</span>
+
+<span class="hl com"># Step 4: Add a flag to the original data</span>
+<span class="hl com">#data &lt;- data %&gt;%</span>
+  <span class="hl com">#mutate(is_common = Biodomain_Subdomain %in% common_subdomains)</span>
+
+
+<span class="hl com"># Step 5:Order data by Biodomain and Biodomain_Subdomain</span>
+<span class="hl def">data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">arrange</span><span class="hl def">(Biodomain, Biodomain_Subdomain)</span>
+
+<span class="hl com"># Step 6:Create factor with correct order</span>
+<span class="hl def">data</span><span class="hl opt">$</span><span class="hl def">Biodomain_Subdomain</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Biodomain_Subdomain,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">unique</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Biodomain_Subdomain))</span>
+
+<span class="hl com"># Step 7:Determine y positions for rectangles</span>
+<span class="hl def">biodomain_bounds</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">distinct</span><span class="hl def">(Biodomain, Biodomain_Subdomain)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">group_by</span><span class="hl def">(Biodomain)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">summarise</span><span class="hl def">(</span>
+    <span class="hl kwc">ymin</span> <span class="hl def">=</span> <span class="hl kwd">min</span><span class="hl def">(</span><span class="hl kwd">as.numeric</span><span class="hl def">(Biodomain_Subdomain))</span> <span class="hl opt">-</span> <span class="hl num">0.5</span><span class="hl def">,</span>
+    <span class="hl kwc">ymax</span> <span class="hl def">=</span> <span class="hl kwd">max</span><span class="hl def">(</span><span class="hl kwd">as.numeric</span><span class="hl def">(Biodomain_Subdomain))</span> <span class="hl opt">+</span> <span class="hl num">0.5</span>
+  <span class="hl def">)</span>
+
+
+<span class="hl com"># Plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Metadata,</span> <span class="hl kwc">y</span> <span class="hl def">= Biodomain_Subdomain))</span> <span class="hl opt">+</span>
+
+  <span class="hl com"># Draw background boxes per Biodomain group</span>
+  <span class="hl kwd">geom_rect</span><span class="hl def">(</span><span class="hl kwc">data</span> <span class="hl def">= biodomain_bounds,</span>
+            <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">xmin</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">Inf</span><span class="hl def">,</span> <span class="hl kwc">xmax</span> <span class="hl def">=</span> <span class="hl num">Inf</span><span class="hl def">,</span> <span class="hl kwc">ymin</span> <span class="hl def">= ymin,</span> <span class="hl kwc">ymax</span> <span class="hl def">= ymax,</span> <span class="hl kwc">fill</span> <span class="hl def">= Biodomain),</span>
+            <span class="hl kwc">inherit.aes</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.20</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors,</span> <span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;AD Biodomain&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+  <span class="hl com"># Reset fill scale for correlation bubble color</span>
+  <span class="hl kwd">new_scale_fill</span><span class="hl def">()</span> <span class="hl opt">+</span>
+
+  <span class="hl com"># Bubble plot layer</span>
+  <span class="hl kwd">geom_point</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">= correlation,</span> <span class="hl kwc">size</span> <span class="hl def">= nl10_FDR_p_value),</span>
+             <span class="hl kwc">shape</span> <span class="hl def">=</span> <span class="hl num">21</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_fill_gradient</span><span class="hl def">(</span><span class="hl kwc">low</span> <span class="hl def">=</span> <span class="hl sng">&quot;tomato&quot;</span><span class="hl def">,</span> <span class="hl kwc">high</span> <span class="hl def">=</span> <span class="hl sng">&quot;seagreen&quot;</span><span class="hl def">,</span> <span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;Correlation&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_size</span><span class="hl def">(</span><span class="hl kwc">range</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">4</span><span class="hl def">,</span> <span class="hl num">12</span><span class="hl def">),</span> <span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;-log10(FDR P-value)&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+      <span class="hl com"># Box outline overlay for common points</span>
+    <span class="hl com">#geom_point(</span>
+        <span class="hl com">#data = subset(data, is_common),</span>
+        <span class="hl com">#aes(x = Metadata, y = Biodomain_Subdomain),</span>
+        <span class="hl com">#shape = 0,  # square outline</span>
+        <span class="hl com">#stroke = 1.5,  # Line thickness</span>
+        <span class="hl com">#color = &quot;black&quot;,  # Outline color</span>
+        <span class="hl com">#fill = NA,      # Transparent fill to create a &quot;box&quot; effect</span>
+        <span class="hl com">#size = 8        # Match or slightly larger than base point size</span>
+    <span class="hl com">#) +</span>
+
+  <span class="hl com"># Labels and theme</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span>
+    <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Clinical Parameters Correlation with Subdomain-specific Z score&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Clinical Parameters&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain (Subdomain)&quot;</span>
+  <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+    <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">),</span>
+    <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+    <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">),</span>
+    <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">24</span><span class="hl def">)</span>
+  <span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-5-1.png" alt="plot of chunk unnamed-chunk-5" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#write.table(data, &quot;data_unique.txt&quot;, sep = &quot;\t&quot;, quote = FALSE, row.names = FALSE)</span>
+</pre></div>
+</div></div>
+
+
+    
+##################################################################################################################################################
+# Open the merged clinical parameter correlation table for the sigificant subdomain in each catagory (P value < 0.05) -continious variables
+
+data1 <- read.csv("clinical_parameter_correlation_with_sig_pval_continious.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(data1)
+
+
+# Step 1: Identify matching `Biodomain_Subdomain` for each `Metadata` across groups
+#data1 <- data1 %>%
+    #group_by(Metadata, Biodomain_Subdomain) %>%
+    #mutate(Matching = if_else(n_distinct(Group) > 1, TRUE, FALSE)) %>%
+    #ungroup()
+
+
+# Step 2: Reorder the Group factor with the desired order
+#data1$Group <- factor(data1$Group, levels = c("CT_female", "AD_female", "AsymAD_female", "CT_male", "AD_male", "AsymAD_male"))
+
+data1$Metadata <- recode(data1$Metadata,
+                        "cts_mmse30_lv" = "MMSE"
+                        )
+
+# Step 3: Bubble plot  with square boxes for unique Biodomain_Subdomain
+
+plot_cont <- ggplot(data1, aes(x = Metadata, y = Biodomain_Subdomain, fill = Correlation, size = nl10_FDR_p_value)) +
+    geom_point(shape = 21, color = "black") +  # Bubble plot
+  
+# Increase overall size of the bubbles
+    scale_size(range = c(4, 12), name = "-log10(FDR P-value)") +
+  
+    scale_fill_gradient2(low = "orange", mid = "white", high = "darkgreen", midpoint = 0, name = "Correlation") +  # Color scale
+  
+    labs(
+        title = "Clinical Parameters Correlation with Subdomain-specific Z score",
+        x = "Clinical Parameters",
+        y = "Biodomain_Subdomain",
+        fill = "Correlation value",
+        size = "-log10(P-value)"
+    ) +
+  theme_minimal(base_size = 18) +
+  theme(
+    text = element_text(size = 14),
+    axis.text.x = element_text(size = 18, hjust = 1, angle = 45),
+    axis.text.y = element_text(size = 14),  # Reduce size slightly if too long
+    axis.title = element_text(size = 18),
+    strip.text = element_text(size = 24)
+  )
+
+##################################################################################################################################################
+ # Use shared legend for combined ggplots
+library(patchwork)
+library(ggpubr)
+theme_set(theme_pubr())
+
+
+#ggarrange(
+  #plot_cat, plot_cont, labels = c("A", "B"),
+  #common.legend = TRUE, legend = "bottom"
+  #)
+
+plot_cat + plot_cont
+
+
+end.rcode-->
+
+
+
+
+</body>
+</html>

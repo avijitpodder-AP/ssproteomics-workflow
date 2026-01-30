@@ -1,0 +1,1892 @@
+<html>
+
+<head>
+<style type="text/css">
+.inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.sng {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.def {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+<title>Avijit Podder Date: May7, 2025</title>
+
+<head color="blue">
+
+<h1><font color="blue">Graph construction using individual subdomain Specific Z score for TMT Proteomics from the ROSMAP Cohort (Graph based clustering AD + AsymAD)</font></h1>
+
+</head>
+
+<body>
+
+
+<p>Graph-based Clustering using subdomain Specific Z score Distributions Results</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(reshape2)
+library(dplyr)
+library(igraph)
+library(tidyr)
+library(DT)
+library(pheatmap)
+library(ggraph)
+library(ggplot2)
+library(ggrepel)
+library(tidygraph)
+library(gplots)
+library("ggplot2")
+library(reshape2)
+library(RColorBrewer)
+library(dplyr)
+library(viridis)
+library(ggrepel)
+library(corrplot)
+library(plotly)
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AD_male
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AD_male.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AD_male <- sig_subdomain_AD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AD_male <- sig_subdomain_AD_male[, !(colnames(sig_subdomain_AD_male) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AD_male)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AD_male_pos <- sig_subdomain_AD_male
+sig_subdomain_AD_male_pos[sig_subdomain_AD_male_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AD_male_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_male_pos_edge <- melt(sig_subdomain_AD_male_pos)
+
+dim(sig_subdomain_AD_male_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_male_pos_edge <- filter(sig_subdomain_AD_male_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AD_male_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_male_pos_edge, file = "sig_subdomain_AD_male_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AD_male_neg <- sig_subdomain_AD_male
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AD_male_neg[, -1] <- lapply(sig_subdomain_AD_male_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AD_male_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_male_neg_edge <- melt(sig_subdomain_AD_male_neg)
+
+dim(sig_subdomain_AD_male_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_male_neg_edge <- filter(sig_subdomain_AD_male_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AD_male_neg_edge$value <- abs(sig_subdomain_AD_male_neg_edge$value)
+
+
+dim(sig_subdomain_AD_male_neg_edge)
+
+head(sig_subdomain_AD_male_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_male_neg_edge, file = "sig_subdomain_AD_male_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AD_female
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AD_female.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AD_female <- sig_subdomain_AD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AD_female <- sig_subdomain_AD_female[, !(colnames(sig_subdomain_AD_female) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AD_female)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AD_female_pos <- sig_subdomain_AD_female
+sig_subdomain_AD_female_pos[sig_subdomain_AD_female_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AD_female_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_female_pos_edge <- melt(sig_subdomain_AD_female_pos)
+
+dim(sig_subdomain_AD_female_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_female_pos_edge <- filter(sig_subdomain_AD_female_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AD_female_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_female_pos_edge, file = "sig_subdomain_AD_female_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AD_female_neg <- sig_subdomain_AD_female
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AD_female_neg[, -1] <- lapply(sig_subdomain_AD_female_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AD_female_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_female_neg_edge <- melt(sig_subdomain_AD_female_neg)
+
+dim(sig_subdomain_AD_female_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_female_neg_edge <- filter(sig_subdomain_AD_female_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AD_female_neg_edge$value <- abs(sig_subdomain_AD_female_neg_edge$value)
+
+
+dim(sig_subdomain_AD_female_neg_edge)
+
+head(sig_subdomain_AD_female_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_female_neg_edge, file = "sig_subdomain_AD_female_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AsymAD_male
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AsymAD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AsymAD_male.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AsymAD_male <- sig_subdomain_AsymAD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AsymAD_male <- sig_subdomain_AsymAD_male[, !(colnames(sig_subdomain_AsymAD_male) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AsymAD_male)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AsymAD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AsymAD_male_pos <- sig_subdomain_AsymAD_male
+sig_subdomain_AsymAD_male_pos[sig_subdomain_AsymAD_male_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AsymAD_male_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_male_pos_edge <- melt(sig_subdomain_AsymAD_male_pos)
+
+dim(sig_subdomain_AsymAD_male_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_male_pos_edge <- filter(sig_subdomain_AsymAD_male_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AsymAD_male_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_male_pos_edge, file = "sig_subdomain_AsymAD_male_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AsymAD_male_neg <- sig_subdomain_AsymAD_male
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AsymAD_male_neg[, -1] <- lapply(sig_subdomain_AsymAD_male_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AsymAD_male_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_male_neg_edge <- melt(sig_subdomain_AsymAD_male_neg)
+
+dim(sig_subdomain_AsymAD_male_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_male_neg_edge <- filter(sig_subdomain_AsymAD_male_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AsymAD_male_neg_edge$value <- abs(sig_subdomain_AsymAD_male_neg_edge$value)
+
+
+dim(sig_subdomain_AsymAD_male_neg_edge)
+
+head(sig_subdomain_AsymAD_male_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_male_neg_edge, file = "sig_subdomain_AsymAD_male_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AsymAD_female
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AsymAD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AsymAD_female.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AsymAD_female <- sig_subdomain_AsymAD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AsymAD_female <- sig_subdomain_AsymAD_female[, !(colnames(sig_subdomain_AsymAD_female) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AsymAD_female)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AsymAD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AsymAD_female_pos <- sig_subdomain_AsymAD_female
+sig_subdomain_AsymAD_female_pos[sig_subdomain_AsymAD_female_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AsymAD_female_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_female_pos_edge <- melt(sig_subdomain_AsymAD_female_pos)
+
+dim(sig_subdomain_AsymAD_female_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_female_pos_edge <- filter(sig_subdomain_AsymAD_female_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AsymAD_female_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_female_pos_edge, file = "sig_subdomain_AsymAD_female_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AsymAD_female_neg <- sig_subdomain_AsymAD_female
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AsymAD_female_neg[, -1] <- lapply(sig_subdomain_AsymAD_female_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AsymAD_female_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_female_neg_edge <- melt(sig_subdomain_AsymAD_female_neg)
+
+dim(sig_subdomain_AsymAD_female_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_female_neg_edge <- filter(sig_subdomain_AsymAD_female_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AsymAD_female_neg_edge$value <- abs(sig_subdomain_AsymAD_female_neg_edge$value)
+
+
+dim(sig_subdomain_AsymAD_female_neg_edge)
+
+head(sig_subdomain_AsymAD_female_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_female_neg_edge, file = "sig_subdomain_AsymAD_female_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+# Merge the datasets by stacking them together
+#sig_subdomain_proteomics <- rbind(sig_subdomain_AD_male_pos_edge, sig_subdomain_AD_male_neg_edge, sig_subdomain_AD_female_pos_edge, sig_subdomain_AD_female_neg_edge, #sig_subdomain_AsymAD_male_pos_edge, sig_subdomain_AsymAD_male_neg_edge, sig_subdomain_AsymAD_female_pos_edge, sig_subdomain_AsymAD_female_neg_edge)
+
+#head(sig_subdomain_proteomics)
+
+#dim(sig_subdomain_proteomics)
+
+
+# Write the data frame to a file
+#write.table(sig_subdomain_proteomics, file = "sig_subdomain_proteomics_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+end.rcode-->
+
+<p>Analysis and Visualization of Graph-based Clustering Results</p>
+
+<div class="chunk" id="unnamed-chunk-1"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(reshape2)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'dplyr'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(igraph)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'igraph'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:dplyr':
+## 
+##     as_data_frame, groups, union
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:stats':
+## 
+##     decompose, spectrum
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:base':
+## 
+##     union
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'tidyr'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:igraph':
+## 
+##     crossing
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:reshape2':
+## 
+##     smiths
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(DT)</span>
+<span class="hl kwd">library</span><span class="hl def">(pheatmap)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggraph)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## Loading required package: ggplot2
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: package 'ggplot2' was built under R version 4.5.2
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggrepel)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidygraph)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'tidygraph'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:igraph':
+## 
+##     groups
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:stats':
+## 
+##     filter
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(gplots)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'gplots'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:stats':
+## 
+##     lowess
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(</span><span class="hl sng">&quot;ggplot2&quot;</span><span class="hl def">)</span>
+<span class="hl kwd">library</span><span class="hl def">(reshape2)</span>
+<span class="hl kwd">library</span><span class="hl def">(RColorBrewer)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(viridis)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## Loading required package: viridisLite
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggrepel)</span>
+<span class="hl kwd">library</span><span class="hl def">(corrplot)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## corrplot 0.95 loaded
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(plotly)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'plotly'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:ggplot2':
+## 
+##     last_plot
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:igraph':
+## 
+##     groups
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:stats':
+## 
+##     filter
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:graphics':
+## 
+##     layout
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(scales)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'scales'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:viridis':
+## 
+##     viridis_pal
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(forcats)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyverse)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: package 'readr' was built under R version 4.5.2
+</pre></div>
+<div class="message"><pre class="knitr r">## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ lubridate 1.9.4     ✔ stringr   1.6.0
+## ✔ purrr     1.2.0     ✔ tibble    3.3.0
+## ✔ readr     2.1.6
+</pre></div>
+<div class="message"><pre class="knitr r">## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ lubridate::%--%()       masks igraph::%--%()
+## ✖ tibble::as_data_frame() masks igraph::as_data_frame(), dplyr::as_data_frame()
+## ✖ readr::col_factor()     masks scales::col_factor()
+## ✖ purrr::compose()        masks igraph::compose()
+## ✖ tidyr::crossing()       masks igraph::crossing()
+## ✖ purrr::discard()        masks scales::discard()
+## ✖ plotly::filter()        masks tidygraph::filter(), dplyr::filter(), stats::filter()
+## ✖ dplyr::lag()            masks stats::lag()
+## ✖ purrr::simplify()       masks igraph::simplify()
+## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Open the graph/network structure data</span>
+<span class="hl com">#graph &lt;- read.csv(&quot;Infomap_graph.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+
+<span class="hl com">#head(graph)</span>
+
+
+<span class="hl com"># Distributions of Infomap cluster results</span>
+<span class="hl def">infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;Infomap_clusters_081125.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl kwd">head</span><span class="hl def">(infomap_clusters)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Sno    Nodes    Attributes InfoMap_cluster
+## 1  29 b44.128C     AD_female               1
+## 2  51 b64.131N     AD_female               1
+## 3  52 b36.127N     AD_female               1
+## 4  53 b15.130N     AD_female               1
+## 5  24 b47.128C       AD_male               1
+## 6   7 b51.132C AsymAD_female               1
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Open the Network-based Community detection table</span>
+<span class="hl def">infomap_clusters_sds</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;Infomap_clusters_sds_081125.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl kwd">head</span><span class="hl def">(infomap_clusters_sds)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Sno InfoMap_cluster Nodes         unique_id    Biodomain
+## 1 141               1    UP     Ap_others_1 +    Apoptosis
+## 2 143               1    UP Ap_roceaiiap_11 +    Apoptosis
+## 3 148               1    UP         Au_ph_4 +    Autophagy
+## 4 153               1    UP        DR_Ddr_1 +   DNA Repair
+## 5 165               1    UP        En_re_10 + Endolysosome
+## 6 167               1    UP         En_ri_9 + Endolysosome
+##                                                                          Subdomain
+## 1                                                                             &lt;NA&gt;
+## 2 regulation of cysteine-type endopeptidase activity involved in apoptotic process
+## 3                                                                     phagocytosis
+## 4                                                              DNA damage response
+## 5                                                    receptor-mediated endocytosis
+## 6                                                         receptor internalization
+##                                                                          Biodomain_Subdomain
+## 1                                                                           Apoptosis_others
+## 2 Apoptosis_regulation_of_cysteine-type_endopeptidase_activity_involved_in_apoptotic_process
+## 3                                                                     Autophagy_phagocytosis
+## 4                                                             DNA_Repair_DNA_damage_response
+## 5                                                 Endolysosome_receptor-mediated_endocytosis
+## 6                                                      Endolysosome_receptor_internalization
+##    X X.1 X.2 X.3 X.4
+## 1 NA  NA  NA  NA  NA
+## 2 NA  NA  NA  NA  NA
+## 3 NA  NA  NA  NA  NA
+## 4 NA  NA  NA  NA  NA
+## 5 NA  NA  NA  NA  NA
+## 6 NA  NA  NA  NA  NA
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com"># Define total subject counts for each group</span>
+<span class="hl def">total_subjects</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+  <span class="hl sng">&quot;AD_male&quot;</span> <span class="hl def">=</span> <span class="hl num">47</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AD_female&quot;</span> <span class="hl def">=</span> <span class="hl num">128</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AsymAD_male&quot;</span> <span class="hl def">=</span> <span class="hl num">61</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AsymAD_female&quot;</span> <span class="hl def">=</span> <span class="hl num">159</span>
+<span class="hl def">)</span>
+
+
+<span class="hl com"># Categorize rows into Attributes (UP, DOWN, AD_male, AD_female, AsymaAD_male and AsymAD_female)</span>
+
+<span class="hl def">infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span>
+        <span class="hl kwc">Category</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+            <span class="hl def">Attributes</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl def">Attributes,</span>
+            <span class="hl def">Attributes</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl def">Attributes,</span>
+            <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl num">NA_character_</span>
+        <span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(</span><span class="hl opt">!</span><span class="hl kwd">is.na</span><span class="hl def">(Category))</span>  <span class="hl com"># Keep only rows with valid categories</span>
+
+
+
+<span class="hl com"># Count occurrences of each Category within each InfoMap_cluster</span>
+<span class="hl def">summary_infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">group_by</span><span class="hl def">(InfoMap_cluster, Category)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">summarise</span><span class="hl def">(</span><span class="hl kwc">Count</span> <span class="hl def">=</span> <span class="hl kwd">n</span><span class="hl def">(),</span> <span class="hl kwc">.groups</span> <span class="hl def">=</span> <span class="hl sng">&quot;drop&quot;</span><span class="hl def">)</span>
+
+
+
+<span class="hl com"># Percent for individuals, count for UP/DOWN</span>
+<span class="hl def">summary_infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">summary_infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">Value</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+      <span class="hl def">Category</span> <span class="hl opt">%in%</span> <span class="hl kwd">names</span><span class="hl def">(total_subjects)</span> <span class="hl opt">~</span> <span class="hl kwd">round</span><span class="hl def">((Count</span> <span class="hl opt">/</span> <span class="hl def">total_subjects[Category])</span> <span class="hl opt">*</span> <span class="hl num">100</span><span class="hl def">,</span> <span class="hl num">1</span><span class="hl def">),</span>
+      <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl kwd">as.numeric</span><span class="hl def">(Count)</span>
+    <span class="hl def">)</span>
+  <span class="hl def">)</span>
+
+<span class="hl kwd">head</span><span class="hl def">(summary_infomap_clusters)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## # A tibble: 6 × 4
+##   InfoMap_cluster Category      Count Value
+##             &lt;int&gt; &lt;chr&gt;         &lt;int&gt; &lt;dbl&gt;
+## 1               1 AD_female         4   3.1
+## 2               1 AD_male           1   2.1
+## 3               1 AsymAD_female     8   5  
+## 4               1 AsymAD_male       5   8.2
+## 5               1 UP               35  35  
+## 6               2 AD_female         1   0.8
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com"># Define order</span>
+<span class="hl def">status_categories</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Biodomain summary</span>
+<span class="hl def">biodomain_summary</span> <span class="hl kwb">&lt;-</span> <span class="hl def">infomap_clusters_sds</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">Direction</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(Nodes</span> <span class="hl opt">==</span> <span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">))</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">count</span><span class="hl def">(InfoMap_cluster, Biodomain, Direction,</span> <span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">Category</span> <span class="hl def">= Biodomain)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">pivot_wider</span><span class="hl def">(</span><span class="hl kwc">names_from</span> <span class="hl def">= Direction,</span> <span class="hl kwc">values_from</span> <span class="hl def">= Count,</span> <span class="hl kwc">values_fill</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">Count</span> <span class="hl def">= UP</span> <span class="hl opt">+</span> <span class="hl def">DOWN,</span>
+    <span class="hl kwc">NetDirection</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+      <span class="hl def">UP</span> <span class="hl opt">&gt;</span> <span class="hl def">DOWN</span> <span class="hl opt">~</span> <span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span>
+      <span class="hl def">DOWN</span> <span class="hl opt">&gt;</span> <span class="hl def">UP</span> <span class="hl opt">~</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">,</span>
+      <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl sng">&quot;Neutral&quot;</span>
+    <span class="hl def">)</span>
+  <span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(NetDirection</span> <span class="hl opt">!=</span> <span class="hl sng">&quot;Neutral&quot;</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">select</span><span class="hl def">(InfoMap_cluster, Category, Count,</span> <span class="hl kwc">Direction</span> <span class="hl def">= NetDirection)</span>
+
+
+<span class="hl com"># Merge with original summary</span>
+<span class="hl def">original_summary</span> <span class="hl kwb">&lt;-</span> <span class="hl def">summary_infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">Direction</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+      <span class="hl def">Category</span> <span class="hl opt">%in%</span> <span class="hl def">status_categories</span> <span class="hl opt">~</span> <span class="hl sng">&quot;Status&quot;</span><span class="hl def">,</span>
+      <span class="hl def">Category</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl sng">&quot;Total&quot;</span><span class="hl def">,</span>
+      <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl num">NA_character_</span>
+    <span class="hl def">),</span>
+    <span class="hl kwc">Value</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(Direction</span> <span class="hl opt">==</span> <span class="hl sng">&quot;Status&quot;</span><span class="hl def">, Value, Count)</span>
+  <span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(</span><span class="hl opt">!</span><span class="hl kwd">is.na</span><span class="hl def">(Direction))</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">select</span><span class="hl def">(InfoMap_cluster, Category, Value, Direction)</span>
+
+<span class="hl com"># Combine data</span>
+<span class="hl def">merged_data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">bind_rows</span><span class="hl def">(</span>
+  <span class="hl def">original_summary,</span>
+  <span class="hl def">biodomain_summary</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">rename</span><span class="hl def">(</span><span class="hl kwc">Value</span> <span class="hl def">= Count)</span>
+<span class="hl def">)</span>
+
+<span class="hl com"># Define order</span>
+<span class="hl def">biodomain_categories</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(biodomain_summary</span><span class="hl opt">$</span><span class="hl def">Category))</span>
+<span class="hl def">final_x_order</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(status_categories, biodomain_categories,</span> <span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">)</span>
+<span class="hl def">merged_data</span><span class="hl opt">$</span><span class="hl def">Category</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(merged_data</span><span class="hl opt">$</span><span class="hl def">Category,</span> <span class="hl kwc">levels</span> <span class="hl def">= final_x_order)</span>
+<span class="hl def">merged_data</span><span class="hl opt">$</span><span class="hl def">InfoMap_cluster</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(merged_data</span><span class="hl opt">$</span><span class="hl def">InfoMap_cluster,</span>
+                                      <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(merged_data</span><span class="hl opt">$</span><span class="hl def">InfoMap_cluster),</span> <span class="hl kwc">decreasing</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+
+<span class="hl com"># Custom fill color using improved gradients</span>
+<span class="hl def">merged_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">merged_data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">fill_color</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+      <span class="hl def">Direction</span> <span class="hl opt">==</span> <span class="hl sng">&quot;Status&quot;</span> <span class="hl opt">~</span> <span class="hl kwd">col_numeric</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;purple&quot;</span><span class="hl def">),</span> <span class="hl kwc">domain</span> <span class="hl def">=</span> <span class="hl kwa">NULL</span><span class="hl def">)(Value),</span>
+      <span class="hl def">Direction</span> <span class="hl opt">==</span> <span class="hl sng">&quot;UP&quot;</span>     <span class="hl opt">~</span> <span class="hl kwd">col_numeric</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;#e6f5e6&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;#006400&quot;</span><span class="hl def">),</span> <span class="hl kwc">domain</span> <span class="hl def">=</span> <span class="hl kwa">NULL</span><span class="hl def">)(Value),</span>
+      <span class="hl def">Direction</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span>   <span class="hl opt">~</span> <span class="hl kwd">col_numeric</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;#ffe5e5&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;#8B0000&quot;</span><span class="hl def">),</span> <span class="hl kwc">domain</span> <span class="hl def">=</span> <span class="hl kwa">NULL</span><span class="hl def">)(Value),</span>
+      <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl sng">&quot;grey90&quot;</span>
+    <span class="hl def">)</span>
+  <span class="hl def">)</span>
+
+
+
+<span class="hl com"># Plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(merged_data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Category,</span> <span class="hl kwc">y</span> <span class="hl def">= InfoMap_cluster))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_tile</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">= fill_color),</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl kwc">linewidth</span> <span class="hl def">=</span> <span class="hl num">0.4</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Cell border</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">round</span><span class="hl def">(Value,</span> <span class="hl num">1</span><span class="hl def">)),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_fill_identity</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_y_discrete</span><span class="hl def">(</span><span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;InfoMap Cluster&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_x_discrete</span><span class="hl def">(</span><span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;Category&quot;</span><span class="hl def">,</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl sng">&quot;top&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+  <span class="hl com"># Add horizontal lines between rows (row borders)</span>
+  <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl kwd">seq</span><span class="hl def">(</span><span class="hl num">1.5</span><span class="hl def">,</span> <span class="hl kwd">length</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(merged_data</span><span class="hl opt">$</span><span class="hl def">InfoMap_cluster))</span> <span class="hl opt">+</span> <span class="hl num">0.5</span><span class="hl def">,</span> <span class="hl kwc">by</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+             <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">linewidth</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Add column borders</span>
+  <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl kwd">seq</span><span class="hl def">(</span><span class="hl num">1.5</span><span class="hl def">,</span> <span class="hl kwd">length</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(merged_data</span><span class="hl opt">$</span><span class="hl def">Category))</span> <span class="hl opt">+</span> <span class="hl num">0.5</span><span class="hl def">,</span> <span class="hl kwc">by</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+             <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">linewidth</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+  <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">),</span>
+    <span class="hl kwc">panel.grid</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">()</span>
+  <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Enhanced Cluster-wise Heatmap: Status %, Biodomain Direction &amp; Total Counts&quot;</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-1.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+
+<span class="hl com"># Filter by Status - individual count in each cluster for each catagory &gt; 5%)</span>
+
+<span class="hl com"># Step 1: Identify eligible clusters</span>
+<span class="hl com">#eligible_clusters &lt;- merged_data %&gt;%</span>
+  <span class="hl com">#filter(Category %in% status_categories, Value &gt; 5) %&gt;%</span>
+  <span class="hl com">#pull(InfoMap_cluster) %&gt;%</span>
+  <span class="hl com">#unique()</span>
+
+<span class="hl com"># Step 2: Filter merged_data for eligible clusters only</span>
+<span class="hl com">#filtered_data &lt;- merged_data %&gt;%</span>
+  <span class="hl com">#filter(InfoMap_cluster %in% eligible_clusters)</span>
+
+<span class="hl com"># Step 3: Reorder levels to match filtered data</span>
+<span class="hl com">#filtered_data$Category &lt;- factor(filtered_data$Category, levels = final_x_order)</span>
+
+<span class="hl com">#filtered_data$InfoMap_cluster &lt;- factor(</span>
+  <span class="hl com">#filtered_data$InfoMap_cluster,</span>
+  <span class="hl com">#levels = sort(unique(filtered_data$InfoMap_cluster))  # ascending: Cluster 1 at top</span>
+<span class="hl com">#)</span>
+
+<span class="hl com"># manually define clusters of interest</span>
+<span class="hl def">selected_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl def">,</span> <span class="hl num">2</span><span class="hl def">,</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl num">6</span><span class="hl def">,</span> <span class="hl num">15</span><span class="hl def">,</span> <span class="hl num">16</span><span class="hl def">,</span> <span class="hl num">21</span><span class="hl def">)</span>
+
+<span class="hl com"># filter merged_data to keep only those clusters</span>
+<span class="hl def">filtered_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">merged_data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(InfoMap_cluster</span> <span class="hl opt">%in%</span> <span class="hl def">selected_clusters)</span>
+
+
+
+<span class="hl com"># Step 4: Plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(filtered_data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Category,</span> <span class="hl kwc">y</span> <span class="hl def">= InfoMap_cluster))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_tile</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">= fill_color),</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl kwc">linewidth</span> <span class="hl def">=</span> <span class="hl num">0.4</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">round</span><span class="hl def">(Value,</span> <span class="hl num">1</span><span class="hl def">)),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_fill_identity</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_y_discrete</span><span class="hl def">(</span><span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;InfoMap Cluster&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_x_discrete</span><span class="hl def">(</span><span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;Category&quot;</span><span class="hl def">,</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl sng">&quot;top&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># moved labels to top</span>
+
+    <span class="hl com"># Add horizontal lines between rows (row borders)</span>
+  <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl kwd">seq</span><span class="hl def">(</span><span class="hl num">1.5</span><span class="hl def">,</span> <span class="hl kwd">length</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(filtered_data</span><span class="hl opt">$</span><span class="hl def">InfoMap_cluster))</span> <span class="hl opt">+</span> <span class="hl num">0.5</span><span class="hl def">,</span> <span class="hl kwc">by</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+             <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">linewidth</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Add column borders</span>
+  <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl kwd">seq</span><span class="hl def">(</span><span class="hl num">1.5</span><span class="hl def">,</span> <span class="hl kwd">length</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(filtered_data</span><span class="hl opt">$</span><span class="hl def">Category))</span> <span class="hl opt">+</span> <span class="hl num">0.5</span><span class="hl def">,</span> <span class="hl kwc">by</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+             <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">linewidth</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+
+  <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">),</span>
+    <span class="hl kwc">panel.grid</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">()</span>
+  <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Filtered Clusters with individual count in each cluster &gt; 10%&quot;</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-2.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com">#  Create a color mapping</span>
+<span class="hl def">long_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">summary_infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">FillType</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+      <span class="hl def">Category</span> <span class="hl opt">==</span> <span class="hl sng">&quot;UP&quot;</span> <span class="hl opt">~</span> <span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span>
+      <span class="hl def">Category</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span> <span class="hl opt">~</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">,</span>
+      <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl sng">&quot;Percent&quot;</span>
+    <span class="hl def">),</span>
+    <span class="hl kwc">FillColor</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+      <span class="hl def">Category</span> <span class="hl opt">==</span> <span class="hl sng">&quot;UP&quot;</span> <span class="hl opt">~</span> <span class="hl sng">&quot;green&quot;</span><span class="hl def">,</span>
+      <span class="hl def">Category</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span> <span class="hl opt">~</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">,</span>
+      <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl def">scales</span><span class="hl opt">::</span><span class="hl kwd">col_numeric</span><span class="hl def">(</span>
+        <span class="hl kwc">palette</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;steelblue&quot;</span><span class="hl def">),</span>
+        <span class="hl kwc">domain</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">0</span><span class="hl def">,</span> <span class="hl num">100</span><span class="hl def">)</span>
+      <span class="hl def">)(Value)</span>
+    <span class="hl def">),</span>
+    <span class="hl kwc">Label</span> <span class="hl def">=</span> <span class="hl kwd">if_else</span><span class="hl def">(FillType</span> <span class="hl opt">==</span> <span class="hl sng">&quot;Percent&quot;</span><span class="hl def">,</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">round</span><span class="hl def">(Value,</span> <span class="hl num">1</span><span class="hl def">),</span> <span class="hl sng">&quot;%&quot;</span><span class="hl def">),</span> <span class="hl kwd">as.character</span><span class="hl def">(Value)),</span>
+    <span class="hl kwc">InfoMap_cluster</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(InfoMap_cluster,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(InfoMap_cluster),</span> <span class="hl kwc">decreasing</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>  <span class="hl com"># Reverse order</span>
+  <span class="hl def">)</span>
+
+
+<span class="hl com"># Plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(long_data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Category,</span> <span class="hl kwc">y</span> <span class="hl def">= InfoMap_cluster))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_tile</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">= FillColor),</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl kwc">linewidth</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">= Label),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_fill_identity</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span>
+    <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Cluster-wise Distribution of UP/DOWN Counts and Subject Category Percentages&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Category&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;InfoMap Cluster&quot;</span>
+  <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+    <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+    <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span>
+  <span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-3.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com"># Network diagram with highlighted the clusters</span>
+
+<span class="hl com"># Open the graph/network structure data</span>
+<span class="hl com">#graph &lt;- read.csv(&quot;Infomap_graph.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl def">graph</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;Infomap_graph_081125.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">head</span><span class="hl def">(graph)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Sno           Node1     Unique_ID                     Biodomain
+## 1   1      LM_gmp_6 +      LM_gmp_6              Lipid_Metabolism
+## 2   2     SS_mpod_6 +     SS_mpod_6      Structural_Stabilization
+## 3   3 MBaH_oaaomi_5 + MBaH_oaaomi_5 Metal_Binding_and_Homeostasis
+## 4   4  MBaH_romit_6 +  MBaH_romit_6 Metal_Binding_and_Homeostasis
+## 5   5  MBaH_romit_6 +  MBaH_romit_6 Metal_Binding_and_Homeostasis
+## 6   6  MBaH_romit_6 +  MBaH_romit_6 Metal_Binding_and_Homeostasis
+##                                        Subdomain
+## 1                   glycolipid_metabolic_process
+## 2 microtubule_polymerization_or_depolymerization
+## 3  oxidoreductase_activity,_acting_on_metal_ions
+## 4              regulation_of_metal_ion_transport
+## 5              regulation_of_metal_ion_transport
+## 6              regulation_of_metal_ion_transport
+##                                                           Biodomain_Subdomain
+## 1                               Lipid_Metabolism_glycolipid_metabolic_process
+## 2     Structural_Stabilization_microtubule_polymerization_or_depolymerization
+## 3 Metal_Binding_and_Homeostasis_oxidoreductase_activity,_acting_on_metal_ions
+## 4             Metal_Binding_and_Homeostasis_regulation_of_metal_ion_transport
+## 5             Metal_Binding_and_Homeostasis_regulation_of_metal_ion_transport
+## 6             Metal_Binding_and_Homeostasis_regulation_of_metal_ion_transport
+##   Interaction      IDs      Status       Node2
+## 1          PP b63.132N AsymAD_male  AsymAD_M_2
+## 2          PP b54.129N AsymAD_male AsymAD_M_13
+## 3          PP b52.128N AsymAD_male AsymAD_M_24
+## 4          PP b62.130C AsymAD_male  AsymAD_M_8
+## 5          PP b58.127C AsymAD_male AsymAD_M_31
+## 6          PP b11.128C AsymAD_male  AsymAD_M_5
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Open the graph/network attributes data</span>
+<span class="hl com">#attributes &lt;- read.csv(&quot;Infomap_graph_attributes.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl def">attributes</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;Infomap_graph_attributes_081125.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">head</span><span class="hl def">(attributes)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##        Nodes    Attributes InfoMap_cluster
+## 1     AD_F_4     AD_female               1
+## 2     AD_F_3     AD_female               1
+## 3     AD_F_2     AD_female               1
+## 4     AD_F_1     AD_female               1
+## 5     AD_M_1       AD_male               1
+## 6 AsymAD_F_8 AsymAD_female               1
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+
+<span class="hl com"># 1. Prepare edge list</span>
+<span class="hl def">edges</span> <span class="hl kwb">&lt;-</span> <span class="hl def">graph</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">rename</span><span class="hl def">(</span><span class="hl kwc">from</span> <span class="hl def">= Node1,</span> <span class="hl kwc">to</span> <span class="hl def">= Node2)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">select</span><span class="hl def">(from, to)</span>
+
+<span class="hl com"># 2. Create node list from unique nodes in edges</span>
+<span class="hl def">edge_nodes</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">unique</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(edges</span><span class="hl opt">$</span><span class="hl def">from, edges</span><span class="hl opt">$</span><span class="hl def">to))</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">tibble</span><span class="hl def">(</span><span class="hl kwc">name</span> <span class="hl def">= .)</span>
+
+<span class="hl com"># 3. Prepare attribute data</span>
+<span class="hl def">attributes_clean</span> <span class="hl kwb">&lt;-</span> <span class="hl def">attributes</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">rename</span><span class="hl def">(</span><span class="hl kwc">name</span> <span class="hl def">= Nodes)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">select</span><span class="hl def">(name, Attributes, InfoMap_cluster)</span>
+
+<span class="hl com"># 4. Merge to form complete node metadata</span>
+<span class="hl def">nodes</span> <span class="hl kwb">&lt;-</span> <span class="hl def">edge_nodes</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">left_join</span><span class="hl def">(attributes_clean,</span> <span class="hl kwc">by</span> <span class="hl def">=</span> <span class="hl sng">&quot;name&quot;</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">Attr</span> <span class="hl def">=</span> <span class="hl kwd">replace_na</span><span class="hl def">(Attributes,</span> <span class="hl sng">&quot;Unassigned&quot;</span><span class="hl def">),</span>
+    <span class="hl kwc">InfomapCluster</span> <span class="hl def">=</span> <span class="hl kwd">as.integer</span><span class="hl def">(InfoMap_cluster),</span>
+    <span class="hl kwc">NodeShape</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+      <span class="hl def">Attr</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl sng">&quot;AD Subdomain&quot;</span><span class="hl def">,</span>
+      <span class="hl def">Attr</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl sng">&quot;AD Subject&quot;</span><span class="hl def">,</span>
+      <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl sng">&quot;circle&quot;</span>
+    <span class="hl def">)</span>
+  <span class="hl def">)</span>
+
+<span class="hl com"># 5. Create zero-padded cluster labels</span>
+<span class="hl def">unique_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(nodes</span><span class="hl opt">$</span><span class="hl def">InfomapCluster[</span><span class="hl opt">!</span><span class="hl kwd">is.na</span><span class="hl def">(nodes</span><span class="hl opt">$</span><span class="hl def">InfomapCluster)]))</span>
+<span class="hl def">ordered_labels</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sprintf</span><span class="hl def">(</span><span class="hl sng">&quot;Cluster %02d&quot;</span><span class="hl def">, unique_clusters)</span>
+
+<span class="hl def">nodes</span> <span class="hl kwb">&lt;-</span> <span class="hl def">nodes</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">ClusterLabel</span> <span class="hl def">=</span> <span class="hl kwd">sprintf</span><span class="hl def">(</span><span class="hl sng">&quot;Cluster %02d&quot;</span><span class="hl def">, InfomapCluster),</span>
+    <span class="hl kwc">ClusterLabel</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(ClusterLabel,</span> <span class="hl kwc">levels</span> <span class="hl def">= ordered_labels)</span>
+  <span class="hl def">)</span>
+
+<span class="hl com"># 6. Define shape and color mappings</span>
+<span class="hl def">shape_map</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+  <span class="hl sng">&quot;AD Subdomain&quot;</span> <span class="hl def">=</span> <span class="hl num">15</span><span class="hl def">,</span>  <span class="hl com"># square</span>
+  <span class="hl sng">&quot;AD Subject&quot;</span> <span class="hl def">=</span> <span class="hl num">16</span>   <span class="hl com"># circle</span>
+<span class="hl def">)</span>
+
+<span class="hl def">attr_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+  <span class="hl sng">&quot;UP&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;seagreen1&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;DOWN&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;thistle1&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AD_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;mediumblue&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AD_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;tomato&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AsymAD_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;dodgerblue&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AsymAD_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;coral&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;Unassigned&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray70&quot;</span>
+<span class="hl def">)</span>
+
+<span class="hl com"># 7. Create graph</span>
+<span class="hl def">g</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">graph_from_data_frame</span><span class="hl def">(</span><span class="hl kwc">d</span> <span class="hl def">= edges,</span> <span class="hl kwc">vertices</span> <span class="hl def">= nodes,</span> <span class="hl kwc">directed</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com"># 8. Plot graph</span>
+<span class="hl kwd">ggraph</span><span class="hl def">(g,</span> <span class="hl kwc">layout</span> <span class="hl def">=</span> <span class="hl sng">&quot;graphopt&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_edge_link</span><span class="hl def">(</span><span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.2</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray60&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_node_point</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Attr,</span> <span class="hl kwc">shape</span> <span class="hl def">= NodeShape),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># &lt;--- added shape aesthetic</span>
+  <span class="hl kwd">geom_node_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">= name),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl kwc">repel</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.6</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= attr_colors)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_shape_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= shape_map)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">facet_nodes</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">ClusterLabel)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme_graph</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;bottom&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span>
+  <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span>
+    <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Network Clusters by InfoMap&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">subtitle</span> <span class="hl def">=</span> <span class="hl sng">&quot;Nodes colored by Attribute | Faceted by Cluster&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">shape</span> <span class="hl def">=</span> <span class="hl sng">&quot;Node Shape&quot;</span>
+  <span class="hl def">)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 44 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 12 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 31 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 128 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 12 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 18 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 66 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 38 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-4.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+
+<span class="hl com"># 1. Select clusters of interest</span>
+<span class="hl def">selected_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl def">,</span> <span class="hl num">2</span><span class="hl def">,</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl num">6</span><span class="hl def">,</span> <span class="hl num">15</span><span class="hl def">,</span> <span class="hl num">16</span><span class="hl def">,</span> <span class="hl num">21</span><span class="hl def">)</span>
+
+<span class="hl com"># Zero-padded labels like &quot;Cluster 01&quot;, &quot;Cluster 02&quot;, etc.</span>
+<span class="hl def">ordered_labels</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sprintf</span><span class="hl def">(</span><span class="hl sng">&quot;Cluster %02d&quot;</span><span class="hl def">, selected_clusters)</span>
+
+<span class="hl com"># 5. Merge with edge node list</span>
+<span class="hl def">nodes</span> <span class="hl kwb">&lt;-</span> <span class="hl def">edge_nodes</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">left_join</span><span class="hl def">(attributes_clean,</span> <span class="hl kwc">by</span> <span class="hl def">=</span> <span class="hl sng">&quot;name&quot;</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">Attr</span> <span class="hl def">=</span> <span class="hl kwd">replace_na</span><span class="hl def">(Attributes,</span> <span class="hl sng">&quot;Unassigned&quot;</span><span class="hl def">),</span>
+    <span class="hl kwc">InfomapCluster</span> <span class="hl def">=</span> <span class="hl kwd">as.integer</span><span class="hl def">(InfoMap_cluster)</span>
+  <span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(InfomapCluster</span> <span class="hl opt">%in%</span> <span class="hl def">selected_clusters)</span> <span class="hl opt">%&gt;%</span>  <span class="hl com"># Filter clusters</span>
+   <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">ClusterLabel</span> <span class="hl def">=</span> <span class="hl kwd">sprintf</span><span class="hl def">(</span><span class="hl sng">&quot;Cluster %02d&quot;</span><span class="hl def">, InfomapCluster),</span>
+    <span class="hl kwc">ClusterLabel</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(ClusterLabel,</span> <span class="hl kwc">levels</span> <span class="hl def">= ordered_labels)</span>
+  <span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">NodeShape</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+    <span class="hl def">Attr</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl sng">&quot;AD Subdomain&quot;</span><span class="hl def">,</span>
+    <span class="hl def">Attr</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl sng">&quot;AD Subject&quot;</span><span class="hl def">,</span>
+    <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl sng">&quot;circle&quot;</span>  <span class="hl com"># fallback for Unassigned or others</span>
+  <span class="hl def">))</span>
+
+<span class="hl com"># 7. Filter edges to only those between selected nodes</span>
+<span class="hl def">edges_filtered</span> <span class="hl kwb">&lt;-</span> <span class="hl def">edges</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(from</span> <span class="hl opt">%in%</span> <span class="hl def">nodes</span><span class="hl opt">$</span><span class="hl def">name</span> <span class="hl opt">&amp;</span> <span class="hl def">to</span> <span class="hl opt">%in%</span> <span class="hl def">nodes</span><span class="hl opt">$</span><span class="hl def">name)</span>
+
+<span class="hl com"># 8. Create graph</span>
+<span class="hl def">g</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">graph_from_data_frame</span><span class="hl def">(</span><span class="hl kwc">d</span> <span class="hl def">= edges_filtered,</span> <span class="hl kwc">vertices</span> <span class="hl def">= nodes,</span> <span class="hl kwc">directed</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com"># 9. Plot</span>
+<span class="hl kwd">ggraph</span><span class="hl def">(g,</span> <span class="hl kwc">layout</span> <span class="hl def">=</span> <span class="hl sng">&quot;graphopt&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_edge_link</span><span class="hl def">(</span><span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.2</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray60&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_node_point</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Attr,</span> <span class="hl kwc">shape</span> <span class="hl def">= NodeShape),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_node_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">= name),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl kwc">repel</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.6</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= attr_colors)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_shape_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= shape_map)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">facet_nodes</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">ClusterLabel,</span> <span class="hl kwc">ncol</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Respects selected and ordered clusters</span>
+  <span class="hl kwd">theme_graph</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;bottom&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span>
+  <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span>
+    <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Selected InfoMap Clusters&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">subtitle</span> <span class="hl def">=</span> <span class="hl sng">&quot;Clusters: selected 10 | Colored by Attribute&quot;</span>
+  <span class="hl def">)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 39 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 28 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 57 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 10 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 116 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 30 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 1 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-5.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com"># Boxplots of Clinical and Pathological Measures by Cluster</span>
+<span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(rstatix)</span>  <span class="hl com"># cleaner statistical output</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'rstatix'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     filter
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#data &lt;- read.csv(&quot;Infomap_clusters_with_clinicalParameters.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl def">data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;Infomap_clusters_with_clinicalParameters_082525.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">head</span><span class="hl def">(data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Sno Sample_ID        Status Infomap_cluster age_death       PMI APOE4 BRAAK
+## 1   1  b44.128C     AD_female               1  90.00000  8.450000     0     5
+## 2   2  b64.131N     AD_female               1  82.40383  6.500000     1     5
+## 3   3  b36.127N     AD_female               1  90.00000  9.500000     0     3
+## 4   4  b15.130N     AD_female               1  87.93000 19.580000     0     5
+## 5  89  b47.128C       AD_male               1  80.21000 26.500000     1     3
+## 6 131  b51.132C AsymAD_female               1  90.00000  4.183333     1     4
+##   CERAD     MMSE
+## 1     1  4.00000
+## 2     1 22.00000
+## 3     2 21.81818
+## 4     1  0.00000
+## 5     2 23.00000
+## 6     3 29.00000
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Step 1: Pivot data to long format from age_death onward</span>
+<span class="hl def">data_long</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">pivot_longer</span><span class="hl def">(</span>
+        <span class="hl kwc">cols</span> <span class="hl def">= age_death</span><span class="hl opt">:</span><span class="hl def">MMSE,</span>  <span class="hl com"># Select columns to plot</span>
+        <span class="hl kwc">names_to</span> <span class="hl def">=</span> <span class="hl sng">&quot;Variable&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">values_to</span> <span class="hl def">=</span> <span class="hl sng">&quot;Value&quot;</span>
+    <span class="hl def">)</span>
+
+<span class="hl com"># Step 2: Convert columns to factors (if needed)</span>
+<span class="hl def">data_long</span><span class="hl opt">$</span><span class="hl def">Infomap_cluster</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(data_long</span><span class="hl opt">$</span><span class="hl def">Infomap_cluster)</span>
+<span class="hl def">data_long</span><span class="hl opt">$</span><span class="hl def">Status</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(data_long</span><span class="hl opt">$</span><span class="hl def">Status)</span>
+
+
+<span class="hl com"># Step 3:Define custom colors</span>
+<span class="hl def">custom_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+    <span class="hl sng">&quot;AD_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;mediumblue&quot;</span><span class="hl def">,</span>
+    <span class="hl sng">&quot;AD_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">,</span>
+    <span class="hl sng">&quot;AsymAD_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;dodgerblue&quot;</span><span class="hl def">,</span>
+    <span class="hl sng">&quot;AsymAD_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;coral&quot;</span>
+<span class="hl def">)</span>
+
+
+<span class="hl com"># Step 4: Plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(data_long,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Infomap_cluster,</span> <span class="hl kwc">y</span> <span class="hl def">= Value))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_violin</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray90&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.4</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># violin instead of boxplot</span>
+    <span class="hl kwd">geom_jitter</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Status),</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_jitter</span><span class="hl def">(</span><span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.2</span><span class="hl def">),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">1.8</span><span class="hl def">,</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">facet_wrap</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">Variable,</span> <span class="hl kwc">scales</span> <span class="hl def">=</span> <span class="hl sng">&quot;free_y&quot;</span><span class="hl def">,</span> <span class="hl kwc">ncol</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Violin Plots of Clinical and Pathological Measures by Cluster&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Infomap Cluster&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Value&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">28</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;bottom&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">face</span> <span class="hl def">=</span> <span class="hl sng">&quot;bold&quot;</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: Removed 4 rows containing non-finite outside the scale range
+## (`stat_ydensity()`).
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: Removed 4 rows containing missing values or values outside the scale range
+## (`geom_point()`).
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-6.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com">#Pairwise Comparisons Between Clusters </span>
+
+
+<span class="hl com"># Prepare data if not already done</span>
+<span class="hl def">data_long</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">pivot_longer</span><span class="hl def">(</span>
+    <span class="hl kwc">cols</span> <span class="hl def">= age_death</span><span class="hl opt">:</span><span class="hl def">MMSE,</span>
+    <span class="hl kwc">names_to</span> <span class="hl def">=</span> <span class="hl sng">&quot;Variable&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">values_to</span> <span class="hl def">=</span> <span class="hl sng">&quot;Value&quot;</span>
+  <span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">Infomap_cluster</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(Infomap_cluster),</span>
+    <span class="hl kwc">Status</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(Status)</span>
+  <span class="hl def">)</span>
+
+<span class="hl com"># Step 1: Run pairwise Wilcoxon for all variables</span>
+<span class="hl def">pairwise_results</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_long</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">drop_na</span><span class="hl def">(Value, Infomap_cluster)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">group_by</span><span class="hl def">(Variable)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">group_modify</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">{</span>
+    <span class="hl kwd">tryCatch</span><span class="hl def">(</span>
+      <span class="hl def">{</span>
+        <span class="hl def">res</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">pairwise_wilcox_test</span><span class="hl def">(.x, Value</span> <span class="hl opt">~</span> <span class="hl def">Infomap_cluster,</span> <span class="hl kwc">p.adjust.method</span> <span class="hl def">=</span> <span class="hl sng">&quot;fdr&quot;</span><span class="hl def">)</span>
+        <span class="hl def">res</span><span class="hl opt">$</span><span class="hl def">Variable</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">unique</span><span class="hl def">(.x</span><span class="hl opt">$</span><span class="hl def">Variable)</span>  <span class="hl com"># tag results with variable name</span>
+        <span class="hl def">res</span>
+      <span class="hl def">},</span>
+      <span class="hl kwc">error</span> <span class="hl def">=</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">e</span><span class="hl def">) {</span>
+        <span class="hl com"># return a placeholder row with NA if test fails</span>
+        <span class="hl kwd">tibble</span><span class="hl def">(</span>
+          <span class="hl kwc">group1</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwc">group2</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwc">p</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwc">p.adj</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwc">p.adj.signif</span> <span class="hl def">=</span> <span class="hl num">NA</span><span class="hl def">,</span>
+          <span class="hl kwc">Variable</span> <span class="hl def">=</span> <span class="hl kwd">unique</span><span class="hl def">(.x</span><span class="hl opt">$</span><span class="hl def">Variable)</span>
+        <span class="hl def">)</span>
+      <span class="hl def">}</span>
+    <span class="hl def">)</span>
+  <span class="hl def">})</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">ungroup</span><span class="hl def">()</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: Unknown or uninitialised column: `Variable`.
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: Unknown or uninitialised column: `Variable`.
+## Unknown or uninitialised column: `Variable`.
+## Unknown or uninitialised column: `Variable`.
+## Unknown or uninitialised column: `Variable`.
+## Unknown or uninitialised column: `Variable`.
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Step 2: Filter significant results (if any)</span>
+<span class="hl def">significant_results</span> <span class="hl kwb">&lt;-</span> <span class="hl def">pairwise_results</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(</span><span class="hl opt">!</span><span class="hl kwd">is.na</span><span class="hl def">(p.adj)</span> <span class="hl opt">&amp;</span> <span class="hl def">p.adj</span> <span class="hl opt">&lt;</span> <span class="hl num">0.05</span><span class="hl def">)</span>
+
+<span class="hl com"># Step 3: Print significant comparisons</span>
+<span class="hl kwd">print</span><span class="hl def">(significant_results)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## # A tibble: 11 × 10
+##    Variable .y.   group1 group2    n1    n2 statistic       p p.adj p.adj.signif
+##    &lt;chr&gt;    &lt;chr&gt; &lt;chr&gt;  &lt;chr&gt;  &lt;int&gt; &lt;int&gt;     &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;       
+##  1 MMSE     Value 1      16        18    17      238. 5   e-3 0.035 *           
+##  2 MMSE     Value 2      5         20    46      686. 2   e-3 0.028 *           
+##  3 MMSE     Value 2      6         20    18      276. 5   e-3 0.035 *           
+##  4 MMSE     Value 2      15        20     6      107  4   e-3 0.035 *           
+##  5 MMSE     Value 2      16        20    17      287  3.6 e-4 0.013 *           
+##  6 age_dea… Value 1      16        18    17       51  7.57e-5 0.001 **          
+##  7 age_dea… Value 2      16        20    17       85  9.92e-4 0.007 **          
+##  8 age_dea… Value 3      16        46    17      196. 4.65e-4 0.004 **          
+##  9 age_dea… Value 5      16        46    17      196. 4.65e-4 0.004 **          
+## 10 age_dea… Value 6      16        18    17       51  7.57e-5 0.001 **          
+## 11 age_dea… Value 16     21        17    18      212. 5   e-3 0.032 *
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">write.table</span><span class="hl def">(pairwise_results,</span><span class="hl sng">&quot;Clinical_and_Pathological_Measures_by_Cluster.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=F)</span>
+
+<span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com"># Step 1: Prepare data</span>
+<span class="hl def">heat_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">pairwise_results</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span>
+        <span class="hl kwc">group1</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(</span><span class="hl kwd">as.numeric</span><span class="hl def">(</span><span class="hl kwd">as.character</span><span class="hl def">(group1))),</span>
+        <span class="hl kwc">group2</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(</span><span class="hl kwd">as.numeric</span><span class="hl def">(</span><span class="hl kwd">as.character</span><span class="hl def">(group2))),</span>
+        <span class="hl kwc">p_display</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(p</span> <span class="hl opt">&lt;</span> <span class="hl num">0.05</span><span class="hl def">, p,</span> <span class="hl num">NA</span><span class="hl def">),</span>         <span class="hl com"># show only p &lt; 0.05 in gradient</span>
+        <span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(p.adj</span> <span class="hl opt">&lt;</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl sng">&quot;*&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">)</span>
+    <span class="hl def">)</span>
+
+<span class="hl com"># Define group order</span>
+<span class="hl def">ordered_levels</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl kwd">as.numeric</span><span class="hl def">(</span><span class="hl kwd">as.character</span><span class="hl def">(heat_data</span><span class="hl opt">$</span><span class="hl def">group1)),</span>
+                                <span class="hl kwd">as.numeric</span><span class="hl def">(</span><span class="hl kwd">as.character</span><span class="hl def">(heat_data</span><span class="hl opt">$</span><span class="hl def">group2)))))</span>
+<span class="hl def">heat_data</span><span class="hl opt">$</span><span class="hl def">group1</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(heat_data</span><span class="hl opt">$</span><span class="hl def">group1,</span> <span class="hl kwc">levels</span> <span class="hl def">= ordered_levels)</span>
+<span class="hl def">heat_data</span><span class="hl opt">$</span><span class="hl def">group2</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(heat_data</span><span class="hl opt">$</span><span class="hl def">group2,</span> <span class="hl kwc">levels</span> <span class="hl def">= ordered_levels)</span>
+
+<span class="hl com"># Step 2: Plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(heat_data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= group1,</span> <span class="hl kwc">y</span> <span class="hl def">= group2,</span> <span class="hl kwc">fill</span> <span class="hl def">= p_display))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_tile</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">= label),</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">8</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">facet_wrap</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">Variable,</span> <span class="hl kwc">scales</span> <span class="hl def">=</span> <span class="hl sng">&quot;free&quot;</span><span class="hl def">,</span> <span class="hl kwc">ncol</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_fill_gradient</span><span class="hl def">(</span>
+        <span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;p &lt; 0.05&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">low</span> <span class="hl def">=</span> <span class="hl sng">&quot;#08306b&quot;</span><span class="hl def">,</span> <span class="hl kwc">high</span> <span class="hl def">=</span> <span class="hl sng">&quot;#deebf7&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">na.value</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray90&quot;</span>  <span class="hl com"># p &gt;= 0.05 will appear gray</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Significant Pairwise Comparisons Between Clusters&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group 1&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group 2&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">28</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+        <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">face</span> <span class="hl def">=</span> <span class="hl sng">&quot;bold&quot;</span><span class="hl def">)</span>
+    <span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-7.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com"># Selct the clusters for ploting (change according to criteria)</span>
+<span class="hl com">#selected_clusters &lt;- c(1, 3, 4, 6, 11, 12, 15, 18)</span>
+
+<span class="hl com"># Create a subset of original file</span>
+<span class="hl com">#infomap_clusters &lt;- infomap_clusters %&gt;%</span>
+  <span class="hl com">#filter(InfoMap_cluster %in% selected_clusters)</span>
+
+<span class="hl com"># Categorize rows into Attributes (UP, DOWN, AD_male, AD_female, AsymaAD_male and AsymAD_female)</span>
+
+<span class="hl def">infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span>
+        <span class="hl kwc">Category</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+            <span class="hl def">Attributes</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl def">Attributes,</span>
+            <span class="hl def">Attributes</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span><span class="hl def">)</span> <span class="hl opt">~</span> <span class="hl def">Attributes,</span>
+            <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl num">NA_character_</span>
+        <span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(</span><span class="hl opt">!</span><span class="hl kwd">is.na</span><span class="hl def">(Category))</span>  <span class="hl com"># Keep only rows with valid categories</span>
+
+<span class="hl com"># Assign negative values to DOWN counts</span>
+<span class="hl def">infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span>
+        <span class="hl kwc">Value</span> <span class="hl def">=</span> <span class="hl kwd">case_when</span><span class="hl def">(</span>
+            <span class="hl def">Category</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span> <span class="hl opt">~ -</span><span class="hl num">1</span><span class="hl def">,</span>
+            <span class="hl num">TRUE</span> <span class="hl opt">~</span> <span class="hl num">1</span>
+        <span class="hl def">)</span>
+    <span class="hl def">)</span>
+
+
+<span class="hl com"># Count occurrences of each Category within each InfoMap_cluster</span>
+<span class="hl def">summary_infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">group_by</span><span class="hl def">(InfoMap_cluster, Category)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">summarise</span><span class="hl def">(</span><span class="hl kwc">Count</span> <span class="hl def">=</span> <span class="hl kwd">n</span><span class="hl def">(),</span> <span class="hl kwc">.groups</span> <span class="hl def">=</span> <span class="hl sng">&quot;drop&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Set factor levels for ordered categories</span>
+<span class="hl def">summary_infomap_clusters</span><span class="hl opt">$</span><span class="hl def">Category</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(summary_infomap_clusters</span><span class="hl opt">$</span><span class="hl def">Category,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span><span class="hl def">))</span>
+
+
+<span class="hl com"># Custom colors for the bars</span>
+<span class="hl def">custom_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;darkgreen&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;mediumblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;tomato&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;dodgerblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;coral&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Create the bar plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(summary_infomap_clusters,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Category,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(Category</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl def">Count, Count),</span> <span class="hl kwc">fill</span> <span class="hl def">= Category))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.6</span><span class="hl def">,</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_dodge</span><span class="hl def">(</span><span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_text</span><span class="hl def">(</span>
+        <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">abs</span><span class="hl def">(Count)),</span>
+        <span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">,</span>  <span class="hl com"># Center the text vertically within the bar</span>
+        <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span>
+        <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_dodge</span><span class="hl def">(</span><span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">facet_wrap</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">InfoMap_cluster,</span> <span class="hl kwc">ncol</span> <span class="hl def">=</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl kwc">scales</span> <span class="hl def">=</span> <span class="hl sng">&quot;free_y&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Adjust `ncol` for desired layout</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Distribution of Subdomains (UP and DOWN), AD and AsymAD (Male and Female) by InfoMap Cluster&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Attributes&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Category&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>  <span class="hl com"># Apply custom colors</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-8.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+
+<span class="hl com"># Aggregate UP and DOWN counts per cluster</span>
+<span class="hl def">up_down_counts</span> <span class="hl kwb">&lt;-</span> <span class="hl def">summary_infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(Category</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">))</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">group_by</span><span class="hl def">(InfoMap_cluster)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">summarise</span><span class="hl def">(</span><span class="hl kwc">Total_UP_DOWN</span> <span class="hl def">=</span> <span class="hl kwd">sum</span><span class="hl def">(Count),</span> <span class="hl kwc">.groups</span> <span class="hl def">=</span> <span class="hl sng">&quot;drop&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Step 2: Identify clusters where UP + DOWN &gt;= 5</span>
+<span class="hl def">clusters_to_keep</span> <span class="hl kwb">&lt;-</span> <span class="hl def">up_down_counts</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(Total_UP_DOWN</span> <span class="hl opt">&gt;=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">pull</span><span class="hl def">(InfoMap_cluster)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">unique</span><span class="hl def">()</span>
+
+<span class="hl com"># Step 3: Filter summary data to keep only those clusters but include all categories</span>
+<span class="hl def">filtered_summary_infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">summary_infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(InfoMap_cluster</span> <span class="hl opt">%in%</span> <span class="hl def">clusters_to_keep)</span>
+
+<span class="hl com"># Step 4: Plot the data</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(filtered_summary_infomap_clusters,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Category,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(Category</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl def">Count, Count),</span> <span class="hl kwc">fill</span> <span class="hl def">= Category))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.6</span><span class="hl def">,</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_dodge</span><span class="hl def">(</span><span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_text</span><span class="hl def">(</span>
+        <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">abs</span><span class="hl def">(Count)),</span>
+        <span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">,</span>  <span class="hl com"># Center the text vertically within the bar</span>
+        <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">6</span><span class="hl def">,</span>
+        <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_dodge</span><span class="hl def">(</span><span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">facet_wrap</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">InfoMap_cluster,</span> <span class="hl kwc">ncol</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl kwc">scales</span> <span class="hl def">=</span> <span class="hl sng">&quot;free_y&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Adjust `ncol` for desired layout</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Distribution of Subdomains (UP + DOWN ≥ 5) &amp; Other Attributes by InfoMap Cluster&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Attributes&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Category&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>  <span class="hl com"># Apply custom colors</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-9.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+
+<span class="hl com"># Aggregate individual counts per cluster</span>
+<span class="hl def">ind_counts</span> <span class="hl kwb">&lt;-</span> <span class="hl def">summary_infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(Category</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_female&quot;</span><span class="hl def">))</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">group_by</span><span class="hl def">(InfoMap_cluster)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">summarise</span><span class="hl def">(</span><span class="hl kwc">Total_ind</span> <span class="hl def">=</span> <span class="hl kwd">sum</span><span class="hl def">(Count),</span> <span class="hl kwc">.groups</span> <span class="hl def">=</span> <span class="hl sng">&quot;drop&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Step 2: Identify clusters where individuals &gt;= 3</span>
+<span class="hl def">clusters_to_keep</span> <span class="hl kwb">&lt;-</span> <span class="hl def">ind_counts</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(Total_ind</span> <span class="hl opt">&gt;=</span> <span class="hl num">3</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">pull</span><span class="hl def">(InfoMap_cluster)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">unique</span><span class="hl def">()</span>
+
+<span class="hl com"># Step 3: Filter summary data to keep only those clusters but include all categories</span>
+<span class="hl def">filtered_summary_infomap_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">summary_infomap_clusters</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(InfoMap_cluster</span> <span class="hl opt">%in%</span> <span class="hl def">clusters_to_keep)</span>
+
+<span class="hl kwd">ggplot</span><span class="hl def">(filtered_summary_infomap_clusters,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Category,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(Category</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl def">Count, Count),</span> <span class="hl kwc">fill</span> <span class="hl def">= Category))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.6</span><span class="hl def">,</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_dodge</span><span class="hl def">(</span><span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_text</span><span class="hl def">(</span>
+        <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">abs</span><span class="hl def">(Count)),</span>
+        <span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">,</span>  <span class="hl com"># Center the text vertically within the bar</span>
+        <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span>
+        <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_dodge</span><span class="hl def">(</span><span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">0.9</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">facet_wrap</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">InfoMap_cluster,</span> <span class="hl kwc">ncol</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl kwc">scales</span> <span class="hl def">=</span> <span class="hl sng">&quot;free_y&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Adjust `ncol` for desired layout</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Distribution of Subdomains (total individuals ≥ 3) &amp; Other Attributes by InfoMap Cluster&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Attributes&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Category&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>  <span class="hl com"># Apply custom colors</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">strip.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-10.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com">#########################################################################################################################################################</span>
+
+<span class="hl com"># Biodomain/Subdomain Counts by Community (Infomap Clusters)</span>
+
+<span class="hl com"># Define the Biodomain colors</span>
+<span class="hl def">custom_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Apoptosis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#673399&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;APP Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#fe6500&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Autophagy&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#9931fd&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Cell Cycle&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#18857f&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DNA Repair&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#f451ad&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Endolysosome&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#3466cc&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Epigenetic&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cb3233&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Immune Response&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#9ccdcc&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Lipid Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#989898&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Metal Binding and Homeostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#4b0d20&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Mitochondrial Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#97cb98&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Myelination&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#996735&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Oxidative Stress&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#ffcd66&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Proteostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#c8b269&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;RNA Spliceosome&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#0c9aff&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Structural Stabilization&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#ff9a9a&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Synapse&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#329a33&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Tau Homeostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cb97cb&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Vasculature&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cecd02&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;none&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#7f7f7f&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Open the Network-based Community detection table</span>
+
+<span class="hl com">#infomap_clusters_sds &lt;- read.csv(&quot;Infomap_clusters_sds.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl def">infomap_clusters_sds</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;Infomap_clusters_sds_081125.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">head</span><span class="hl def">(infomap_clusters_sds)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Sno InfoMap_cluster Nodes         unique_id    Biodomain
+## 1 141               1    UP     Ap_others_1 +    Apoptosis
+## 2 143               1    UP Ap_roceaiiap_11 +    Apoptosis
+## 3 148               1    UP         Au_ph_4 +    Autophagy
+## 4 153               1    UP        DR_Ddr_1 +   DNA Repair
+## 5 165               1    UP        En_re_10 + Endolysosome
+## 6 167               1    UP         En_ri_9 + Endolysosome
+##                                                                          Subdomain
+## 1                                                                             &lt;NA&gt;
+## 2 regulation of cysteine-type endopeptidase activity involved in apoptotic process
+## 3                                                                     phagocytosis
+## 4                                                              DNA damage response
+## 5                                                    receptor-mediated endocytosis
+## 6                                                         receptor internalization
+##                                                                          Biodomain_Subdomain
+## 1                                                                           Apoptosis_others
+## 2 Apoptosis_regulation_of_cysteine-type_endopeptidase_activity_involved_in_apoptotic_process
+## 3                                                                     Autophagy_phagocytosis
+## 4                                                             DNA_Repair_DNA_damage_response
+## 5                                                 Endolysosome_receptor-mediated_endocytosis
+## 6                                                      Endolysosome_receptor_internalization
+##    X X.1 X.2 X.3 X.4
+## 1 NA  NA  NA  NA  NA
+## 2 NA  NA  NA  NA  NA
+## 3 NA  NA  NA  NA  NA
+## 4 NA  NA  NA  NA  NA
+## 5 NA  NA  NA  NA  NA
+## 6 NA  NA  NA  NA  NA
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Selct the clusters for ploting (change according to criteria)</span>
+<span class="hl com">#selected_clusters &lt;- c(1, 3, 4, 6, 11, 12, 15, 18)</span>
+
+<span class="hl com"># Create a subset of original file</span>
+<span class="hl com">#infomap_clusters_sds &lt;- infomap_clusters_sds %&gt;%</span>
+  <span class="hl com">#filter(InfoMap_cluster %in% selected_clusters)</span>
+
+
+
+<span class="hl com"># Plot the data as bar graph for each cluster</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(infomap_clusters_sds,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Biodomain))</span> <span class="hl opt">+</span>
+     <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">= Biodomain))</span> <span class="hl opt">+</span>  <span class="hl com"># Bar plot with fill by Biodomain</span>
+     <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count of Biodomains by Infomap Clusters&quot;</span><span class="hl def">,</span>
+          <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain&quot;</span><span class="hl def">,</span>
+          <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+     <span class="hl kwd">facet_wrap</span><span class="hl def">(</span><span class="hl opt">~</span><span class="hl def">InfoMap_cluster,</span> <span class="hl kwc">ncol</span> <span class="hl def">=</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl kwc">scales</span> <span class="hl def">=</span> <span class="hl sng">&quot;free_y&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Facet based on Community with free y-axis scaling</span>
+     <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+     <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">))</span> <span class="hl opt">+</span>
+     <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>
+     <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">))</span> <span class="hl opt">+</span>
+     <span class="hl kwd">scale_y_continuous</span><span class="hl def">(</span><span class="hl kwc">breaks</span> <span class="hl def">= scales</span><span class="hl opt">::</span><span class="hl kwd">pretty_breaks</span><span class="hl def">(</span><span class="hl kwc">n</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">))</span> <span class="hl com"># Rounded Y-axis</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-11.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################################</span>
+<span class="hl com"># Identify clusters where UP or DOWN subdomains have 5 or more counts</span>
+
+<span class="hl com"># Count the number of UP and DOWN subdomains in each cluster</span>
+<span class="hl def">cluster_counts</span> <span class="hl kwb">&lt;-</span> <span class="hl def">infomap_clusters_sds</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(Nodes</span> <span class="hl opt">%in%</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;UP&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">))</span> <span class="hl opt">%&gt;%</span>  <span class="hl com"># Consider only UP and DOWN subdomains</span>
+    <span class="hl kwd">group_by</span><span class="hl def">(InfoMap_cluster)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">summarise</span><span class="hl def">(</span><span class="hl kwc">Count</span> <span class="hl def">=</span> <span class="hl kwd">n</span><span class="hl def">(),</span> <span class="hl kwc">.groups</span> <span class="hl def">=</span> <span class="hl sng">&quot;drop&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Select clusters where UP and DOWN subdomains are 5 or more</span>
+<span class="hl def">selected_clusters</span> <span class="hl kwb">&lt;-</span> <span class="hl def">cluster_counts</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(Count</span> <span class="hl opt">&gt;=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">pull</span><span class="hl def">(InfoMap_cluster)</span>  <span class="hl com"># Extract the list of selected clusters</span>
+
+<span class="hl com"># Filter the main dataset for only the selected clusters</span>
+<span class="hl def">filtered_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">infomap_clusters_sds</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">filter</span><span class="hl def">(InfoMap_cluster</span> <span class="hl opt">%in%</span> <span class="hl def">selected_clusters)</span>
+
+<span class="hl com"># Create the bar plot with the filtered data</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(filtered_data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Biodomain))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">= Biodomain))</span> <span class="hl opt">+</span>  <span class="hl com"># Bar plot with fill by Biodomain</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count of Biodomains by Community (Filtered Infomap Clusters)&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">facet_wrap</span><span class="hl def">(</span><span class="hl opt">~</span><span class="hl def">InfoMap_cluster,</span> <span class="hl kwc">scales</span> <span class="hl def">=</span> <span class="hl sng">&quot;free_y&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Facet based on selected clusters</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span> <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">15</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">20</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_y_continuous</span><span class="hl def">(</span><span class="hl kwc">breaks</span> <span class="hl def">= scales</span><span class="hl opt">::</span><span class="hl kwd">pretty_breaks</span><span class="hl def">(</span><span class="hl kwc">n</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">))</span>  <span class="hl com"># Rounded Y-axis</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-12.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div></div>
+
+#########################################################################################################################################################
+# Function to create a word cloud for a given cluster
+library(wordcloud2)
+library(htmlwidgets)
+library(grid)
+library(gridExtra)
+
+
+# Change the "data" with specific file name - infomap_clusters_sds or leiden_clusters_sds 
+
+create_and_save_wordcloud <- function(cluster_data, custom_colors, file_name) {
+    # Calculate word frequencies (not used for sizing here)
+    word_freq <- as.data.frame(table(cluster_data$Biodomain))
+    colnames(word_freq) <- c("Biodomain", "Frequency")
+
+    # Select the top 3 Biodomain entries based on original frequency
+    word_freq <- word_freq[order(-word_freq$Frequency), ]
+    word_freq <- head(word_freq, 3)
+
+    # Set all frequencies to the same value (e.g., 1) to equalize word sizes
+    word_freq$Frequency <- 1
+
+    # Generate the word cloud with equal word sizes
+    wc <- wordcloud2(
+        data = word_freq,
+        color = htmlwidgets::JS(
+            paste0(
+                "function(word, weight) {",
+                paste(
+                    sapply(names(custom_colors), function(word)
+                        sprintf("if (word === '%s') return '%s';", word, custom_colors[word])),
+                    collapse = " "
+                ),
+                "return 'black'; }"
+            )
+        ),
+        size = 1,
+        minRotation = 0,
+        maxRotation = 0
+    )
+
+    # Save the word cloud as an HTML file
+    saveWidget(wc, file = file_name, selfcontained = TRUE)
+}
+
+# Create word clouds for each cluster and save as HTML files
+clusters <- unique(infomap_clusters_sds$InfoMap_cluster)
+file_names <- paste0("wordcloud_cluster_", clusters, ".html")
+
+lapply(seq_along(clusters), function(i) {
+    cluster_data <- subset(infomap_clusters_sds, InfoMap_cluster == clusters[i])
+    create_and_save_wordcloud(cluster_data, custom_colors, file_names[i])
+})
+
+
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+# Distributions of leiden cluster results
+
+library(dplyr)
+library(ggplot2)
+
+leiden_clusters <- read.csv("leiden_clusters.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(leiden_clusters)
+
+
+# Categorize rows into Attributes (UP, DOWN, AD_male, AD_female, AsymaAD_male and AsymAD_female)
+
+leiden_clusters <- leiden_clusters %>%
+    mutate(
+        Category = case_when(
+            Attributes %in% c("UP", "DOWN") ~ Attributes,
+            Attributes %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female") ~ Attributes,
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    filter(!is.na(Category))  # Keep only rows with valid categories
+
+# Assign negative values to DOWN counts
+leiden_clusters <- leiden_clusters %>%
+    mutate(
+        Value = case_when(
+            Category == "DOWN" ~ -1,
+            TRUE ~ 1
+        )
+    )
+
+
+
+# Count occurrences of each Category within each leiden_cluster
+summary_leiden_clusters <- leiden_clusters %>%
+    group_by(leiden_cluster, Category) %>%
+    summarise(Count = n(), .groups = "drop")
+
+# Set factor levels for ordered categories
+summary_leiden_clusters$Category <- factor(summary_leiden_clusters$Category, levels = c("UP", "DOWN", "AD_male", "AD_female", "AsymAD_male", "AsymAD_female"))
+
+
+# Custom colors for the bars
+custom_colors <- c("UP" = "darkgreen", "DOWN" = "red", "AD_male" = "mediumblue", "AD_female" = "tomato", "AsymAD_male" = "dodgerblue", "AsymAD_female" = "coral")
+
+
+# Create the bar plot
+ggplot(summary_leiden_clusters, aes(x = Category, y = ifelse(Category == "DOWN", -Count, Count), fill = Category)) +
+    geom_bar(stat = "identity", width = 0.6, position = position_dodge(width = 0.9)) +
+    geom_text(
+        aes(label = abs(Count)),
+        vjust = 0.5,  # Center the text vertically within the bar
+        size = 6,
+        position = position_dodge(width = 0.9)
+    ) +
+    facet_wrap(~ leiden_cluster, ncol = 3, scales = "free_y") +  # Adjust `ncol` for desired layout
+    labs(
+        title = "Distribution of Subdomains (UP and DOWN), AD and AsyamAD (Male and Female) by Leiden Cluster",
+        x = "Attributes",
+        y = "Count",
+        fill = "Category"
+    ) +
+    theme_minimal(base_size = 14) +
+    scale_fill_manual(values = custom_colors) +  # Apply custom colors
+    theme(
+        text = element_text(size = 14),
+        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 14)
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black")
+
+
+#########################################################################################################################################################
+
+
+# Biodomain/Subdomain Counts by Community (Leiden Clusters)
+
+# Define the Biodomain colors
+custom_colors <- c("Apoptosis" = "#673399", "APP Metabolism" = "#fe6500", "Autophagy" = "#9931fd", "Cell Cycle" = "#18857f", "DNA Repair" = "#f451ad", "Endolysosome" = "#3466cc", "Epigenetic" = "#cb3233", "Immune Response" = "#9ccdcc", "Lipid Metabolism" = "#989898", "Metal Binding and Homeostasis" = "#4b0d20", "Mitochondrial Metabolism" = "#97cb98", "Myelination" = "#996735", "Oxidative Stress" = "#ffcd66", "Proteostasis" = "#c8b269", "RNA Spliceosome" = "#0c9aff", "Structural Stabilization" = "#ff9a9a", "Synapse" = "#329a33", "Tau Homeostasis" = "#cb97cb", "Vasculature" = "#cecd02", "none" = "#7f7f7f")
+
+
+# Open the Network-based Community detection table
+
+leiden_clusters_sds <- read.csv("leiden_clusters_sds.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(infomap_clusters_sds)
+
+
+
+# Plot the data as bar graph for each cluster
+ggplot(leiden_clusters_sds, aes(x = Biodomain)) + 
+     geom_bar(aes(fill = Biodomain)) +  # Bar plot with fill by Biodomain
+     labs(title = "Count of Biodomains by Community (Leiden Clusters)", 
+          x = "Biodomain", 
+          y = "Count") +
+     facet_wrap(~leiden_cluster, scales = "free_y") +  # Facet based on Community with free y-axis scaling
+     theme_minimal() + 
+     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14)) +
+     scale_fill_manual(values = custom_colors) + 
+     theme(text = element_text(size = 14)) +
+     scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) # Rounded Y-axis
+
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(patchwork)  # For combining plots
+
+# Filter only UP and DOWN categories for Stacked Bar Plot
+up_down_data <- filtered_summary_infomap_clusters %>%
+    filter(Category %in% c("UP", "DOWN"))
+
+# Filter only AD and AsymAD categories for Pie Chart
+ad_asymad_data <- filtered_summary_infomap_clusters %>%
+    filter(Category %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female"))
+
+# Define colors
+custom_colors <- c("UP" = "darkgreen", "DOWN" = "red3", 
+                   "AD_male" = "mediumblue", "AD_female" = "tomato", 
+                   "AsymAD_male" = "dodgerblue", "AsymAD_female" = "coral")
+
+# Create an empty list to store plots
+plot_list <- list()
+
+# Generate plots for each cluster
+for (cluster in unique(filtered_summary_infomap_clusters$InfoMap_cluster)) {
+    
+    # Subset data for the current cluster
+    cluster_up_down <- up_down_data %>% filter(InfoMap_cluster == cluster)
+    cluster_ad_asymad <- ad_asymad_data %>% filter(InfoMap_cluster == cluster)
+    
+    # Horizontal Stacked Bar Plot for UP and DOWN
+    p1 <- ggplot(cluster_up_down, aes(y = Category, x = Count, fill = Category)) +
+        geom_bar(stat = "identity", width = 0.6) +
+        geom_text(aes(label = Count), position = position_stack(vjust = 0.5), size = 4, color = "white") +  # Center text
+        scale_fill_manual(values = custom_colors) +
+        labs(title = paste("Cluster", cluster, "- UP & DOWN"), y = "Subdoamin", x = "Count") +
+        theme_minimal() +
+        theme(panel.grid.major = element_blank(),   # Remove major grid lines
+              panel.grid.minor = element_blank(),   # Remove minor grid lines
+              panel.background = element_blank(),   # Remove background
+              axis.text.y = element_text(size = 12), 
+              text = element_text(size = 12))
+    
+    # Pie Chart for AD & AsymAD Categories (Only if there are AD/AsymAD data)
+    if (nrow(cluster_ad_asymad) > 0) {
+        p2 <- ggplot(cluster_ad_asymad, aes(x = "", y = Count, fill = Category)) +
+            geom_bar(stat = "identity", width = 1) +
+            coord_polar("y", start = 0) +
+            geom_text(aes(label = paste0(Category, "\n", Count)), 
+                      position = position_stack(vjust = 0.5), size = 4, color = "white") +
+            scale_fill_manual(values = custom_colors) +
+            labs(title = paste("Cluster", cluster, "- AD & AsymAD")) +
+            theme_void() +
+            theme(legend.position = "none", text = element_text(size = 12))
+        
+        # Combine horizontal stacked bar plot and pie chart side-by-side
+        plot_list[[as.character(cluster)]] <- p1 + p2 + plot_layout(ncol = 1)
+    } else {
+        # If no AD/AsymAD data, only show the stacked bar plot
+        plot_list[[as.character(cluster)]] <- p1
+    }
+}
+
+# Arrange all plots in a grid
+wrap_plots(plot_list, ncol = 4)  # Adjust `ncol` for layout preference
+
+end.rcode-->
+#########################################################################################################################################################
+#########################################################################################################################################################
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(forcats)
+
+
+# Open the cluster based sample metadata details
+infomap_clusters_sample <- read.csv("Infomap_clusters_sample_metadata.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(infomap_clusters_sample)
+
+# ---- Parameters ----
+# Clusters you want to include in the plot
+#selected_clusters <- c(1, 3, 6, 8, 9, 11, 12, 20)
+
+selected_clusters <- c(1, 3, 4, 6, 11, 12, 15, 18)
+
+# Color mapping for JohnsonDx_sex groups
+custom_colors_sample <- c(
+    "AD_female" = "tomato",
+    "AD_male" = "mediumblue",
+    "AsymAD_female" = "coral",
+    "AsymAD_male" = "dodgerblue"
+)
+
+# ---- Data Wrangling ----
+# Filter to only selected clusters
+data_filtered <- infomap_clusters_sample %>%
+  filter(Infomap_cluster %in% selected_clusters)
+
+# Variables to compare
+variables_to_plot <- c("ApoE4.Dose", "braaksc", "ceradsc_RADCnonStd", "cts_mmse30_lv")
+
+# Pivot data to long format
+data_long <- data_filtered %>%
+  select(Infomap_cluster, JohnsonDx_sex, all_of(variables_to_plot)) %>%
+  pivot_longer(
+    cols = all_of(variables_to_plot),
+    names_to = "Variable",
+    values_to = "Value"
+  )
+
+# Convert Infomap_cluster to factor for better plotting
+data_long$Infomap_cluster <- as.factor(data_long$Infomap_cluster)
+
+# ---- Plot ----
+ggplot(data_long, aes(x = Infomap_cluster, y = Value, color = JohnsonDx_sex)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, position = position_dodge(width = 0.8)) +
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.6, size = 1.8) +
+  facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+  scale_color_manual(values = custom_colors_sample) +
+  theme_bw(base_size = 20) +
+  labs(
+    title = "Comparative Boxplots by Infomap Cluster",
+    x = "Infomap Cluster",
+    y = "Value",
+    color = "Group"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(size = 20),
+    legend.position = "right"
+  )
+
+
+end.rcode-->
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+# Function to create a word cloud for a given cluster
+library(wordcloud2)
+library(htmlwidgets)
+library(grid)
+library(gridExtra)
+
+
+# Change the "data" with specific file name - infomap_clusters_sds or leiden_clusters_sds 
+
+create_and_save_wordcloud <- function(cluster_data, custom_colors, file_name) {
+    # Calculate word frequencies
+    word_freq <- as.data.frame(table(cluster_data$Biodomain))
+    colnames(word_freq) <- c("Biodomain", "Frequency")
+    
+    # Select the top 3 Biodomain entries based on frequency
+    word_freq <- word_freq[order(-word_freq$Frequency), ]  # Sort in descending order of frequency
+    word_freq <- head(word_freq, 3)  # Keep only the top 3 entries
+    
+    # Generate the word cloud
+    wc <- wordcloud2(
+        data = word_freq,
+        color = htmlwidgets::JS(
+            paste0(
+                "function(word, weight) {",
+                paste(
+                    sapply(names(custom_colors), function(word)
+                        sprintf("if (word === '%s') return '%s';", word, custom_colors[word])),
+                    collapse = " "
+                ),
+                "return 'black'; }"
+            )
+        ),
+        size = 1,          # Adjust size as needed
+        minRotation = 0,   # Set words horizontally
+        maxRotation = 0    # Set words horizontally
+    )
+    
+    # Save the word cloud as an HTML file
+    saveWidget(wc, file = file_name, selfcontained = TRUE)
+}
+
+# Create word clouds for each cluster and save as HTML files
+clusters <- unique(infomap_clusters_sds$InfoMap_cluster)
+file_names <- paste0("wordcloud_cluster_", clusters, ".html")
+
+lapply(seq_along(clusters), function(i) {
+    cluster_data <- subset(infomap_clusters_sds, InfoMap_cluster == clusters[i])
+    create_and_save_wordcloud(cluster_data, custom_colors, file_names[i])
+})
+
+end.rcode-->
+
+
+</body>
+</html>

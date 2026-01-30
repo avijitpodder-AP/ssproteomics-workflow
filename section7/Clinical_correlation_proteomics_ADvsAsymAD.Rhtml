@@ -1,0 +1,1177 @@
+<html>
+
+<head>
+<title>Avijit Podder Date: Feb 26, 2025</title>
+
+<head color="blue">
+
+<h1><font color="blue">Clinical Parameter's Correlation with the Subdomain-specific Zscore (TMT Proteomics) for the Samples from ROSMAP Cohort</font></h1>
+
+</head>
+
+<body>
+
+<p>Metadata from ROSMAP Samples</p>
+
+<!--begin.rcode fig.width=25, fig.height=15
+library(stringr)
+library(dplyr)
+library(viridis)
+library(gplots)
+library(ggplot2)
+library(reshape2)
+library(RColorBrewer)
+library(ggrepel)
+library(tidyr)
+library(DT)
+library(patchwork)
+library(corrplot)
+library(plotly)
+library(htmlwidgets)
+library(qvalue)
+
+
+# Open sample information file as "sample_data" for TMT specific 610 samples (round 1 and round2)
+sample_data <- read.csv("2c.traits-ROSMAP610.R1+R2-2xTAMPORcorrected.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+dim(sample_data)
+
+head(sample_data)
+
+# Define the sex_type (sex) based on the msex value
+sample_data$sex <- with(sample_data, ifelse(msex == 0, "female",
+                                ifelse(msex == 1, "male", "NA")))
+
+# Create a new categorical column based on cts_mmse30_lv
+sample_data$cts_mmse30_cat <- ifelse(sample_data$cts_mmse30_lv <= 23, "0", "1")
+
+
+
+dim(sample_data)
+
+head(sample_data)
+
+##################################################################################################################################################
+
+# Select a sub-set of the sample (Tissue: DLPFC) from sample_data file
+sample_data_DLPFC <- filter(sample_data, tissue == "dorsolateral prefrontal cortex")
+
+dim(sample_data_DLPFC)
+
+# Read the outliers file
+outliers <- read.table("outliers.txt", header = TRUE)
+
+# Extract the IDs to be removed
+ids_to_remove <- outliers$Outliers
+
+ids_to_remove
+
+# Use the 'subset' function to remove rows with specified IDs (outliers) from the sample description file with CT samples
+sample_data_DLPFC <- subset(sample_data_DLPFC, !(batch.channel %in% ids_to_remove))
+
+dim(sample_data_DLPFC)
+
+##################################################################################################################################################
+
+# Create a subset of the DLPFC sample description file with control samples only
+sample_data_DLPFC_contorl <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_contorl)
+
+# Create a subset of the control sample description file with female samples only
+#sample_data_DLPFC_contorl_female <- sample_data_DLPFC_contorl[grep("female", sample_data_DLPFC_contorl$sex), ]
+
+#dim(sample_data_DLPFC_contorl_female)
+
+
+# Create a subset of the control sample description file with male samples only
+#sample_data_DLPFC_contorl_male <- sample_data_DLPFC_contorl[sample_data_DLPFC_contorl$sex == "male", ]
+
+#dim(sample_data_DLPFC_contorl_male)
+
+##################################################################################################################################################
+
+# Create a subset of the DLPFC sample description file with AD samples only
+sample_data_DLPFC_AD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AD", ]
+
+dim(sample_data_DLPFC_AD)
+
+
+# Create a subset of the AD sample description file with female samples only
+#sample_data_DLPFC_AD_female <- sample_data_DLPFC_AD[grep("female", sample_data_DLPFC_AD$sex), ]
+
+#dim(sample_data_DLPFC_AD_female)
+
+
+# Create a subset of the AD sample description file with male samples only
+#sample_data_DLPFC_AD_male <- sample_data_DLPFC_AD[sample_data_DLPFC_AD$sex == "male", ]
+
+#dim(sample_data_DLPFC_AD_male)
+
+##################################################################################################################################################
+
+# Create a subset of the DLPFC sample description file with AsymAD samples only
+sample_data_DLPFC_AsymAD <- sample_data_DLPFC[grep("AsymAD", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_AsymAD)
+
+
+# Create a subset of the AD sample description file with female samples only
+#sample_data_DLPFC_AsymAD_female <- sample_data_DLPFC_AsymAD[grep("female", sample_data_DLPFC_AsymAD$sex), ]
+
+#dim(sample_data_DLPFC_AsymAD_female)
+
+
+# Create a subset of the AD sample description file with male samples only
+#sample_data_DLPFC_AsymAD_male <- sample_data_DLPFC_AsymAD[sample_data_DLPFC_AsymAD$sex == "male", ]
+
+#dim(sample_data_DLPFC_AsymAD_male)
+
+##################################################################################################################################################
+
+# Merge both datasets by stacking rows
+sample_data_DLPFC_cases <- rbind(sample_data_DLPFC_AD, sample_data_DLPFC_AsymAD)
+
+# Check the dimensions to ensure it merged correctly
+dim(sample_data_DLPFC_cases)
+
+##################################################################################################################################################
+
+# Merge CT, AD and AsymAD altogether
+sample_data_DLPFC_CTADAsymAD <- rbind(sample_data_DLPFC_contorl, sample_data_DLPFC_cases)
+
+dim(sample_data_DLPFC_CTADAsymAD)
+
+head(sample_data_DLPFC_CTADAsymAD)
+
+
+end.rcode-->
+
+<p>Open Subdomain-specific Zscore for CT, AD and AsymAD Individuals (Male and Female Separately):</p>
+
+<!--begin.rcode fig.width=25, fig.height=15
+
+##################################################################################################################################################
+## CT
+
+# Open Subdomain-specific Zscore distribution files for CT male
+Subdomain_zscore_CT_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/subdomain_zscore_CT_male_summary.txt", header = TRUE, sep = "\t");
+
+#Subdomain_zscore_CT_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/sig_Subdomain_CT_male.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+Subdomain_zscore_CT_male <- Subdomain_zscore_CT_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(Subdomain_zscore_CT_male)
+
+##################################################################################################################################################
+
+# Open Subdomain-specific Zscore distribution files for CT male
+Subdomain_zscore_CT_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_CT_female_summary.txt", header = TRUE, sep = "\t");
+
+#Subdomain_zscore_CT_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_CT_female.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+Subdomain_zscore_CT_female <- Subdomain_zscore_CT_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(Subdomain_zscore_CT_female)
+
+##################################################################################################################################################
+
+# Merge both datasets by stacking rows
+Subdomain_zscore_CT <- rbind(Subdomain_zscore_CT_male, Subdomain_zscore_CT_female)
+
+# Check the dimensions to ensure it merged correctly
+dim(Subdomain_zscore_CT)
+
+
+##################################################################################################################################################
+##################################################################################################################################################
+## AD
+
+# Open Subdomain-specific Zscore distribution files for AD male
+Subdomain_zscore_AD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_AD_male_summary.txt", header = TRUE, sep = "\t");
+
+#Subdomain_zscore_AD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_CT_male.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+Subdomain_zscore_AD_male <- Subdomain_zscore_AD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(Subdomain_zscore_AD_male)
+
+##################################################################################################################################################
+
+# Open Subdomain-specific Zscore distribution files for AD male
+Subdomain_zscore_AD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_AD_female_summary.txt", header = TRUE, sep = "\t");
+
+#Subdomain_zscore_AD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_CT_female.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+Subdomain_zscore_AD_female <- Subdomain_zscore_AD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(Subdomain_zscore_AD_female)
+
+##################################################################################################################################################
+
+# Merge both datasets by stacking rows
+Subdomain_zscore_AD <- rbind(Subdomain_zscore_AD_male, Subdomain_zscore_AD_female)
+
+# Check the dimensions to ensure it merged correctly
+dim(Subdomain_zscore_AD)
+
+##################################################################################################################################################
+##################################################################################################################################################
+## AsymAD
+
+# Open Subdomain-specific Zscore distribution files for AD male
+Subdomain_zscore_AsymAD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_AsymAD_male_summary.txt", header = TRUE, sep = "\t");
+
+#Subdomain_zscore_AsymAD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_AsymAD_male.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+Subdomain_zscore_AsymAD_male <- Subdomain_zscore_AsymAD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(Subdomain_zscore_AsymAD_male)
+
+##################################################################################################################################################
+
+# Open Subdomain-specific Zscore distribution files for AsymAD male
+Subdomain_zscore_AsymAD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/Subdomain_zscore_AsymAD_female_summary.txt", header = TRUE, sep = "\t");
+
+#Subdomain_zscore_AsymAD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_Subdomain_AsymAD_female.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+Subdomain_zscore_AsymAD_female <- Subdomain_zscore_AsymAD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(Subdomain_zscore_AsymAD_female)
+
+##################################################################################################################################################
+
+# Merge both datasets by stacking rows
+Subdomain_zscore_AsymAD <- rbind(Subdomain_zscore_AsymAD_male, Subdomain_zscore_AsymAD_female)
+
+# Check the dimensions to ensure it merged correctly
+dim(Subdomain_zscore_AsymAD)
+
+##################################################################################################################################################
+##################################################################################################################################################
+## Cases - AD + AsymAD
+
+# Merge both datasets by stacking rows
+Subdomain_zscore_cases <- rbind(Subdomain_zscore_AD, Subdomain_zscore_AsymAD)
+
+# Check the dimensions to ensure it merged correctly
+dim(Subdomain_zscore_cases)
+
+##################################################################################################################################################
+##################################################################################################################################################
+
+# Merge CT, AD and AsymAD specific Z scores all together
+Subdomain_zscore_CTADAsymAD <- rbind(Subdomain_zscore_CT, Subdomain_zscore_cases)
+
+dim(Subdomain_zscore_CTADAsymAD)
+
+#head(Subdomain_zscore_CTADAsymAD)
+
+end.rcode-->
+
+##################################################################################################################################################
+##################################################################################################################################################
+
+<p>Correlation of Clinical Features with Subdomain-specific Zscore  (CT, AD and AsymAD all together):</p>
+
+<!--begin.rcode fig.width=25, fig.height=15
+library(ggplot2)
+library(dplyr)
+library(viridis)
+library(ggpubr)
+theme_set(theme_pubr())
+
+
+# Merge CT, AD and AsymAD specific Z scores and clinical parameters altogether
+merged_data_CTADAsymAD <- Subdomain_zscore_CTADAsymAD %>%
+    inner_join(sample_data_DLPFC_CTADAsymAD %>% select(batch.channel, ApoE4.Dose, braaksc, ceradsc_RADCnonStd, cts_mmse30_lv, cts_mmse30_cat, JohnsonDx, sex),
+               by = c("Sample_ID" = "batch.channel")) %>%
+    mutate(Group = paste(JohnsonDx, sex, sep = "_"))  # Combine JohnsonDx and sex
+
+
+dim(merged_data_CTADAsymAD)
+
+write.table(merged_data_CTADAsymAD, "merged_data_CTADAsymAD.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+#head(merged_data_CTADAsymAD)
+
+##################################################################################################################################################
+
+# Define custom colors for each group
+group_colors <- c("AD_male" = "mediumblue", "AD_female" = "tomato", "AsymAD_male" = "dodgerblue", "AsymAD_female" = "coral", "Control_male" = "skyblue", "Control_female" = "lightpink")
+
+
+# Calculate 1st and 99th percentile from CT_male and CT_female
+#ct_values <- merged_data_CTADAsymAD %>%
+    #filter(Group %in% c("CT_male", "CT_female")) %>%
+    #pull(AM_ac_4_Zscore)
+
+#percentile_1 <- quantile(ct_values, probs = 0.01, na.rm = TRUE)  # 1st percentile
+#percentile_99 <- quantile(ct_values, probs = 0.99, na.rm = TRUE)  # 99th percentile
+
+    
+# Create the box plot for Braak Stage
+ggplot(merged_data_CTADAsymAD, aes(x = factor(braaksc), y = AM_ac_4_Zscore, fill = as.numeric(braaksc))) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Box plot with transparent fill
+    geom_jitter(aes(color = Group), width = 0.2, size = 3, alpha = 0.8) +  # Jittered points
+    #geom_hline(yintercept = percentile_1, linetype = "dashed", color = "black", size = 1) +  # 1st percentile line
+    #geom_hline(yintercept = percentile_99, linetype = "dashed", color = "black", size = 1) +  # 99th percentile line
+    scale_color_manual(values = group_colors) +  # Assign custom colors to Group
+    scale_fill_gradient(low = "#D8BFD8", high = "#4B0082", guide = guide_colorbar(title = "Braak")) +  # Purple gradient +
+    labs(title = "APP Metabolism: amyloid-beta clearance Zscore Distribution by Braak Stage", 
+         x = "BRAAK", 
+         y = "Z-score", 
+         color = "Group", 
+         fill = "BRAAK") +
+    theme_minimal(base_size = 16) +
+    theme(
+        text = element_text(size = 24),
+        axis.text.x = element_text(size = 24),
+        axis.text.y = element_text(size = 24),
+        axis.title = element_text(size = 24),
+        legend.position = "right"
+    )
+
+################################################################################
+
+#  Fit a Linear Model (Numeric BRAAK as Continuous Proxy)
+
+lm_model <- lm(AM_ac_4_Zscore ~ as.numeric(braaksc), data = merged_data_CTADAsymAD)
+
+
+summary(lm_model)
+
+# To get the correlation coefficient from R²
+#sqrt(0.09614)  # ≈ 0.310
+
+#Since the slope is positive, the correlation is:
+  
+ # correlation ≈ 0.310
+
+################################################################################
+
+# Create the box plot for ApoE4.Dose Stage
+ggplot(
+    merged_data_CTADAsymAD %>% filter(!is.na(ApoE4.Dose)),  # ⬅️ Exclude NA ApoE4.Dose
+    aes(x = factor(ApoE4.Dose), y = AM_ac_4_Zscore, fill = as.numeric(ApoE4.Dose))) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Box plot with transparent fill
+    geom_jitter(aes(color = Group), width = 0.2, size = 3, alpha = 0.8) +  # Jittered points
+    #geom_hline(yintercept = percentile_1, linetype = "dashed", color = "black", size = 1) +  # 1st percentile line
+    #geom_hline(yintercept = percentile_99, linetype = "dashed", color = "black", size = 1) +  # 99th percentile line
+    scale_color_manual(values = group_colors) +  # Assign custom colors to Group
+    scale_fill_gradient(low = "#D8BFD8", high = "#4B0082", guide = guide_colorbar(title = "ApoE4")) +  # Purple gradient +
+    labs(title = "APP Metabolism: amyloid-beta clearance Zscore Distribution by ApoE4 Dose", 
+         x = "APOE4", 
+         y = "Z-score", 
+         color = "Group", 
+         fill = "ApoE4") +
+    theme_minimal(base_size = 16) +
+    theme(
+        text = element_text(size = 24),
+        axis.text.x = element_text(size = 24),
+        axis.text.y = element_text(size = 24),
+        axis.title = element_text(size = 24),
+        legend.position = "right"
+    )
+
+################################################################################
+
+# Create the box plot for ceradsc_RADCnonStd
+ggplot(merged_data_CTADAsymAD, aes(x = factor(ceradsc_RADCnonStd), y = AM_ac_4_Zscore, fill = as.numeric(ceradsc_RADCnonStd))) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # Box plot with transparent fill
+    geom_jitter(aes(color = Group), width = 0.2, size = 3, alpha = 0.8) +  # Jittered points
+    #geom_hline(yintercept = percentile_1, linetype = "dashed", color = "black", size = 1) +  # 1st percentile line
+    #geom_hline(yintercept = percentile_99, linetype = "dashed", color = "black", size = 1) +  # 99th percentile line
+    scale_color_manual(values = group_colors) +  # Assign custom colors to Group
+    scale_fill_gradient(high = "#D8BFD8", low = "#4B0082", guide = guide_colorbar(title = "CERAD")) +  # Purple gradient +
+    labs(title = "APP Metabolism: amyloid-beta clearance Zscore by ceradsc_RADCnonStd", 
+         x = "CERAD", 
+         y = "Z-score", 
+         color = "Group", 
+         fill = "CERAD") +
+  theme_minimal(base_size = 16) +
+    theme(
+        text = element_text(size = 24),
+        axis.text.x = element_text(size = 24),
+        axis.text.y = element_text(size = 24),
+        axis.title = element_text(size = 24),
+        legend.position = "right"
+    )
+
+################################################################################
+
+
+# Step 1: Rename only selected Metadata values, leave others unchanged
+merged_data_CTADAsymAD$cts_mmse30_cat <- recode(merged_data_CTADAsymAD$cts_mmse30_cat,
+                        "0" = "[0-23]",
+                        "1" = ">23"
+                        )
+
+# Define fill colors using the recoded levels
+fill_colors <- c("[0-23]" = "#4B0082", ">23" = "#D8BFD8")
+
+ggplot(merged_data_CTADAsymAD, aes(x = factor(cts_mmse30_cat), y = AM_ac_4_Zscore, fill = cts_mmse30_cat)) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.7) +
+    geom_jitter(aes(color = Group), width = 0.2, size = 3, alpha = 0.8) +
+    scale_color_manual(values = group_colors) +
+    scale_fill_manual(values = fill_colors, name = "MMSE Category") +
+    labs(
+        title = "APP Metabolism: amyloid-beta clearance Z-score Distribution by MMSE Category",
+        x = "MMSE Category",
+        y = "Z-score",
+        color = "Group"
+    ) +
+    theme_minimal(base_size = 16) +
+    theme(
+        text = element_text(size = 24),
+        axis.text.x = element_text(size = 24),
+        axis.text.y = element_text(size = 24),
+        axis.title = element_text(size = 24),
+        legend.position = "right"
+    )
+
+
+################################################################################
+# Prepare figures for manuscript
+
+#ggarrange(P2, P3, P4, P5,
+          #labels = c("B", "C", "D", "E"),
+          #font.label = list(size = 20))  # Adjust size as needed
+
+##################################################################################################################################################
+##################################################################################################################################################
+
+end.rcode-->
+
+<p>Correlation of Clinical Features with Subdomain-specific Zscore  (AD and AsymAD all together):</p>
+
+<!--begin.rcode fig.width=25, fig.height=15
+
+  
+## Cases (AD + AsymAD)
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_cases <- merge(Subdomain_zscore_cases, sample_data_DLPFC_cases, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_cases)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_cases[is.na(merged_data_cases)] <- 0
+
+
+write.table(merged_data_cases, "merged_data_cases.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+##################################################################################################################################################
+
+# Function to compute correlation or Kruskal-Wallis test based on variable type
+correlation_and_kw_test <- function(Subdomain_col, metadata_col, is_categorical) {
+  if (is_categorical) {
+    # Perform Kruskal-Wallis test for categorical variables
+    test <- kruskal.test(Subdomain_col ~ as.factor(metadata_col))
+    return(c(statistic = test$statistic, p_value = test$p.value, test_type = "Kruskal-Wallis"))
+  } else {
+    # Perform Pearson correlation for continuous variables
+    test <- cor.test(Subdomain_col, metadata_col, use = "complete.obs")
+    return(c(correlation = test$estimate, p_value = test$p.value, test_type = "Pearson"))
+  }
+}
+
+# Identify categorical and continuous metadata columns
+categorical_cols <- c(134, 146, 147)  # Indices of categorical metadata columns
+continuous_cols <- c(141)  # Indices of continuous metadata columns
+
+# Compute correlations or Kruskal-Wallis results for each subdomain-metadata pair
+correlation_results_cases <- lapply(merged_data_cases[, 2:129], function(Subdomain_col) {
+  # Combine results for categorical and continuous metadata columns
+  results <- list()
+  
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_cases[[cat_col]]
+    results[[colnames(merged_data_cases)[cat_col]]] <- correlation_and_kw_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+  
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_cases[[cont_col]]
+    results[[colnames(merged_data_cases)[cont_col]]] <- correlation_and_kw_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+  
+  return(results)
+})
+
+# Combine the results into a single data frame
+correlation_cases <- do.call(rbind, lapply(names(correlation_results_cases), function(Subdomain_name) {
+  subdomain_results <- correlation_results_cases[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+# Apply BY correction
+correlation_cases$FDR_p_value <- p.adjust(correlation_cases$p_value, method = "fdr")
+
+
+# View results
+head(correlation_cases)
+
+# Write the result to a file
+write.table(correlation_cases, "correlation_cases_with_FDR_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+##################################################################################################################################################
+
+## Control + Cases (CT + AD + AsymAD)
+
+#head(merged_data_CTADAsymAD)
+
+
+dim(merged_data_CTADAsymAD)
+
+# Function to compute correlation or Kruskal-Wallis test based on variable type
+correlation_and_kw_test <- function(Subdomain_col, metadata_col, is_categorical) {
+  if (is_categorical) {
+    # Perform Kruskal-Wallis test for categorical variables
+    test <- kruskal.test(Subdomain_col ~ as.factor(metadata_col))
+    return(c(statistic = test$statistic, p_value = test$p.value, test_type = "Kruskal-Wallis"))
+  } else {
+    # Perform Pearson correlation for continuous variables
+    test <- cor.test(Subdomain_col, metadata_col, use = "complete.obs")
+    return(c(correlation = test$estimate, p_value = test$p.value, test_type = "Pearson"))
+  }
+}
+
+# Identify categorical and continuous metadata columns
+categorical_cols <- c(130, 131, 132)  # Indices of categorical metadata columns
+continuous_cols <- c(133)  # Indices of continuous metadata columns
+
+# Compute correlations or Kruskal-Wallis results for each subdomain-metadata pair
+correlation_results_all <- lapply(merged_data_CTADAsymAD[, 2:129], function(Subdomain_col) {
+  # Combine results for categorical and continuous metadata columns
+  results <- list()
+  
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_CTADAsymAD[[cat_col]]
+    results[[colnames(merged_data_CTADAsymAD)[cat_col]]] <- correlation_and_kw_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+  
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_CTADAsymAD[[cont_col]]
+    results[[colnames(merged_data_CTADAsymAD)[cont_col]]] <- correlation_and_kw_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+  
+  return(results)
+})
+
+# Combine the results into a single data frame
+correlation_all <- do.call(rbind, lapply(names(correlation_results_all), function(Subdomain_name) {
+  subdomain_results <- correlation_results_all[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+# Apply BY correction
+correlation_all$FDR_p_value <- p.adjust(correlation_all$p_value, method = "fdr")
+
+
+# View results
+head(correlation_all)
+
+# Write the result to a file
+write.table(correlation_all, "correlation_all_with_FDR_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+
+end.rcode-->
+
+
+# Updated function: Spearman correlation with safe numeric coercion
+safe_spearman_test <- function(Subdomain_col, metadata_col) {
+  # Try to coerce metadata to numeric
+  metadata_col <- suppressWarnings(as.numeric(as.character(metadata_col)))
+  
+  # Skip if metadata_col is still not numeric or all NA
+  if (all(is.na(metadata_col))) {
+    return(c(correlation = NA, p_value = NA, test_type = "Spearman"))
+  }
+
+  # Perform Spearman correlation
+  test <- suppressWarnings(cor.test(Subdomain_col, metadata_col, method = "spearman", use = "complete.obs"))
+  return(c(correlation = test$estimate, p_value = test$p.value, test_type = "Spearman"))
+}
+
+# Columns to test
+metadata_cols <- c(134, 141, 146, 147, 170)
+
+# Compute Spearman correlations
+correlation_results_cases <- lapply(merged_data_cases[, 2:129], function(Subdomain_col) {
+  results <- list()
+  for (meta_col in metadata_cols) {
+    metadata_col <- merged_data_cases[[meta_col]]
+    results[[colnames(merged_data_cases)[meta_col]]] <- safe_spearman_test(Subdomain_col, metadata_col)
+  }
+  return(results)
+})
+
+# Combine results into data frame
+correlation_cases <- do.call(rbind, lapply(names(correlation_results_cases), function(Subdomain_name) {
+  subdomain_results <- correlation_results_cases[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+# FDR correction
+correlation_cases$FDR_p_value <- p.adjust(as.numeric(correlation_cases$p_value), method = "fdr")
+
+# Save to CSV
+write.csv(correlation_cases, "Spearman_correlation_results.csv", row.names = FALSE)
+
+# View top of result
+head(correlation_cases)
+
+##################################################################################################################################################
+end.rcode-->
+
+<p>Correlation of Clinical Features with Subdomain-specific Zscore  (CT, AD and AsymAD Separately):</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(ggplot2)
+library(dplyr)
+
+##################################################################################################################################################
+## CT
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_CT <- merge(Subdomain_zscore_CT, sample_data_DLPFC_contorl, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_CT)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_CT[is.na(merged_data_CT)] <- 0
+
+#write.table(merged_data_CT_male, "merged_data_CT_male.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+##################################################################################################################################################
+
+set.seed(123)  # For reproducibility
+
+# Define categorical and continuous metadata columns (Update these indices as per your dataset)
+categorical_cols <- c(134, 146, 147)  # Column indices for categorical variables
+continuous_cols <- c(141)  # Column index for continuous variables
+
+# Function to perform permutation-based correction
+perform_permutation_test <- function(Subdomain_col, metadata_col, is_categorical, n_permutations = 1000) {
+  observed_p <- if (is_categorical) {
+    kruskal.test(Subdomain_col ~ as.factor(metadata_col))$p.value
+  } else {
+    cor.test(Subdomain_col, metadata_col, use = "complete.obs")$p.value
+  }
+
+  # Generate null distribution by shuffling metadata
+  permuted_p_values <- replicate(n_permutations, {
+    permuted_metadata <- sample(metadata_col)  # Shuffle labels
+    if (is_categorical) {
+      kruskal.test(Subdomain_col ~ as.factor(permuted_metadata))$p.value
+    } else {
+      cor.test(Subdomain_col, permuted_metadata, use = "complete.obs")$p.value
+    }
+  })
+
+  # Compute empirical p-value
+  empirical_p <- mean(permuted_p_values <= observed_p)
+
+  return(c(observed_p = observed_p, empirical_p = empirical_p))
+}
+
+# Apply permutation test to all subdomains (columns 2 to 129)
+permutation_results <- lapply(merged_data_CT[, 2:129], function(Subdomain_col) {
+  results <- list()
+
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_CT[[cat_col]]
+    results[[colnames(merged_data_CT)[cat_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_CT[[cont_col]]
+    results[[colnames(merged_data_CT)[cont_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+
+  return(results)
+})
+
+# Combine results into a dataframe
+correlation_CT<- do.call(rbind, lapply(names(permutation_results), function(Subdomain_name) {
+  subdomain_results <- permutation_results[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+
+# View results
+head(correlation_CT)
+
+# Write the result to a file
+write.table(correlation_CT, "correlation_CT_with_empirical_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+##################################################################################################################################################
+##################################################################################################################################################
+## AD
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_AD <- merge(Subdomain_zscore_AD, sample_data_DLPFC_AD, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_AD)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_AD[is.na(merged_data_AD)] <- 0
+
+##################################################################################################################################################
+
+set.seed(123)  # For reproducibility
+
+# Define categorical and continuous metadata columns (Update these indices as per your dataset)
+categorical_cols <- c(134, 146, 147)  # Column indices for categorical variables
+continuous_cols <- c(141)  # Column index for continuous variables
+
+# Function to perform permutation-based correction
+perform_permutation_test <- function(Subdomain_col, metadata_col, is_categorical, n_permutations = 1000) {
+  observed_p <- if (is_categorical) {
+    kruskal.test(Subdomain_col ~ as.factor(metadata_col))$p.value
+  } else {
+    cor.test(Subdomain_col, metadata_col, use = "complete.obs")$p.value
+  }
+
+  # Generate null distribution by shuffling metadata
+  permuted_p_values <- replicate(n_permutations, {
+    permuted_metadata <- sample(metadata_col)  # Shuffle labels
+    if (is_categorical) {
+      kruskal.test(Subdomain_col ~ as.factor(permuted_metadata))$p.value
+    } else {
+      cor.test(Subdomain_col, permuted_metadata, use = "complete.obs")$p.value
+    }
+  })
+
+  # Compute empirical p-value
+  empirical_p <- mean(permuted_p_values <= observed_p)
+
+  return(c(observed_p = observed_p, empirical_p = empirical_p))
+}
+
+# Apply permutation test to all subdomains (columns 2 to 129)
+permutation_results <- lapply(merged_data_AD[, 2:129], function(Subdomain_col) {
+  results <- list()
+
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_AD[[cat_col]]
+    results[[colnames(merged_data_AD)[cat_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_AD[[cont_col]]
+    results[[colnames(merged_data_AD)[cont_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+
+  return(results)
+})
+
+# Combine results into a dataframe
+correlation_AD <- do.call(rbind, lapply(names(permutation_results), function(Subdomain_name) {
+  subdomain_results <- permutation_results[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+# View results
+head(correlation_AD)
+
+# Write the result to a file
+write.table(correlation_AD, "correlation_AD_with_empirical_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+##################################################################################################################################################
+##################################################################################################################################################
+## AsymAD
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_AsymAD <- merge(Subdomain_zscore_AsymAD, sample_data_DLPFC_AsymAD, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_AsymAD)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_AsymAD[is.na(merged_data_AsymAD)] <- 0
+
+
+##################################################################################################################################################
+
+set.seed(123)  # For reproducibility
+
+# Define categorical and continuous metadata columns (Update these indices as per your dataset)
+categorical_cols <- c(134, 146, 147)  # Column indices for categorical variables
+continuous_cols <- c(141)  # Column index for continuous variables
+
+# Function to perform permutation-based correction
+perform_permutation_test <- function(Subdomain_col, metadata_col, is_categorical, n_permutations = 1000) {
+  observed_p <- if (is_categorical) {
+    kruskal.test(Subdomain_col ~ as.factor(metadata_col))$p.value
+  } else {
+    cor.test(Subdomain_col, metadata_col, use = "complete.obs")$p.value
+  }
+
+  # Generate null distribution by shuffling metadata
+  permuted_p_values <- replicate(n_permutations, {
+    permuted_metadata <- sample(metadata_col)  # Shuffle labels
+    if (is_categorical) {
+      kruskal.test(Subdomain_col ~ as.factor(permuted_metadata))$p.value
+    } else {
+      cor.test(Subdomain_col, permuted_metadata, use = "complete.obs")$p.value
+    }
+  })
+
+  # Compute empirical p-value
+  empirical_p <- mean(permuted_p_values <= observed_p)
+
+  return(c(observed_p = observed_p, empirical_p = empirical_p))
+}
+
+# Apply permutation test to all subdomains (columns 2 to 129)
+permutation_results <- lapply(merged_data_AsymAD[, 2:129], function(Subdomain_col) {
+  results <- list()
+
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_AsymAD[[cat_col]]
+    results[[colnames(merged_data_AsymAD)[cat_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_AsymAD[[cont_col]]
+    results[[colnames(merged_data_AsymAD)[cont_col]]] <- perform_permutation_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+
+  return(results)
+})
+
+# Combine results into a dataframe
+correlation_AsymAD<- do.call(rbind, lapply(names(permutation_results), function(Subdomain_name) {
+  subdomain_results <- permutation_results[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+
+# View results
+head(correlation_AsymAD)
+
+# Write the result to a file
+write.table(correlation_AsymAD, "correlation_AsymAD_with_empirical_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+##################################################################################################################################################
+##################################################################################################################################################
+## Cases (AD + AsymAD)
+
+# Ensure Sample_ID and batch.channel are aligned (join the data based on Sample_ID/batch.channel)
+merged_data_cases <- merge(Subdomain_zscore_cases, sample_data_DLPFC_cases, by.x = "Sample_ID", by.y = "batch.channel")
+
+dim(merged_data_cases)
+
+
+# Replace NA values with 0 (or any other specific value)
+merged_data_cases[is.na(merged_data_cases)] <- 0
+
+
+##################################################################################################################################################
+
+# Function to compute correlation or Kruskal-Wallis test based on variable type
+correlation_and_kw_test <- function(Subdomain_col, metadata_col, is_categorical) {
+  if (is_categorical) {
+    # Perform Kruskal-Wallis test for categorical variables
+    test <- kruskal.test(Subdomain_col ~ as.factor(metadata_col))
+    return(c(statistic = test$statistic, p_value = test$p.value, test_type = "Kruskal-Wallis"))
+  } else {
+    # Perform Pearson correlation for continuous variables
+    test <- cor.test(Subdomain_col, metadata_col, use = "complete.obs")
+    return(c(correlation = test$estimate, p_value = test$p.value, test_type = "Pearson"))
+  }
+}
+
+# Identify categorical and continuous metadata columns
+categorical_cols <- c(134, 146, 147)  # Indices of categorical metadata columns
+continuous_cols <- c(141)  # Indices of continuous metadata columns
+
+# Compute correlations or Kruskal-Wallis results for each subdomain-metadata pair
+correlation_results_cases <- lapply(merged_data_cases[, 2:129], function(Subdomain_col) {
+  # Combine results for categorical and continuous metadata columns
+  results <- list()
+  
+  # Process categorical variables
+  for (cat_col in categorical_cols) {
+    metadata_col <- merged_data_cases[[cat_col]]
+    results[[colnames(merged_data_cases)[cat_col]]] <- correlation_and_kw_test(Subdomain_col, metadata_col, is_categorical = TRUE)
+  }
+  
+  # Process continuous variables
+  for (cont_col in continuous_cols) {
+    metadata_col <- merged_data_cases[[cont_col]]
+    results[[colnames(merged_data_cases)[cont_col]]] <- correlation_and_kw_test(Subdomain_col, metadata_col, is_categorical = FALSE)
+  }
+  
+  return(results)
+})
+
+# Combine the results into a single data frame
+correlation_cases <- do.call(rbind, lapply(names(correlation_results_cases), function(Subdomain_name) {
+  subdomain_results <- correlation_results_cases[[Subdomain_name]]
+  data.frame(
+    Subdomain = Subdomain_name,
+    Metadata = names(subdomain_results),
+    do.call(rbind, subdomain_results)
+  )
+}))
+
+# Apply BY correction
+correlation_cases$FDR_p_value <- p.adjust(correlation_cases$p_value, method = "fdr")
+
+
+# View results
+head(correlation_cases)
+
+# Write the result to a file
+write.table(correlation_cases, "correlation_cases_with_FDR_pvalues.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+end.rcode-->
+
+<p>Plot the correlation between clinical parameters and individual Subdomain for each group</p>
+
+<!--begin.rcode fig.width=25, fig.height=15
+
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(ggnewscale)
+
+
+# Open the merged clinical parameter correlation table for the sigificant subdomain in each catagory (P value < 0.05)
+
+data <- read.csv("clinical_parameter_correlation_all_FDR_062325.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+#data <- read.csv("clinical_parameter_correlation_spearman.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+
+
+head(data)
+
+
+# Define the color code for each Biodomain
+custom_colors <- c("Apoptosis" = "#673399", "APP Metabolism" = "#fe6500", "Autophagy" = "#9931fd", "Cell Cycle" = "#18857f", "DNA Repair" = "#f451ad", "Endolysosome" = "#3466cc", "Epigenetic" = "#cb3233", "Immune Response" = "#9ccdcc", "Lipid Metabolism" = "#989898", "Metal Binding and Homeostasis" = "#4b0d20", "Mitochondrial Metabolism" = "#97cb98", "Myelination" = "#996735", "Oxidative Stress" = "#ffcd66", "Proteostasis" = "#c8b269", "RNA Spliceosome" = "#0c9aff", "Structural Stabilization" = "#ff9a9a", "Synapse" = "#329a33", "Tau Homeostasis" = "#cb97cb", "Vasculature" = "#cecd02", "none" = "#7f7f7f")
+
+
+# Wrap long Biodomain_Subdomain names
+#data <- data %>%
+  #mutate(Biodomain_Subdomain_wrapped = str_wrap(Biodomain_Subdomain, width = 40))
+
+
+# Truncate long Biodomain_Subdomain names to 40 characters
+#data <- data %>%
+  #mutate(Biodomain_Subdomain_short = str_trunc(Biodomain_Subdomain, width = 40))
+
+
+# Step 1: Rename only selected Metadata values, leave others unchanged
+data$Metadata <- recode(data$Metadata,
+                        "ApoE4.Dose" = "APOE4",
+                        "braaksc" = "BRAAK",
+                        "ceradsc_RADCnonStd" = "CERAD",
+                        "cts_mmse30_lv"= "MMSE"
+                        )
+
+# Step 2: Reorder Metadata as factor with desired order
+data$Metadata <- factor(data$Metadata, levels = c("APOE4", "CERAD", "BRAAK", "MMSE"))
+
+
+# Step 3: Identify Biodomain_Subdomain values that appear in more than one Metadata
+#common_subdomains <- data %>%
+  #group_by(Biodomain_Subdomain) %>%
+  #summarise(n_metadata = n_distinct(Metadata)) %>%
+  #filter(n_metadata > 1) %>%
+  #pull(Biodomain_Subdomain)
+
+# Step 4: Add a flag to the original data
+#data <- data %>%
+  #mutate(is_common = Biodomain_Subdomain %in% common_subdomains)
+
+
+# Step 5:Order data by Biodomain and Biodomain_Subdomain
+data <- data %>%
+  arrange(Biodomain, Biodomain_Subdomain)
+
+# Step 6:Create factor with correct order
+data$Biodomain_Subdomain <- factor(data$Biodomain_Subdomain, levels = unique(data$Biodomain_Subdomain))
+
+# Step 7:Determine y positions for rectangles
+biodomain_bounds <- data %>%
+  distinct(Biodomain, Biodomain_Subdomain) %>%
+  group_by(Biodomain) %>%
+  summarise(
+    ymin = min(as.numeric(Biodomain_Subdomain)) - 0.5,
+    ymax = max(as.numeric(Biodomain_Subdomain)) + 0.5
+  )
+
+
+# Plot
+ggplot(data, aes(x = Metadata, y = Biodomain_Subdomain)) +
+
+  # Draw background boxes per Biodomain group
+  geom_rect(data = biodomain_bounds,
+            aes(xmin = -Inf, xmax = Inf, ymin = ymin, ymax = ymax, fill = Biodomain),
+            inherit.aes = FALSE, alpha = 0.20) +
+  scale_fill_manual(values = custom_colors, name = "AD Biodomain") +
+
+  # Reset fill scale for correlation bubble color
+  new_scale_fill() +
+
+  # Bubble plot layer
+  geom_point(aes(fill = correlation, size = nl10_FDR_p_value),
+             shape = 21, color = "black", alpha = 0.9) +
+  scale_fill_gradient(low = "tomato", high = "seagreen", name = "Correlation") +
+  scale_size(range = c(4, 12), name = "-log10(FDR P-value)") +
+  
+      # Box outline overlay for common points
+    #geom_point(
+        #data = subset(data, is_common),
+        #aes(x = Metadata, y = Biodomain_Subdomain),
+        #shape = 0,  # square outline
+        #stroke = 1.5,  # Line thickness
+        #color = "black",  # Outline color
+        #fill = NA,      # Transparent fill to create a "box" effect
+        #size = 8        # Match or slightly larger than base point size
+    #) +
+
+  # Labels and theme
+  labs(
+    title = "Clinical Parameters Correlation with Subdomain-specific Z score",
+    x = "Clinical Parameters",
+    y = "Biodomain (Subdomain)"
+  ) +
+  theme_minimal(base_size = 18) +
+  theme(
+    text = element_text(size = 14),
+    axis.text.x = element_text(size = 18, hjust = 1, angle = 45),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 18),
+    strip.text = element_text(size = 24)
+  ) 
+
+#write.table(data, "data_unique.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+end.rcode-->
+
+
+    
+##################################################################################################################################################
+# Open the merged clinical parameter correlation table for the sigificant subdomain in each catagory (P value < 0.05) -continious variables
+
+data1 <- read.csv("clinical_parameter_correlation_with_sig_pval_continious.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(data1)
+
+
+# Step 1: Identify matching `Biodomain_Subdomain` for each `Metadata` across groups
+#data1 <- data1 %>%
+    #group_by(Metadata, Biodomain_Subdomain) %>%
+    #mutate(Matching = if_else(n_distinct(Group) > 1, TRUE, FALSE)) %>%
+    #ungroup()
+
+
+# Step 2: Reorder the Group factor with the desired order
+#data1$Group <- factor(data1$Group, levels = c("CT_female", "AD_female", "AsymAD_female", "CT_male", "AD_male", "AsymAD_male"))
+
+data1$Metadata <- recode(data1$Metadata,
+                        "cts_mmse30_lv" = "MMSE"
+                        )
+
+# Step 3: Bubble plot  with square boxes for unique Biodomain_Subdomain
+
+plot_cont <- ggplot(data1, aes(x = Metadata, y = Biodomain_Subdomain, fill = Correlation, size = nl10_FDR_p_value)) +
+    geom_point(shape = 21, color = "black") +  # Bubble plot
+  
+# Increase overall size of the bubbles
+    scale_size(range = c(4, 12), name = "-log10(FDR P-value)") +
+  
+    scale_fill_gradient2(low = "orange", mid = "white", high = "darkgreen", midpoint = 0, name = "Correlation") +  # Color scale
+  
+    labs(
+        title = "Clinical Parameters Correlation with Subdomain-specific Z score",
+        x = "Clinical Parameters",
+        y = "Biodomain_Subdomain",
+        fill = "Correlation value",
+        size = "-log10(P-value)"
+    ) +
+  theme_minimal(base_size = 18) +
+  theme(
+    text = element_text(size = 14),
+    axis.text.x = element_text(size = 18, hjust = 1, angle = 45),
+    axis.text.y = element_text(size = 14),  # Reduce size slightly if too long
+    axis.title = element_text(size = 18),
+    strip.text = element_text(size = 24)
+  )
+
+##################################################################################################################################################
+ # Use shared legend for combined ggplots
+library(patchwork)
+library(ggpubr)
+theme_set(theme_pubr())
+
+
+#ggarrange(
+  #plot_cat, plot_cont, labels = c("A", "B"),
+  #common.legend = TRUE, legend = "bottom"
+  #)
+
+plot_cat + plot_cont
+
+
+end.rcode-->
+
+
+
+
+</body>
+</html>

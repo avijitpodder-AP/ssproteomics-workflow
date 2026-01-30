@@ -1,0 +1,1513 @@
+<html>
+
+<head>
+<title>Avijit Podder Date: May7, 2025</title>
+
+<head color="blue">
+
+<h1><font color="blue">Graph construction using individual subdomain Specific Z score for TMT Proteomics from the ROSMAP Cohort (Graph based clustering AD + AsymAD)</font></h1>
+
+</head>
+
+<body>
+
+
+<p>Graph-based Clustering using subdomain Specific Z score Distributions Results</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(reshape2)
+library(dplyr)
+library(igraph)
+library(tidyr)
+library(DT)
+library(pheatmap)
+library(ggraph)
+library(ggplot2)
+library(ggrepel)
+library(tidygraph)
+library(gplots)
+library("ggplot2")
+library(reshape2)
+library(RColorBrewer)
+library(dplyr)
+library(viridis)
+library(ggrepel)
+library(corrplot)
+library(plotly)
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AD_male
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AD_male.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AD_male <- sig_subdomain_AD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AD_male <- sig_subdomain_AD_male[, !(colnames(sig_subdomain_AD_male) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AD_male)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AD_male_pos <- sig_subdomain_AD_male
+sig_subdomain_AD_male_pos[sig_subdomain_AD_male_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AD_male_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_male_pos_edge <- melt(sig_subdomain_AD_male_pos)
+
+dim(sig_subdomain_AD_male_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_male_pos_edge <- filter(sig_subdomain_AD_male_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AD_male_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_male_pos_edge, file = "sig_subdomain_AD_male_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AD_male_neg <- sig_subdomain_AD_male
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AD_male_neg[, -1] <- lapply(sig_subdomain_AD_male_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AD_male_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_male_neg_edge <- melt(sig_subdomain_AD_male_neg)
+
+dim(sig_subdomain_AD_male_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_male_neg_edge <- filter(sig_subdomain_AD_male_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AD_male_neg_edge$value <- abs(sig_subdomain_AD_male_neg_edge$value)
+
+
+dim(sig_subdomain_AD_male_neg_edge)
+
+head(sig_subdomain_AD_male_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_male_neg_edge, file = "sig_subdomain_AD_male_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AD_female
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AD_female.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AD_female <- sig_subdomain_AD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AD_female <- sig_subdomain_AD_female[, !(colnames(sig_subdomain_AD_female) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AD_female)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AD_female_pos <- sig_subdomain_AD_female
+sig_subdomain_AD_female_pos[sig_subdomain_AD_female_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AD_female_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_female_pos_edge <- melt(sig_subdomain_AD_female_pos)
+
+dim(sig_subdomain_AD_female_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_female_pos_edge <- filter(sig_subdomain_AD_female_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AD_female_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_female_pos_edge, file = "sig_subdomain_AD_female_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AD_female_neg <- sig_subdomain_AD_female
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AD_female_neg[, -1] <- lapply(sig_subdomain_AD_female_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AD_female_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_female_neg_edge <- melt(sig_subdomain_AD_female_neg)
+
+dim(sig_subdomain_AD_female_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_female_neg_edge <- filter(sig_subdomain_AD_female_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AD_female_neg_edge$value <- abs(sig_subdomain_AD_female_neg_edge$value)
+
+
+dim(sig_subdomain_AD_female_neg_edge)
+
+head(sig_subdomain_AD_female_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_female_neg_edge, file = "sig_subdomain_AD_female_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AsymAD_male
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AsymAD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AsymAD_male.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AsymAD_male <- sig_subdomain_AsymAD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AsymAD_male <- sig_subdomain_AsymAD_male[, !(colnames(sig_subdomain_AsymAD_male) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AsymAD_male)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AsymAD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AsymAD_male_pos <- sig_subdomain_AsymAD_male
+sig_subdomain_AsymAD_male_pos[sig_subdomain_AsymAD_male_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AsymAD_male_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_male_pos_edge <- melt(sig_subdomain_AsymAD_male_pos)
+
+dim(sig_subdomain_AsymAD_male_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_male_pos_edge <- filter(sig_subdomain_AsymAD_male_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AsymAD_male_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_male_pos_edge, file = "sig_subdomain_AsymAD_male_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AsymAD_male_neg <- sig_subdomain_AsymAD_male
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AsymAD_male_neg[, -1] <- lapply(sig_subdomain_AsymAD_male_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AsymAD_male_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_male_neg_edge <- melt(sig_subdomain_AsymAD_male_neg)
+
+dim(sig_subdomain_AsymAD_male_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_male_neg_edge <- filter(sig_subdomain_AsymAD_male_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AsymAD_male_neg_edge$value <- abs(sig_subdomain_AsymAD_male_neg_edge$value)
+
+
+dim(sig_subdomain_AsymAD_male_neg_edge)
+
+head(sig_subdomain_AsymAD_male_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_male_neg_edge, file = "sig_subdomain_AsymAD_male_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AsymAD_female
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AsymAD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AsymAD_female.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AsymAD_female <- sig_subdomain_AsymAD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AsymAD_female <- sig_subdomain_AsymAD_female[, !(colnames(sig_subdomain_AsymAD_female) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AsymAD_female)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AsymAD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AsymAD_female_pos <- sig_subdomain_AsymAD_female
+sig_subdomain_AsymAD_female_pos[sig_subdomain_AsymAD_female_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AsymAD_female_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_female_pos_edge <- melt(sig_subdomain_AsymAD_female_pos)
+
+dim(sig_subdomain_AsymAD_female_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_female_pos_edge <- filter(sig_subdomain_AsymAD_female_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AsymAD_female_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_female_pos_edge, file = "sig_subdomain_AsymAD_female_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AsymAD_female_neg <- sig_subdomain_AsymAD_female
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AsymAD_female_neg[, -1] <- lapply(sig_subdomain_AsymAD_female_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AsymAD_female_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_female_neg_edge <- melt(sig_subdomain_AsymAD_female_neg)
+
+dim(sig_subdomain_AsymAD_female_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_female_neg_edge <- filter(sig_subdomain_AsymAD_female_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AsymAD_female_neg_edge$value <- abs(sig_subdomain_AsymAD_female_neg_edge$value)
+
+
+dim(sig_subdomain_AsymAD_female_neg_edge)
+
+head(sig_subdomain_AsymAD_female_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_female_neg_edge, file = "sig_subdomain_AsymAD_female_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+# Merge the datasets by stacking them together
+#sig_subdomain_proteomics <- rbind(sig_subdomain_AD_male_pos_edge, sig_subdomain_AD_male_neg_edge, sig_subdomain_AD_female_pos_edge, sig_subdomain_AD_female_neg_edge, #sig_subdomain_AsymAD_male_pos_edge, sig_subdomain_AsymAD_male_neg_edge, sig_subdomain_AsymAD_female_pos_edge, sig_subdomain_AsymAD_female_neg_edge)
+
+#head(sig_subdomain_proteomics)
+
+#dim(sig_subdomain_proteomics)
+
+
+# Write the data frame to a file
+#write.table(sig_subdomain_proteomics, file = "sig_subdomain_proteomics_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+end.rcode-->
+
+<p>Analysis and Visualization of Graph-based Clustering Results</p>
+
+<!--begin.rcode fig.width=25, fig.height=15
+
+library(reshape2)
+library(dplyr)
+library(igraph)
+library(tidyr)
+library(DT)
+library(pheatmap)
+library(ggraph)
+library(ggplot2)
+library(ggrepel)
+library(tidygraph)
+library(gplots)
+library("ggplot2")
+library(reshape2)
+library(RColorBrewer)
+library(dplyr)
+library(viridis)
+library(ggrepel)
+library(corrplot)
+library(plotly)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(forcats)
+library(tidyverse)
+
+
+# Open the graph/network structure data
+#graph <- read.csv("Infomap_graph.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+
+#head(graph)
+
+
+# Distributions of Infomap cluster results
+infomap_clusters <- read.csv("Infomap_clusters_081125.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+
+head(infomap_clusters)
+
+
+# Open the Network-based Community detection table
+infomap_clusters_sds <- read.csv("Infomap_clusters_sds_081125.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+
+head(infomap_clusters_sds)
+
+#########################################################################################################################################################
+# Define total subject counts for each group
+total_subjects <- c(
+  "AD_male" = 47,
+  "AD_female" = 128,
+  "AsymAD_male" = 61,
+  "AsymAD_female" = 159
+)
+
+
+# Categorize rows into Attributes (UP, DOWN, AD_male, AD_female, AsymaAD_male and AsymAD_female)
+
+infomap_clusters <- infomap_clusters %>%
+    mutate(
+        Category = case_when(
+            Attributes %in% c("UP", "DOWN") ~ Attributes,
+            Attributes %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female") ~ Attributes,
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    filter(!is.na(Category))  # Keep only rows with valid categories
+
+
+
+# Count occurrences of each Category within each InfoMap_cluster
+summary_infomap_clusters <- infomap_clusters %>%
+    group_by(InfoMap_cluster, Category) %>%
+    summarise(Count = n(), .groups = "drop")
+
+
+
+# Percent for individuals, count for UP/DOWN
+summary_infomap_clusters <- summary_infomap_clusters %>%
+  mutate(
+    Value = case_when(
+      Category %in% names(total_subjects) ~ round((Count / total_subjects[Category]) * 100, 1),
+      TRUE ~ as.numeric(Count)
+    )
+  )
+
+head(summary_infomap_clusters)
+
+#########################################################################################################################################################
+# Define order
+status_categories <- c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female")
+
+# Biodomain summary
+biodomain_summary <- infomap_clusters_sds %>%
+  mutate(Direction = ifelse(Nodes == "UP", "UP", "DOWN")) %>%
+  count(InfoMap_cluster, Biodomain, Direction, name = "Count") %>%
+  mutate(Category = Biodomain) %>%
+  pivot_wider(names_from = Direction, values_from = Count, values_fill = 0) %>%
+  mutate(
+    Count = UP + DOWN,
+    NetDirection = case_when(
+      UP > DOWN ~ "UP",
+      DOWN > UP ~ "DOWN",
+      TRUE ~ "Neutral"
+    )
+  ) %>%
+  filter(NetDirection != "Neutral") %>%
+  select(InfoMap_cluster, Category, Count, Direction = NetDirection)
+
+
+# Merge with original summary
+original_summary <- summary_infomap_clusters %>%
+  mutate(
+    Direction = case_when(
+      Category %in% status_categories ~ "Status",
+      Category %in% c("UP", "DOWN") ~ "Total",
+      TRUE ~ NA_character_
+    ),
+    Value = ifelse(Direction == "Status", Value, Count)
+  ) %>%
+  filter(!is.na(Direction)) %>%
+  select(InfoMap_cluster, Category, Value, Direction)
+
+# Combine data
+merged_data <- bind_rows(
+  original_summary,
+  biodomain_summary %>% rename(Value = Count)
+)
+
+# Define order
+biodomain_categories <- sort(unique(biodomain_summary$Category))
+final_x_order <- c(status_categories, biodomain_categories, "UP", "DOWN")
+merged_data$Category <- factor(merged_data$Category, levels = final_x_order)
+merged_data$InfoMap_cluster <- factor(merged_data$InfoMap_cluster,
+                                      levels = sort(unique(merged_data$InfoMap_cluster), decreasing = TRUE))
+
+# Custom fill color using improved gradients
+merged_data <- merged_data %>%
+  mutate(
+    fill_color = case_when(
+      Direction == "Status" ~ col_numeric(c("white", "purple"), domain = NULL)(Value),
+      Direction == "UP"     ~ col_numeric(c("#e6f5e6", "#006400"), domain = NULL)(Value),
+      Direction == "DOWN"   ~ col_numeric(c("#ffe5e5", "#8B0000"), domain = NULL)(Value),
+      TRUE ~ "grey90"
+    )
+  )
+
+
+
+# Plot
+ggplot(merged_data, aes(x = Category, y = InfoMap_cluster)) +
+  geom_tile(aes(fill = fill_color), color = "white", linewidth = 0.4) +  # Cell border
+  geom_text(aes(label = round(Value, 1)), size = 5) +
+  scale_fill_identity() +
+  scale_y_discrete(name = "InfoMap Cluster") +
+  scale_x_discrete(name = "Category", position = "top") +
+  
+  # Add horizontal lines between rows (row borders)
+  geom_hline(yintercept = seq(1.5, length(unique(merged_data$InfoMap_cluster)) + 0.5, by = 1), 
+             color = "gray", linewidth = 0.5) +
+  
+    # Add column borders
+  geom_vline(xintercept = seq(1.5, length(unique(merged_data$Category)) + 0.5, by = 1),
+             color = "gray", linewidth = 0.5) +
+  
+  theme_minimal(base_size = 18) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 0),
+    panel.grid = element_blank()
+  ) +
+  labs(title = "Enhanced Cluster-wise Heatmap: Status %, Biodomain Direction & Total Counts")
+
+
+#########################################################################################################################################################
+
+# Filter by Status - individual count in each cluster for each catagory > 5%)
+
+# Step 1: Identify eligible clusters
+#eligible_clusters <- merged_data %>%
+  #filter(Category %in% status_categories, Value > 5) %>%
+  #pull(InfoMap_cluster) %>%
+  #unique()
+
+# Step 2: Filter merged_data for eligible clusters only
+#filtered_data <- merged_data %>%
+  #filter(InfoMap_cluster %in% eligible_clusters)
+
+# Step 3: Reorder levels to match filtered data
+#filtered_data$Category <- factor(filtered_data$Category, levels = final_x_order)
+
+#filtered_data$InfoMap_cluster <- factor(
+  #filtered_data$InfoMap_cluster,
+  #levels = sort(unique(filtered_data$InfoMap_cluster))  # ascending: Cluster 1 at top
+#)
+
+# manually define clusters of interest
+selected_clusters <- c(1, 2, 3, 4, 5, 6, 15, 16, 21)
+
+# filter merged_data to keep only those clusters
+filtered_data <- merged_data %>%
+  filter(InfoMap_cluster %in% selected_clusters)
+
+
+
+# Step 4: Plot
+ggplot(filtered_data, aes(x = Category, y = InfoMap_cluster)) +
+  geom_tile(aes(fill = fill_color), color = "white", linewidth = 0.4) +
+  geom_text(aes(label = round(Value, 1)), size = 5) +
+  scale_fill_identity() +
+  scale_y_discrete(name = "InfoMap Cluster") +
+  scale_x_discrete(name = "Category", position = "top") +  # moved labels to top
+  
+    # Add horizontal lines between rows (row borders)
+  geom_hline(yintercept = seq(1.5, length(unique(filtered_data$InfoMap_cluster)) + 0.5, by = 1), 
+             color = "gray", linewidth = 0.5) +
+  
+    # Add column borders
+  geom_vline(xintercept = seq(1.5, length(unique(filtered_data$Category)) + 0.5, by = 1),
+             color = "gray", linewidth = 0.5) +
+  
+  
+  theme_minimal(base_size = 18) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 0),
+    panel.grid = element_blank()
+  ) +
+  labs(title = "Filtered Clusters with individual count in each cluster > 10%")
+
+#########################################################################################################################################################
+#  Create a color mapping
+long_data <- summary_infomap_clusters %>%
+  mutate(
+    FillType = case_when(
+      Category == "UP" ~ "UP",
+      Category == "DOWN" ~ "DOWN",
+      TRUE ~ "Percent"
+    ),
+    FillColor = case_when(
+      Category == "UP" ~ "green",
+      Category == "DOWN" ~ "red",
+      TRUE ~ scales::col_numeric(
+        palette = c("white", "steelblue"),
+        domain = c(0, 100)
+      )(Value)
+    ),
+    Label = if_else(FillType == "Percent", paste0(round(Value, 1), "%"), as.character(Value)),
+    InfoMap_cluster = factor(InfoMap_cluster, levels = sort(unique(InfoMap_cluster), decreasing = TRUE))  # Reverse order
+  )
+
+
+# Plot
+ggplot(long_data, aes(x = Category, y = InfoMap_cluster)) +
+  geom_tile(aes(fill = FillColor), color = "white", linewidth = 0.5) +
+  geom_text(aes(label = Label), size = 4, color = "black") +
+  scale_fill_identity() +
+  labs(
+    title = "Cluster-wise Distribution of UP/DOWN Counts and Subject Category Percentages",
+    x = "Category",
+    y = "InfoMap Cluster"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(size = 14),
+    legend.position = "none"
+  )
+
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+# Network diagram with highlighted the clusters
+
+# Open the graph/network structure data
+#graph <- read.csv("Infomap_graph.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+graph <- read.csv("Infomap_graph_081125.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(graph)
+
+
+# Open the graph/network attributes data
+#attributes <- read.csv("Infomap_graph_attributes.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+attributes <- read.csv("Infomap_graph_attributes_081125.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(attributes)
+
+#########################################################################################################################################################
+
+# 1. Prepare edge list
+edges <- graph %>%
+  rename(from = Node1, to = Node2) %>%
+  select(from, to)
+
+# 2. Create node list from unique nodes in edges
+edge_nodes <- unique(c(edges$from, edges$to)) %>%
+  tibble(name = .)
+
+# 3. Prepare attribute data
+attributes_clean <- attributes %>%
+  rename(name = Nodes) %>%
+  select(name, Attributes, InfoMap_cluster)
+
+# 4. Merge to form complete node metadata
+nodes <- edge_nodes %>%
+  left_join(attributes_clean, by = "name") %>%
+  mutate(
+    Attr = replace_na(Attributes, "Unassigned"),
+    InfomapCluster = as.integer(InfoMap_cluster),
+    NodeShape = case_when(
+      Attr %in% c("UP", "DOWN") ~ "AD Subdomain",
+      Attr %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female") ~ "AD Subject",
+      TRUE ~ "circle"
+    )
+  )
+
+# 5. Create zero-padded cluster labels
+unique_clusters <- sort(unique(nodes$InfomapCluster[!is.na(nodes$InfomapCluster)]))
+ordered_labels <- sprintf("Cluster %02d", unique_clusters)
+
+nodes <- nodes %>%
+  mutate(
+    ClusterLabel = sprintf("Cluster %02d", InfomapCluster),
+    ClusterLabel = factor(ClusterLabel, levels = ordered_labels)
+  )
+
+# 6. Define shape and color mappings
+shape_map <- c(
+  "AD Subdomain" = 15,  # square
+  "AD Subject" = 16   # circle
+)
+
+attr_colors <- c(
+  "UP" = "seagreen1",
+  "DOWN" = "thistle1",
+  "AD_male" = "mediumblue",
+  "AD_female" = "tomato",
+  "AsymAD_male" = "dodgerblue",
+  "AsymAD_female" = "coral",
+  "Unassigned" = "gray70"
+)
+
+# 7. Create graph
+g <- graph_from_data_frame(d = edges, vertices = nodes, directed = FALSE)
+
+# 8. Plot graph
+ggraph(g, layout = "graphopt") +
+  geom_edge_link(alpha = 0.2, color = "gray60") +
+  geom_node_point(aes(color = Attr, shape = NodeShape), size = 4, alpha = 0.9) +  # <--- added shape aesthetic
+  geom_node_text(aes(label = name), size = 4, repel = TRUE, alpha = 0.6) +
+  scale_color_manual(values = attr_colors) +
+  scale_shape_manual(values = shape_map) +
+  facet_nodes(~ ClusterLabel) +
+  theme_graph(base_size = 16) +
+  theme(
+    legend.position = "bottom",
+    strip.text = element_text(size = 16)
+  ) +
+  labs(
+    title = "Network Clusters by InfoMap",
+    subtitle = "Nodes colored by Attribute | Faceted by Cluster",
+    shape = "Node Shape"
+  )
+
+
+
+#########################################################################################################################################################
+
+# 1. Select clusters of interest
+selected_clusters <- c(1, 2, 3, 4, 5, 6, 15, 16, 21)
+
+# Zero-padded labels like "Cluster 01", "Cluster 02", etc.
+ordered_labels <- sprintf("Cluster %02d", selected_clusters)
+
+# 5. Merge with edge node list
+nodes <- edge_nodes %>%
+  left_join(attributes_clean, by = "name") %>%
+  mutate(
+    Attr = replace_na(Attributes, "Unassigned"),
+    InfomapCluster = as.integer(InfoMap_cluster)
+  ) %>%
+  filter(InfomapCluster %in% selected_clusters) %>%  # Filter clusters
+   mutate(
+    ClusterLabel = sprintf("Cluster %02d", InfomapCluster),
+    ClusterLabel = factor(ClusterLabel, levels = ordered_labels)
+  ) %>%
+  mutate(NodeShape = case_when(
+    Attr %in% c("UP", "DOWN") ~ "AD Subdomain",
+    Attr %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female") ~ "AD Subject",
+    TRUE ~ "circle"  # fallback for Unassigned or others
+  ))
+
+# 7. Filter edges to only those between selected nodes
+edges_filtered <- edges %>%
+  filter(from %in% nodes$name & to %in% nodes$name)
+
+# 8. Create graph
+g <- graph_from_data_frame(d = edges_filtered, vertices = nodes, directed = FALSE)
+
+# 9. Plot
+ggraph(g, layout = "graphopt") +
+  geom_edge_link(alpha = 0.2, color = "gray60") +
+  geom_node_point(aes(color = Attr, shape = NodeShape), size = 4, alpha = 0.9) +
+  geom_node_text(aes(label = name), size = 4, repel = TRUE, alpha = 0.6) +
+  scale_color_manual(values = attr_colors) +
+  scale_shape_manual(values = shape_map) +
+  facet_nodes(~ ClusterLabel, ncol = 3) +  # Respects selected and ordered clusters
+  theme_graph(base_size = 16) +
+  theme(
+    legend.position = "bottom",
+    strip.text = element_text(size = 16)
+  ) +
+  labs(
+    title = "Selected InfoMap Clusters",
+    subtitle = "Clusters: selected 10 | Colored by Attribute"
+  )
+
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+# Boxplots of Clinical and Pathological Measures by Cluster
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(rstatix)  # cleaner statistical output
+
+
+#data <- read.csv("Infomap_clusters_with_clinicalParameters.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+data <- read.csv("Infomap_clusters_with_clinicalParameters_082525.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(data)
+
+
+# Step 1: Pivot data to long format from age_death onward
+data_long <- data %>%
+    pivot_longer(
+        cols = age_death:MMSE,  # Select columns to plot
+        names_to = "Variable",
+        values_to = "Value"
+    )
+
+# Step 2: Convert columns to factors (if needed)
+data_long$Infomap_cluster <- factor(data_long$Infomap_cluster)
+data_long$Status <- factor(data_long$Status)
+
+
+# Step 3:Define custom colors
+custom_colors <- c(
+    "AD_male" = "mediumblue",
+    "AD_female" = "red",
+    "AsymAD_male" = "dodgerblue",
+    "AsymAD_female" = "coral"
+)
+
+
+# Step 4: Plot
+ggplot(data_long, aes(x = Infomap_cluster, y = Value)) +
+    geom_violin(fill = "gray90", color = "black", alpha = 0.4, width = 0.8) +  # violin instead of boxplot
+    geom_jitter(aes(color = Status), position = position_jitter(width = 0.2), size = 1.8, alpha = 0.8) +
+    facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+    labs(
+        title = "Violin Plots of Clinical and Pathological Measures by Cluster",
+        x = "Infomap Cluster",
+        y = "Value"
+    ) +
+    theme_minimal(base_size = 28) +
+    theme(
+        legend.position = "bottom",
+        strip.text = element_text(face = "bold")
+    ) +
+    scale_color_manual(values = custom_colors)
+
+#########################################################################################################################################################
+#Pairwise Comparisons Between Clusters 
+
+
+# Prepare data if not already done
+data_long <- data %>%
+  pivot_longer(
+    cols = age_death:MMSE,
+    names_to = "Variable",
+    values_to = "Value"
+  ) %>%
+  mutate(
+    Infomap_cluster = factor(Infomap_cluster),
+    Status = factor(Status)
+  )
+
+# Step 1: Run pairwise Wilcoxon for all variables
+pairwise_results <- data_long %>%
+  drop_na(Value, Infomap_cluster) %>%
+  group_by(Variable) %>%
+  group_modify(~ {
+    tryCatch(
+      {
+        res <- pairwise_wilcox_test(.x, Value ~ Infomap_cluster, p.adjust.method = "fdr")
+        res$Variable <- unique(.x$Variable)  # tag results with variable name
+        res
+      },
+      error = function(e) {
+        # return a placeholder row with NA if test fails
+        tibble(
+          group1 = NA, group2 = NA, p = NA, p.adj = NA, p.adj.signif = NA,
+          Variable = unique(.x$Variable)
+        )
+      }
+    )
+  }) %>%
+  ungroup()
+
+# Step 2: Filter significant results (if any)
+significant_results <- pairwise_results %>%
+  filter(!is.na(p.adj) & p.adj < 0.05)
+
+# Step 3: Print significant comparisons
+print(significant_results)
+
+
+
+write.table(pairwise_results,"Clinical_and_Pathological_Measures_by_Cluster.txt",sep="\t",quote=F)
+
+#########################################################################################################################################################
+# Step 1: Prepare data
+heat_data <- pairwise_results %>%
+    mutate(
+        group1 = factor(as.numeric(as.character(group1))),
+        group2 = factor(as.numeric(as.character(group2))),
+        p_display = ifelse(p < 0.05, p, NA),         # show only p < 0.05 in gradient
+        label = ifelse(p.adj < 0.05, "*", "")
+    )
+
+# Define group order
+ordered_levels <- sort(unique(c(as.numeric(as.character(heat_data$group1)),
+                                as.numeric(as.character(heat_data$group2)))))
+heat_data$group1 <- factor(heat_data$group1, levels = ordered_levels)
+heat_data$group2 <- factor(heat_data$group2, levels = ordered_levels)
+
+# Step 2: Plot
+ggplot(heat_data, aes(x = group1, y = group2, fill = p_display)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = label), color = "white", size = 8) +
+    facet_wrap(~ Variable, scales = "free", ncol = 2) +
+    scale_fill_gradient(
+        name = "p < 0.05",
+        low = "#08306b", high = "#deebf7",
+        na.value = "gray90"  # p >= 0.05 will appear gray
+    ) +
+    labs(
+        title = "Significant Pairwise Comparisons Between Clusters",
+        x = "Group 1",
+        y = "Group 2"
+    ) +
+    theme_minimal(base_size = 28) +
+    theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.text = element_text(face = "bold")
+    )
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+# Selct the clusters for ploting (change according to criteria)
+#selected_clusters <- c(1, 3, 4, 6, 11, 12, 15, 18)
+
+# Create a subset of original file
+#infomap_clusters <- infomap_clusters %>%
+  #filter(InfoMap_cluster %in% selected_clusters)
+
+# Categorize rows into Attributes (UP, DOWN, AD_male, AD_female, AsymaAD_male and AsymAD_female)
+
+infomap_clusters <- infomap_clusters %>%
+    mutate(
+        Category = case_when(
+            Attributes %in% c("UP", "DOWN") ~ Attributes,
+            Attributes %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female") ~ Attributes,
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    filter(!is.na(Category))  # Keep only rows with valid categories
+
+# Assign negative values to DOWN counts
+infomap_clusters <- infomap_clusters %>%
+    mutate(
+        Value = case_when(
+            Category == "DOWN" ~ -1,
+            TRUE ~ 1
+        )
+    )
+
+
+# Count occurrences of each Category within each InfoMap_cluster
+summary_infomap_clusters <- infomap_clusters %>%
+    group_by(InfoMap_cluster, Category) %>%
+    summarise(Count = n(), .groups = "drop")
+
+
+# Set factor levels for ordered categories
+summary_infomap_clusters$Category <- factor(summary_infomap_clusters$Category, levels = c("UP", "DOWN", "AD_male", "AD_female", "AsymAD_male", "AsymAD_female"))
+
+
+# Custom colors for the bars
+custom_colors <- c("UP" = "darkgreen", "DOWN" = "red", "AD_male" = "mediumblue", "AD_female" = "tomato", "AsymAD_male" = "dodgerblue", "AsymAD_female" = "coral")
+
+
+# Create the bar plot
+ggplot(summary_infomap_clusters, aes(x = Category, y = ifelse(Category == "DOWN", -Count, Count), fill = Category)) +
+    geom_bar(stat = "identity", width = 0.6, position = position_dodge(width = 0.9)) +
+    geom_text(
+        aes(label = abs(Count)),
+        vjust = 0.5,  # Center the text vertically within the bar
+        size = 5,
+        position = position_dodge(width = 0.9)
+    ) +
+    facet_wrap(~ InfoMap_cluster, ncol = 4, scales = "free_y") +  # Adjust `ncol` for desired layout
+    labs(
+        title = "Distribution of Subdomains (UP and DOWN), AD and AsymAD (Male and Female) by InfoMap Cluster",
+        x = "Attributes",
+        y = "Count",
+        fill = "Category"
+    ) +
+    theme_minimal(base_size = 14) +
+    scale_fill_manual(values = custom_colors) +  # Apply custom colors
+    theme(
+        text = element_text(size = 18),
+        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 14)
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black")
+
+#########################################################################################################################################################
+
+# Aggregate UP and DOWN counts per cluster
+up_down_counts <- summary_infomap_clusters %>%
+    filter(Category %in% c("UP", "DOWN")) %>%
+    group_by(InfoMap_cluster) %>%
+    summarise(Total_UP_DOWN = sum(Count), .groups = "drop")
+
+# Step 2: Identify clusters where UP + DOWN >= 5
+clusters_to_keep <- up_down_counts %>%
+    filter(Total_UP_DOWN >= 5) %>%
+    pull(InfoMap_cluster) %>%
+    unique()
+
+# Step 3: Filter summary data to keep only those clusters but include all categories
+filtered_summary_infomap_clusters <- summary_infomap_clusters %>%
+    filter(InfoMap_cluster %in% clusters_to_keep)
+
+# Step 4: Plot the data
+ggplot(filtered_summary_infomap_clusters, aes(x = Category, y = ifelse(Category == "DOWN", -Count, Count), fill = Category)) +
+    geom_bar(stat = "identity", width = 0.6, position = position_dodge(width = 0.9)) +
+    geom_text(
+        aes(label = abs(Count)),
+        vjust = 0.5,  # Center the text vertically within the bar
+        size = 6,
+        position = position_dodge(width = 0.9)
+    ) +
+    facet_wrap(~ InfoMap_cluster, ncol = 3, scales = "free_y") +  # Adjust `ncol` for desired layout
+    labs(
+        title = "Distribution of Subdomains (UP + DOWN ≥ 5) & Other Attributes by InfoMap Cluster",
+        x = "Attributes",
+        y = "Count",
+        fill = "Category"
+    ) +
+    theme_minimal(base_size = 14) +
+    scale_fill_manual(values = custom_colors) +  # Apply custom colors
+    theme(
+        text = element_text(size = 14),
+        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 14)
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black")
+
+#########################################################################################################################################################
+
+# Aggregate individual counts per cluster
+ind_counts <- summary_infomap_clusters %>%
+    filter(Category %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female")) %>%
+    group_by(InfoMap_cluster) %>%
+    summarise(Total_ind = sum(Count), .groups = "drop")
+
+# Step 2: Identify clusters where individuals >= 3
+clusters_to_keep <- ind_counts %>%
+    filter(Total_ind >= 3) %>%
+    pull(InfoMap_cluster) %>%
+    unique()
+
+# Step 3: Filter summary data to keep only those clusters but include all categories
+filtered_summary_infomap_clusters <- summary_infomap_clusters %>%
+    filter(InfoMap_cluster %in% clusters_to_keep)
+
+ggplot(filtered_summary_infomap_clusters, aes(x = Category, y = ifelse(Category == "DOWN", -Count, Count), fill = Category)) +
+    geom_bar(stat = "identity", width = 0.6, position = position_dodge(width = 0.9)) +
+    geom_text(
+        aes(label = abs(Count)),
+        vjust = 0.5,  # Center the text vertically within the bar
+        size = 5,
+        position = position_dodge(width = 0.9)
+    ) +
+    facet_wrap(~ InfoMap_cluster, ncol = 3, scales = "free_y") +  # Adjust `ncol` for desired layout
+    labs(
+        title = "Distribution of Subdomains (total individuals ≥ 3) & Other Attributes by InfoMap Cluster",
+        x = "Attributes",
+        y = "Count",
+        fill = "Category"
+    ) +
+    theme_minimal(base_size = 14) +
+    scale_fill_manual(values = custom_colors) +  # Apply custom colors
+    theme(
+        text = element_text(size = 14),
+        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 14)
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black")
+
+
+
+
+
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+# Biodomain/Subdomain Counts by Community (Infomap Clusters)
+
+# Define the Biodomain colors
+custom_colors <- c("Apoptosis" = "#673399", "APP Metabolism" = "#fe6500", "Autophagy" = "#9931fd", "Cell Cycle" = "#18857f", "DNA Repair" = "#f451ad", "Endolysosome" = "#3466cc", "Epigenetic" = "#cb3233", "Immune Response" = "#9ccdcc", "Lipid Metabolism" = "#989898", "Metal Binding and Homeostasis" = "#4b0d20", "Mitochondrial Metabolism" = "#97cb98", "Myelination" = "#996735", "Oxidative Stress" = "#ffcd66", "Proteostasis" = "#c8b269", "RNA Spliceosome" = "#0c9aff", "Structural Stabilization" = "#ff9a9a", "Synapse" = "#329a33", "Tau Homeostasis" = "#cb97cb", "Vasculature" = "#cecd02", "none" = "#7f7f7f")
+
+
+# Open the Network-based Community detection table
+
+#infomap_clusters_sds <- read.csv("Infomap_clusters_sds.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+infomap_clusters_sds <- read.csv("Infomap_clusters_sds_081125.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(infomap_clusters_sds)
+
+# Selct the clusters for ploting (change according to criteria)
+#selected_clusters <- c(1, 3, 4, 6, 11, 12, 15, 18)
+
+# Create a subset of original file
+#infomap_clusters_sds <- infomap_clusters_sds %>%
+  #filter(InfoMap_cluster %in% selected_clusters)
+
+
+
+# Plot the data as bar graph for each cluster
+ggplot(infomap_clusters_sds, aes(x = Biodomain)) + 
+     geom_bar(aes(fill = Biodomain)) +  # Bar plot with fill by Biodomain
+     labs(title = "Count of Biodomains by Infomap Clusters", 
+          x = "Biodomain", 
+          y = "Count") +
+     facet_wrap(~InfoMap_cluster, ncol = 4, scales = "free_y") +  # Facet based on Community with free y-axis scaling
+     theme_minimal() + 
+     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14)) +
+     scale_fill_manual(values = custom_colors) + 
+     theme(text = element_text(size = 18)) +
+     scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) # Rounded Y-axis
+
+#########################################################################################################################################################
+# Identify clusters where UP or DOWN subdomains have 5 or more counts
+
+# Count the number of UP and DOWN subdomains in each cluster
+cluster_counts <- infomap_clusters_sds %>%
+    filter(Nodes %in% c("UP", "DOWN")) %>%  # Consider only UP and DOWN subdomains
+    group_by(InfoMap_cluster) %>%
+    summarise(Count = n(), .groups = "drop")
+
+# Select clusters where UP and DOWN subdomains are 5 or more
+selected_clusters <- cluster_counts %>%
+    filter(Count >= 5) %>%
+    pull(InfoMap_cluster)  # Extract the list of selected clusters
+
+# Filter the main dataset for only the selected clusters
+filtered_data <- infomap_clusters_sds %>%
+    filter(InfoMap_cluster %in% selected_clusters)
+
+# Create the bar plot with the filtered data
+ggplot(filtered_data, aes(x = Biodomain)) +
+    geom_bar(aes(fill = Biodomain)) +  # Bar plot with fill by Biodomain
+    labs(title = "Count of Biodomains by Community (Filtered Infomap Clusters)",
+         x = "Biodomain",
+         y = "Count") +
+    facet_wrap(~InfoMap_cluster, scales = "free_y") +  # Facet based on selected clusters
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 15)) +
+    scale_fill_manual(values = custom_colors) +
+    theme(text = element_text(size = 20)) +
+    scale_y_continuous(breaks = scales::pretty_breaks(n = 5))  # Rounded Y-axis
+
+
+
+end.rcode-->
+
+#########################################################################################################################################################
+# Function to create a word cloud for a given cluster
+library(wordcloud2)
+library(htmlwidgets)
+library(grid)
+library(gridExtra)
+
+
+# Change the "data" with specific file name - infomap_clusters_sds or leiden_clusters_sds 
+
+create_and_save_wordcloud <- function(cluster_data, custom_colors, file_name) {
+    # Calculate word frequencies (not used for sizing here)
+    word_freq <- as.data.frame(table(cluster_data$Biodomain))
+    colnames(word_freq) <- c("Biodomain", "Frequency")
+
+    # Select the top 3 Biodomain entries based on original frequency
+    word_freq <- word_freq[order(-word_freq$Frequency), ]
+    word_freq <- head(word_freq, 3)
+
+    # Set all frequencies to the same value (e.g., 1) to equalize word sizes
+    word_freq$Frequency <- 1
+
+    # Generate the word cloud with equal word sizes
+    wc <- wordcloud2(
+        data = word_freq,
+        color = htmlwidgets::JS(
+            paste0(
+                "function(word, weight) {",
+                paste(
+                    sapply(names(custom_colors), function(word)
+                        sprintf("if (word === '%s') return '%s';", word, custom_colors[word])),
+                    collapse = " "
+                ),
+                "return 'black'; }"
+            )
+        ),
+        size = 1,
+        minRotation = 0,
+        maxRotation = 0
+    )
+
+    # Save the word cloud as an HTML file
+    saveWidget(wc, file = file_name, selfcontained = TRUE)
+}
+
+# Create word clouds for each cluster and save as HTML files
+clusters <- unique(infomap_clusters_sds$InfoMap_cluster)
+file_names <- paste0("wordcloud_cluster_", clusters, ".html")
+
+lapply(seq_along(clusters), function(i) {
+    cluster_data <- subset(infomap_clusters_sds, InfoMap_cluster == clusters[i])
+    create_and_save_wordcloud(cluster_data, custom_colors, file_names[i])
+})
+
+
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+# Distributions of leiden cluster results
+
+library(dplyr)
+library(ggplot2)
+
+leiden_clusters <- read.csv("leiden_clusters.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(leiden_clusters)
+
+
+# Categorize rows into Attributes (UP, DOWN, AD_male, AD_female, AsymaAD_male and AsymAD_female)
+
+leiden_clusters <- leiden_clusters %>%
+    mutate(
+        Category = case_when(
+            Attributes %in% c("UP", "DOWN") ~ Attributes,
+            Attributes %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female") ~ Attributes,
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    filter(!is.na(Category))  # Keep only rows with valid categories
+
+# Assign negative values to DOWN counts
+leiden_clusters <- leiden_clusters %>%
+    mutate(
+        Value = case_when(
+            Category == "DOWN" ~ -1,
+            TRUE ~ 1
+        )
+    )
+
+
+
+# Count occurrences of each Category within each leiden_cluster
+summary_leiden_clusters <- leiden_clusters %>%
+    group_by(leiden_cluster, Category) %>%
+    summarise(Count = n(), .groups = "drop")
+
+# Set factor levels for ordered categories
+summary_leiden_clusters$Category <- factor(summary_leiden_clusters$Category, levels = c("UP", "DOWN", "AD_male", "AD_female", "AsymAD_male", "AsymAD_female"))
+
+
+# Custom colors for the bars
+custom_colors <- c("UP" = "darkgreen", "DOWN" = "red", "AD_male" = "mediumblue", "AD_female" = "tomato", "AsymAD_male" = "dodgerblue", "AsymAD_female" = "coral")
+
+
+# Create the bar plot
+ggplot(summary_leiden_clusters, aes(x = Category, y = ifelse(Category == "DOWN", -Count, Count), fill = Category)) +
+    geom_bar(stat = "identity", width = 0.6, position = position_dodge(width = 0.9)) +
+    geom_text(
+        aes(label = abs(Count)),
+        vjust = 0.5,  # Center the text vertically within the bar
+        size = 6,
+        position = position_dodge(width = 0.9)
+    ) +
+    facet_wrap(~ leiden_cluster, ncol = 3, scales = "free_y") +  # Adjust `ncol` for desired layout
+    labs(
+        title = "Distribution of Subdomains (UP and DOWN), AD and AsyamAD (Male and Female) by Leiden Cluster",
+        x = "Attributes",
+        y = "Count",
+        fill = "Category"
+    ) +
+    theme_minimal(base_size = 14) +
+    scale_fill_manual(values = custom_colors) +  # Apply custom colors
+    theme(
+        text = element_text(size = 14),
+        axis.text.x = element_text(size = 14, angle = 45, hjust = 1),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 14)
+    ) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black")
+
+
+#########################################################################################################################################################
+
+
+# Biodomain/Subdomain Counts by Community (Leiden Clusters)
+
+# Define the Biodomain colors
+custom_colors <- c("Apoptosis" = "#673399", "APP Metabolism" = "#fe6500", "Autophagy" = "#9931fd", "Cell Cycle" = "#18857f", "DNA Repair" = "#f451ad", "Endolysosome" = "#3466cc", "Epigenetic" = "#cb3233", "Immune Response" = "#9ccdcc", "Lipid Metabolism" = "#989898", "Metal Binding and Homeostasis" = "#4b0d20", "Mitochondrial Metabolism" = "#97cb98", "Myelination" = "#996735", "Oxidative Stress" = "#ffcd66", "Proteostasis" = "#c8b269", "RNA Spliceosome" = "#0c9aff", "Structural Stabilization" = "#ff9a9a", "Synapse" = "#329a33", "Tau Homeostasis" = "#cb97cb", "Vasculature" = "#cecd02", "none" = "#7f7f7f")
+
+
+# Open the Network-based Community detection table
+
+leiden_clusters_sds <- read.csv("leiden_clusters_sds.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(infomap_clusters_sds)
+
+
+
+# Plot the data as bar graph for each cluster
+ggplot(leiden_clusters_sds, aes(x = Biodomain)) + 
+     geom_bar(aes(fill = Biodomain)) +  # Bar plot with fill by Biodomain
+     labs(title = "Count of Biodomains by Community (Leiden Clusters)", 
+          x = "Biodomain", 
+          y = "Count") +
+     facet_wrap(~leiden_cluster, scales = "free_y") +  # Facet based on Community with free y-axis scaling
+     theme_minimal() + 
+     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14)) +
+     scale_fill_manual(values = custom_colors) + 
+     theme(text = element_text(size = 14)) +
+     scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) # Rounded Y-axis
+
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(patchwork)  # For combining plots
+
+# Filter only UP and DOWN categories for Stacked Bar Plot
+up_down_data <- filtered_summary_infomap_clusters %>%
+    filter(Category %in% c("UP", "DOWN"))
+
+# Filter only AD and AsymAD categories for Pie Chart
+ad_asymad_data <- filtered_summary_infomap_clusters %>%
+    filter(Category %in% c("AD_male", "AD_female", "AsymAD_male", "AsymAD_female"))
+
+# Define colors
+custom_colors <- c("UP" = "darkgreen", "DOWN" = "red3", 
+                   "AD_male" = "mediumblue", "AD_female" = "tomato", 
+                   "AsymAD_male" = "dodgerblue", "AsymAD_female" = "coral")
+
+# Create an empty list to store plots
+plot_list <- list()
+
+# Generate plots for each cluster
+for (cluster in unique(filtered_summary_infomap_clusters$InfoMap_cluster)) {
+    
+    # Subset data for the current cluster
+    cluster_up_down <- up_down_data %>% filter(InfoMap_cluster == cluster)
+    cluster_ad_asymad <- ad_asymad_data %>% filter(InfoMap_cluster == cluster)
+    
+    # Horizontal Stacked Bar Plot for UP and DOWN
+    p1 <- ggplot(cluster_up_down, aes(y = Category, x = Count, fill = Category)) +
+        geom_bar(stat = "identity", width = 0.6) +
+        geom_text(aes(label = Count), position = position_stack(vjust = 0.5), size = 4, color = "white") +  # Center text
+        scale_fill_manual(values = custom_colors) +
+        labs(title = paste("Cluster", cluster, "- UP & DOWN"), y = "Subdoamin", x = "Count") +
+        theme_minimal() +
+        theme(panel.grid.major = element_blank(),   # Remove major grid lines
+              panel.grid.minor = element_blank(),   # Remove minor grid lines
+              panel.background = element_blank(),   # Remove background
+              axis.text.y = element_text(size = 12), 
+              text = element_text(size = 12))
+    
+    # Pie Chart for AD & AsymAD Categories (Only if there are AD/AsymAD data)
+    if (nrow(cluster_ad_asymad) > 0) {
+        p2 <- ggplot(cluster_ad_asymad, aes(x = "", y = Count, fill = Category)) +
+            geom_bar(stat = "identity", width = 1) +
+            coord_polar("y", start = 0) +
+            geom_text(aes(label = paste0(Category, "\n", Count)), 
+                      position = position_stack(vjust = 0.5), size = 4, color = "white") +
+            scale_fill_manual(values = custom_colors) +
+            labs(title = paste("Cluster", cluster, "- AD & AsymAD")) +
+            theme_void() +
+            theme(legend.position = "none", text = element_text(size = 12))
+        
+        # Combine horizontal stacked bar plot and pie chart side-by-side
+        plot_list[[as.character(cluster)]] <- p1 + p2 + plot_layout(ncol = 1)
+    } else {
+        # If no AD/AsymAD data, only show the stacked bar plot
+        plot_list[[as.character(cluster)]] <- p1
+    }
+}
+
+# Arrange all plots in a grid
+wrap_plots(plot_list, ncol = 4)  # Adjust `ncol` for layout preference
+
+end.rcode-->
+#########################################################################################################################################################
+#########################################################################################################################################################
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(forcats)
+
+
+# Open the cluster based sample metadata details
+infomap_clusters_sample <- read.csv("Infomap_clusters_sample_metadata.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(infomap_clusters_sample)
+
+# ---- Parameters ----
+# Clusters you want to include in the plot
+#selected_clusters <- c(1, 3, 6, 8, 9, 11, 12, 20)
+
+selected_clusters <- c(1, 3, 4, 6, 11, 12, 15, 18)
+
+# Color mapping for JohnsonDx_sex groups
+custom_colors_sample <- c(
+    "AD_female" = "tomato",
+    "AD_male" = "mediumblue",
+    "AsymAD_female" = "coral",
+    "AsymAD_male" = "dodgerblue"
+)
+
+# ---- Data Wrangling ----
+# Filter to only selected clusters
+data_filtered <- infomap_clusters_sample %>%
+  filter(Infomap_cluster %in% selected_clusters)
+
+# Variables to compare
+variables_to_plot <- c("ApoE4.Dose", "braaksc", "ceradsc_RADCnonStd", "cts_mmse30_lv")
+
+# Pivot data to long format
+data_long <- data_filtered %>%
+  select(Infomap_cluster, JohnsonDx_sex, all_of(variables_to_plot)) %>%
+  pivot_longer(
+    cols = all_of(variables_to_plot),
+    names_to = "Variable",
+    values_to = "Value"
+  )
+
+# Convert Infomap_cluster to factor for better plotting
+data_long$Infomap_cluster <- as.factor(data_long$Infomap_cluster)
+
+# ---- Plot ----
+ggplot(data_long, aes(x = Infomap_cluster, y = Value, color = JohnsonDx_sex)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, position = position_dodge(width = 0.8)) +
+  geom_jitter(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8), alpha = 0.6, size = 1.8) +
+  facet_wrap(~ Variable, scales = "free_y", ncol = 2) +
+  scale_color_manual(values = custom_colors_sample) +
+  theme_bw(base_size = 20) +
+  labs(
+    title = "Comparative Boxplots by Infomap Cluster",
+    x = "Infomap Cluster",
+    y = "Value",
+    color = "Group"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(size = 20),
+    legend.position = "right"
+  )
+
+
+end.rcode-->
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+# Function to create a word cloud for a given cluster
+library(wordcloud2)
+library(htmlwidgets)
+library(grid)
+library(gridExtra)
+
+
+# Change the "data" with specific file name - infomap_clusters_sds or leiden_clusters_sds 
+
+create_and_save_wordcloud <- function(cluster_data, custom_colors, file_name) {
+    # Calculate word frequencies
+    word_freq <- as.data.frame(table(cluster_data$Biodomain))
+    colnames(word_freq) <- c("Biodomain", "Frequency")
+    
+    # Select the top 3 Biodomain entries based on frequency
+    word_freq <- word_freq[order(-word_freq$Frequency), ]  # Sort in descending order of frequency
+    word_freq <- head(word_freq, 3)  # Keep only the top 3 entries
+    
+    # Generate the word cloud
+    wc <- wordcloud2(
+        data = word_freq,
+        color = htmlwidgets::JS(
+            paste0(
+                "function(word, weight) {",
+                paste(
+                    sapply(names(custom_colors), function(word)
+                        sprintf("if (word === '%s') return '%s';", word, custom_colors[word])),
+                    collapse = " "
+                ),
+                "return 'black'; }"
+            )
+        ),
+        size = 1,          # Adjust size as needed
+        minRotation = 0,   # Set words horizontally
+        maxRotation = 0    # Set words horizontally
+    )
+    
+    # Save the word cloud as an HTML file
+    saveWidget(wc, file = file_name, selfcontained = TRUE)
+}
+
+# Create word clouds for each cluster and save as HTML files
+clusters <- unique(infomap_clusters_sds$InfoMap_cluster)
+file_names <- paste0("wordcloud_cluster_", clusters, ".html")
+
+lapply(seq_along(clusters), function(i) {
+    cluster_data <- subset(infomap_clusters_sds, InfoMap_cluster == clusters[i])
+    create_and_save_wordcloud(cluster_data, custom_colors, file_names[i])
+})
+
+end.rcode-->
+
+
+</body>
+</html>

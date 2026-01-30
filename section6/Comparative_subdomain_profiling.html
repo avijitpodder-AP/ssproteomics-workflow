@@ -1,0 +1,2102 @@
+<html>
+
+<head>
+<style type="text/css">
+.inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.sng {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.def {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+<title>Avijit Podder Date: Nov14, 2024</title>
+
+<head color="blue">
+
+<h1><font color="blue">Individual subdomain Specific Z score Calculation using TMT Proteomics from the ROSMAP Cohort (comparative subdomain Profiling - AD-male vs AD-female)</font></h1>
+
+</head>
+
+<body>
+
+<p>Percentage of individuals in each group with associated subdomains (subdomain)</p>
+
+#<!--begin.rcode fig.width=20, fig.height=25
+library(gplots)
+library("ggplot2")
+library(reshape2)
+library(RColorBrewer)
+library(dplyr)
+library(viridis)
+library(ggrepel)
+library(corrplot)
+library(plotly)
+
+
+# Open subdomains comparison file"
+data_subdomain <- read.csv("comarative_subdomain_results.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+# Open subdomains comparison file for Transcriptomic vs Proteomic
+# Combine male and female together to get AD specific percentile in each group
+#data_subdomain <- read.csv("AD_TvsP.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+
+head(data_subdomain)
+
+# Distribution of Gene_ratio over the subdomains
+#ggplot(data_subdomain, aes(x = Overlapping_gene_ratio)) +  
+  #geom_histogram(binwidth = 0.05, fill = "blue", color = "black", alpha = 0.7) + 
+  #geom_text(stat='bin', binwidth=0.05, aes(label=..count..), vjust=-0.5) + 
+  #labs(title = "Histogram of Overlapping Gene Ratio", x = "Gene Ratio", y = "Frequency") + 
+  #theme_minimal() +  
+ # theme(text = element_text(size = 16))
+
+
+
+
+# Removing the 1st and 2nd columns
+data_subdomain_new <- data_subdomain[, -c(1, 2, 3, 4, 6)]
+
+data_subdomain_new <- data_subdomain
+
+head(data_subdomain_new)
+
+data_matrix_subdomain <- data_subdomain_new[, -1]
+
+# Replace NA values with 0 (or any other specific value)
+data_matrix_subdomain[is.na(data_matrix_subdomain)] <- 0
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+color_scale1 <- colorRampPalette(c("white", "lightblue", "blue", "darkblue"))
+color_scale2 <- colorRampPalette(brewer.pal(9, "RdGy"))
+color_scale3 <- colorRampPalette(brewer.pal(9, "Greens"))
+color_scale4 <- colorRampPalette(brewer.pal(9, "Blues"))
+color_scale5 <- colorRampPalette(brewer.pal(9, "Purples"))
+color_scale6 <- colorRampPalette(brewer.pal(9, "Oranges"))
+
+# Reorder the columns
+#data_matrix_subdomain <- data_matrix_subdomain[, c(
+  #"UP_AD_T",
+  #"UP_AD_P",
+  #"DOWN_AD_T",
+  #"DOWN_AD_P"
+#)]
+
+# Assign custom column names
+#colnames(data_matrix_subdomain) <- c("UP_Trans", "UP_Prot", "DOWN_Trans", "DOWN_Prot")
+
+
+
+heatmap.2(
+as.matrix(data_matrix_subdomain),
+Rowv = TRUE,
+Colv = FALSE,
+col = color_scale5,
+scale = "none",  # Scale rows (genes) to Z-scores
+trace = "none",  # Turn off row and column annotations
+margins = c(15, 40),  # Set margins for row and column labels
+key = TRUE,  # Include a color key
+keysize = .5,  # Size of the color key
+cexCol = 1,  # Set column label size
+cexRow = 1,  # Set row label size
+cellnote=round(data_matrix_subdomain, 2),
+notecol="black",
+labRow = data_subdomain$Biodomain_Subdomain,  # Row labels (subdomain name)
+dendrogram = "row",  # Show both row and column dendrograms
+main="Individuals (ratio) in each group exhibit a significant subdomain (subdomain)"
+)
+
+# subset the data where the value is equal to or greater than 0.05 in any row 
+#subset_data_subdomain <- data_subdomain_new %>% filter(UP_AD_T >= 0.10 | UP_AD_P >= 0.10 | DOWN_AD_T >= 0.10 | DOWN_AD_P >= 0.10)
+
+
+rownames(subset_data_subdomain) <- subset_data_subdomain$Biodomain_Subdomain
+
+subset_data_subdomain <- subset_data_subdomain[, -1]
+
+# Replace NA values with 0 (or any other specific value)
+subset_data_subdomain[is.na(subset_data_subdomain)] <- 0
+
+# Reorder the columns
+#subset_data_subdomain <- subset_data_subdomain[, c(
+  #"UP_AD_T",
+  #"UP_AD_P",
+  #"DOWN_AD_T",
+  #"DOWN_AD_P"
+)]
+
+# Assign custom column names
+#colnames(subset_data_subdomain) <- c("UP_Trans", "UP_Prot", "DOWN_Trans", "DOWN_Prot")
+
+
+head(subset_data_subdomain, 3)
+
+
+# Create the heatmap with filtered row names
+heatmap.2(
+     as.matrix(subset_data_subdomain),
+     Rowv = TRUE,
+     Colv = FALSE,
+     col = color_scale5,
+     scale = "none",
+     trace = "none",
+     margins = c(20, 40),
+     key = TRUE,
+     keysize = 1,
+     cexCol = 2,
+     cexRow = 1.5,
+    cellnote=round(subset_data_subdomain, 2),
+    notecol="black",
+    dendrogram = "row",
+    main = "subdomains Present in atleast 5% Individuals",
+    srtCol = 45  # Rotate column headings by 45 degrees
+)
+########################################################################################################################################################################################################
+
+
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(data_matrix_subdomain, use = "complete.obs")
+
+# Plot only the upper half of the correlation matrix
+corrplot(correlation_matrix, method = "circle", type = "upper", 
+         tl.col = "black", tl.cex = 2, number.cex = 1.5, 
+         addCoef.col = "black", diag = TRUE)
+
+end.rcode-->
+
+########################################################################################################################################################################################################
+########################################################################################################################################################################################################
+
+# UP and DOWN subdomain Separate ploting 
+
+<div class="chunk" id="unnamed-chunk-1"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(gplots)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'gplots'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:stats':
+## 
+##     lowess
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(</span><span class="hl sng">&quot;ggplot2&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: package 'ggplot2' was built under R version 4.5.2
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(reshape2)</span>
+<span class="hl kwd">library</span><span class="hl def">(RColorBrewer)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'dplyr'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(viridis)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## Loading required package: viridisLite
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggrepel)</span>
+<span class="hl kwd">library</span><span class="hl def">(corrplot)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## corrplot 0.95 loaded
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(plotly)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'plotly'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:ggplot2':
+## 
+##     last_plot
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:stats':
+## 
+##     filter
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:graphics':
+## 
+##     layout
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(patchwork)</span>
+<span class="hl kwd">library</span><span class="hl def">(stringr)</span>
+
+
+<span class="hl com"># Open subdomains comparison file&quot;</span>
+<span class="hl com">#data_subdomain &lt;- read.csv(&quot;comarative_subdomain_results.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl def">data_subdomain</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;comarative_subdomain_results_050525.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Truncate long Biodomain_Subdomain names to 40 characters</span>
+<span class="hl def">data_subdomain</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">Biodomain_Subdomain</span> <span class="hl def">=</span> <span class="hl kwd">str_trunc</span><span class="hl def">(Biodomain_Subdomain,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">40</span><span class="hl def">))</span>
+
+
+<span class="hl com"># Removing the 1st and 2nd columns</span>
+<span class="hl def">data_subdomain_new_UP</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain[,</span> <span class="hl opt">-</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl def">,</span> <span class="hl num">2</span><span class="hl def">,</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl num">7</span><span class="hl def">,</span> <span class="hl num">9</span><span class="hl def">,</span> <span class="hl num">11</span><span class="hl def">,</span> <span class="hl num">13</span><span class="hl def">)]</span>
+
+<span class="hl kwd">head</span><span class="hl def">(data_subdomain_new_UP)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##                        Biodomain_Subdomain UP_ratio_AD_female UP_ratio_AD_male
+## 1    APP Metabolism_amyloid-beta clearance          0.1015625       0.08510638
+## 2    APP Metabolism_amyloid-beta formation          0.1875000       0.00000000
+## 3 APP Metabolism_amyloid precursor prot...          0.0000000       0.10638298
+## 4 APP Metabolism_amyloid precursor prot...          0.0234375       0.04255319
+## 5                     APP Metabolism_other          0.0234375       0.04255319
+## 6 Apoptosis_apoptotic mitochondrial cha...          0.0390625       0.00000000
+##   UP_ratio_AsymAD_female UP_ratio_AsymAD_male
+## 1            0.050314465           0.04918033
+## 2            0.157232704           0.03278689
+## 3            0.006289308           0.08196721
+## 4            0.012578616           0.01639344
+## 5            0.031446541           0.01639344
+## 6            0.050314465           0.00000000
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl def">data_subdomain_new_DOWN</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain[,</span> <span class="hl opt">-</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl def">,</span> <span class="hl num">2</span><span class="hl def">,</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl num">6</span><span class="hl def">,</span> <span class="hl num">8</span><span class="hl def">,</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl num">12</span><span class="hl def">)]</span>
+
+<span class="hl kwd">head</span><span class="hl def">(data_subdomain_new_DOWN)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##                        Biodomain_Subdomain DOWN_ratio_AD_female
+## 1    APP Metabolism_amyloid-beta clearance            0.0234375
+## 2    APP Metabolism_amyloid-beta formation            0.0234375
+## 3 APP Metabolism_amyloid precursor prot...            0.0781250
+## 4 APP Metabolism_amyloid precursor prot...            0.0078125
+## 5                     APP Metabolism_other            0.0156250
+## 6 Apoptosis_apoptotic mitochondrial cha...            0.0546875
+##   DOWN_ratio_AD_male DOWN_ratio_AsymAD_female DOWN_ratio_AsymAD_male
+## 1         0.00000000              0.006289308             0.01639344
+## 2         0.06382979              0.006289308             0.06557377
+## 3         0.06382979              0.056603774             0.09836066
+## 4         0.04255319              0.006289308             0.00000000
+## 5         0.06382979              0.025157233             0.03278689
+## 6         0.12765957              0.012578616             0.03278689
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl def">data_matrix_subdomain_UP</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_new_UP[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Reorder the columns</span>
+<span class="hl def">data_matrix_subdomain_UP</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_matrix_subdomain_UP[,</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+  <span class="hl sng">&quot;UP_ratio_AD_female&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;UP_ratio_AsymAD_female&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;UP_ratio_AD_male&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;UP_ratio_AsymAD_male&quot;</span>
+<span class="hl def">)]</span>
+
+
+<span class="hl def">data_matrix_subdomain_DOWN</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_new_DOWN[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Reorder the columns</span>
+<span class="hl def">data_matrix_subdomain_DOWN</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_matrix_subdomain_DOWN[,</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+  <span class="hl sng">&quot;DOWN_ratio_AD_female&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;DOWN_ratio_AsymAD_female&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;DOWN_ratio_AD_male&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;DOWN_ratio_AsymAD_male&quot;</span>
+<span class="hl def">)]</span>
+
+
+
+<span class="hl com"># Replace NA values with 0 (or any other specific value)</span>
+<span class="hl def">data_matrix_subdomain_UP[</span><span class="hl kwd">is.na</span><span class="hl def">(data_matrix_subdomain_UP)]</span> <span class="hl kwb">&lt;-</span> <span class="hl num">0</span>
+<span class="hl def">data_matrix_subdomain_DOWN[</span><span class="hl kwd">is.na</span><span class="hl def">(data_matrix_subdomain_DOWN)]</span> <span class="hl kwb">&lt;-</span> <span class="hl num">0</span>
+
+<span class="hl com"># Set up the color scale using RColorBrewer</span>
+<span class="hl def">color_scale</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdYlGn&quot;</span><span class="hl def">))</span>
+
+<span class="hl com"># Assign custom column names</span>
+<span class="hl kwd">colnames</span><span class="hl def">(data_matrix_subdomain_UP)</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_Male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_Male&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Assign custom column names</span>
+<span class="hl kwd">colnames</span><span class="hl def">(data_matrix_subdomain_DOWN)</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_Male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_Male&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Set up the color scale using RColorBrewer</span>
+<span class="hl def">color_scale</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdYlGn&quot;</span><span class="hl def">))</span>
+<span class="hl def">color_scale1</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;lightblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;darkblue&quot;</span><span class="hl def">))</span>
+<span class="hl def">color_scale2</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdGy&quot;</span><span class="hl def">))</span>
+<span class="hl def">color_scale3</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;Greens&quot;</span><span class="hl def">))</span>
+<span class="hl def">color_scale4</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;Blues&quot;</span><span class="hl def">))</span>
+<span class="hl def">color_scale5</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;Purples&quot;</span><span class="hl def">))</span>
+<span class="hl def">color_scale6</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;Oranges&quot;</span><span class="hl def">))</span>
+
+
+
+<span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+<span class="hl kwd">as.matrix</span><span class="hl def">(data_matrix_subdomain_UP),</span>
+<span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+<span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span>
+<span class="hl kwc">col</span> <span class="hl def">= color_scale3,</span>
+<span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>  <span class="hl com"># Scale rows (genes) to Z-scores</span>
+<span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>  <span class="hl com"># Turn off row and column annotations</span>
+<span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">20</span><span class="hl def">,</span> <span class="hl num">40</span><span class="hl def">),</span>  <span class="hl com"># Set margins for row and column labels</span>
+<span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>  <span class="hl com"># Include a color key</span>
+<span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">.5</span><span class="hl def">,</span>  <span class="hl com"># Size of the color key</span>
+<span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">1.5</span><span class="hl def">,</span>  <span class="hl com"># Set column label size</span>
+<span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>  <span class="hl com"># Set row label size</span>
+<span class="hl kwc">cellnote</span><span class="hl def">=</span><span class="hl kwd">round</span><span class="hl def">(data_matrix_subdomain_UP,</span> <span class="hl num">2</span><span class="hl def">),</span>
+<span class="hl kwc">notecol</span><span class="hl def">=</span><span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span>
+<span class="hl kwc">labRow</span> <span class="hl def">= data_subdomain</span><span class="hl opt">$</span><span class="hl def">Biodomain_Subdomain,</span>  <span class="hl com"># Row labels (subdomain name)</span>
+<span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>  <span class="hl com"># Show both row and column dendrograms</span>
+<span class="hl kwc">main</span><span class="hl def">=</span><span class="hl sng">&quot;Individuals (ratio) in each group exhibit a significant subdomain (subdomain)&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-1.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+<span class="hl kwd">as.matrix</span><span class="hl def">(data_matrix_subdomain_DOWN),</span>
+<span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+<span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span>
+<span class="hl kwc">col</span> <span class="hl def">= color_scale6,</span>
+<span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>  <span class="hl com"># Scale rows (genes) to Z-scores</span>
+<span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>  <span class="hl com"># Turn off row and column annotations</span>
+<span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">20</span><span class="hl def">,</span> <span class="hl num">40</span><span class="hl def">),</span>  <span class="hl com"># Set margins for row and column labels</span>
+<span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>  <span class="hl com"># Include a color key</span>
+<span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">.5</span><span class="hl def">,</span>  <span class="hl com"># Size of the color key</span>
+<span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">1.5</span><span class="hl def">,</span>  <span class="hl com"># Set column label size</span>
+<span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>  <span class="hl com"># Set row label size</span>
+<span class="hl kwc">cellnote</span><span class="hl def">=</span><span class="hl kwd">round</span><span class="hl def">(data_matrix_subdomain_DOWN,</span> <span class="hl num">2</span><span class="hl def">),</span>
+<span class="hl kwc">notecol</span><span class="hl def">=</span><span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span>
+<span class="hl kwc">labRow</span> <span class="hl def">= data_subdomain</span><span class="hl opt">$</span><span class="hl def">Biodomain_Subdomain,</span>  <span class="hl com"># Row labels (subdomain name)</span>
+<span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>  <span class="hl com"># Show both row and column dendrograms</span>
+<span class="hl kwc">main</span><span class="hl def">=</span><span class="hl sng">&quot;Individuals (ratio) in each group exhibit a significant subdomain (subdomain)&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-2.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">########################################################################################################################################################################################################</span>
+
+<span class="hl def">subset_data_subdomain_UP</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_new_UP</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">filter</span><span class="hl def">(UP_ratio_AD_female</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.10</span> <span class="hl opt">|</span> <span class="hl def">UP_ratio_AD_male</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.10</span> <span class="hl opt">|</span> <span class="hl def">UP_ratio_AsymAD_female</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.10</span> <span class="hl opt">|</span> <span class="hl def">UP_ratio_AsymAD_male</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.10</span><span class="hl def">)</span>
+
+<span class="hl def">subset_data_subdomain_DOWN</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_new_DOWN</span> <span class="hl opt">%&gt;%</span> <span class="hl kwd">filter</span><span class="hl def">(DOWN_ratio_AD_female</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.10</span> <span class="hl opt">|</span> <span class="hl def">DOWN_ratio_AD_male</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.10</span> <span class="hl opt">|</span> <span class="hl def">DOWN_ratio_AsymAD_female</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.10</span> <span class="hl opt">|</span> <span class="hl def">DOWN_ratio_AsymAD_male</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.10</span><span class="hl def">)</span>
+
+
+<span class="hl kwd">rownames</span><span class="hl def">(subset_data_subdomain_UP)</span> <span class="hl kwb">&lt;-</span> <span class="hl def">subset_data_subdomain_UP</span><span class="hl opt">$</span><span class="hl def">Biodomain_Subdomain</span>
+<span class="hl kwd">rownames</span><span class="hl def">(subset_data_subdomain_DOWN)</span> <span class="hl kwb">&lt;-</span> <span class="hl def">subset_data_subdomain_DOWN</span><span class="hl opt">$</span><span class="hl def">Biodomain_Subdomain</span>
+
+
+<span class="hl def">subset_data_subdomain_UP</span> <span class="hl kwb">&lt;-</span> <span class="hl def">subset_data_subdomain_UP[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+<span class="hl def">subset_data_subdomain_DOWN</span> <span class="hl kwb">&lt;-</span> <span class="hl def">subset_data_subdomain_DOWN[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+
+<span class="hl com"># Replace NA values with 0 (or any other specific value)</span>
+<span class="hl def">subset_data_subdomain_UP[</span><span class="hl kwd">is.na</span><span class="hl def">(subset_data_subdomain_UP)]</span> <span class="hl kwb">&lt;-</span> <span class="hl num">0</span>
+<span class="hl def">subset_data_subdomain_DOWN[</span><span class="hl kwd">is.na</span><span class="hl def">(subset_data_subdomain_DOWN)]</span> <span class="hl kwb">&lt;-</span> <span class="hl num">0</span>
+
+
+<span class="hl kwd">head</span><span class="hl def">(subset_data_subdomain_UP,</span> <span class="hl num">3</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##                                          UP_ratio_AD_female UP_ratio_AD_male
+## APP Metabolism_amyloid-beta clearance             0.1015625       0.08510638
+## APP Metabolism_amyloid-beta formation             0.1875000       0.00000000
+## APP Metabolism_amyloid precursor prot...          0.0000000       0.10638298
+##                                          UP_ratio_AsymAD_female
+## APP Metabolism_amyloid-beta clearance               0.050314465
+## APP Metabolism_amyloid-beta formation               0.157232704
+## APP Metabolism_amyloid precursor prot...            0.006289308
+##                                          UP_ratio_AsymAD_male
+## APP Metabolism_amyloid-beta clearance              0.04918033
+## APP Metabolism_amyloid-beta formation              0.03278689
+## APP Metabolism_amyloid precursor prot...           0.08196721
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">head</span><span class="hl def">(subset_data_subdomain_DOWN,</span> <span class="hl num">3</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##                                          DOWN_ratio_AD_female
+## Apoptosis_apoptotic mitochondrial cha...            0.0546875
+## Autophagy_mitophagy                                 0.0703125
+## Cell Cycle_cell cycle phase transition              0.0234375
+##                                          DOWN_ratio_AD_male
+## Apoptosis_apoptotic mitochondrial cha...         0.12765957
+## Autophagy_mitophagy                              0.06382979
+## Cell Cycle_cell cycle phase transition           0.08510638
+##                                          DOWN_ratio_AsymAD_female
+## Apoptosis_apoptotic mitochondrial cha...               0.01257862
+## Autophagy_mitophagy                                    0.03773585
+## Cell Cycle_cell cycle phase transition                 0.03773585
+##                                          DOWN_ratio_AsymAD_male
+## Apoptosis_apoptotic mitochondrial cha...             0.03278689
+## Autophagy_mitophagy                                  0.11475410
+## Cell Cycle_cell cycle phase transition               0.14754098
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Reorder the columns</span>
+<span class="hl def">subset_data_subdomain_UP</span> <span class="hl kwb">&lt;-</span> <span class="hl def">subset_data_subdomain_UP[,</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+  <span class="hl sng">&quot;UP_ratio_AD_female&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;UP_ratio_AsymAD_female&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;UP_ratio_AD_male&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;UP_ratio_AsymAD_male&quot;</span>
+<span class="hl def">)]</span>
+
+<span class="hl def">subset_data_subdomain_DOWN</span> <span class="hl kwb">&lt;-</span> <span class="hl def">subset_data_subdomain_DOWN[,</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+  <span class="hl sng">&quot;DOWN_ratio_AD_female&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;DOWN_ratio_AsymAD_female&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;DOWN_ratio_AD_male&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;DOWN_ratio_AsymAD_male&quot;</span>
+<span class="hl def">)]</span>
+
+
+<span class="hl com"># Assign custom column names</span>
+<span class="hl kwd">colnames</span><span class="hl def">(subset_data_subdomain_UP)</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_Male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_Male&quot;</span><span class="hl def">)</span>
+
+<span class="hl kwd">colnames</span><span class="hl def">(subset_data_subdomain_DOWN)</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD_Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD_Male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD_Male&quot;</span><span class="hl def">)</span>
+
+
+
+
+<span class="hl com"># Create the heatmap with filtered row names</span>
+<span class="hl def">UP</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+     <span class="hl kwd">as.matrix</span><span class="hl def">(subset_data_subdomain_UP),</span>
+     <span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+     <span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span>
+     <span class="hl kwc">col</span> <span class="hl def">= color_scale3,</span>
+     <span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+     <span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+     <span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">20</span><span class="hl def">,</span> <span class="hl num">50</span><span class="hl def">),</span>
+     <span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+     <span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">.50</span><span class="hl def">,</span>
+     <span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">2.5</span><span class="hl def">,</span>
+     <span class="hl kwc">srtCol</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span>
+     <span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">2.5</span><span class="hl def">,</span>
+    <span class="hl kwc">cellnote</span><span class="hl def">=</span><span class="hl kwd">round</span><span class="hl def">(subset_data_subdomain_UP,</span> <span class="hl num">2</span><span class="hl def">),</span>
+    <span class="hl kwc">notecex</span><span class="hl def">=</span><span class="hl num">2</span><span class="hl def">,</span>
+    <span class="hl kwc">notecol</span><span class="hl def">=</span><span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;subdomains Present in atleast 5% Individuals&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-3.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Create the heatmap with filtered row names</span>
+<span class="hl def">DOWN</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+     <span class="hl kwd">as.matrix</span><span class="hl def">(subset_data_subdomain_DOWN),</span>
+     <span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+     <span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">,</span>
+     <span class="hl kwc">col</span> <span class="hl def">= color_scale6,</span>
+     <span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+     <span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+     <span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">20</span><span class="hl def">,</span> <span class="hl num">50</span><span class="hl def">),</span>
+     <span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+     <span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">.50</span><span class="hl def">,</span>
+     <span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">2.5</span><span class="hl def">,</span>
+     <span class="hl kwc">srtCol</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">,</span>
+     <span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">2.5</span><span class="hl def">,</span>
+    <span class="hl kwc">cellnote</span><span class="hl def">=</span><span class="hl kwd">round</span><span class="hl def">(subset_data_subdomain_DOWN,</span> <span class="hl num">2</span><span class="hl def">),</span>
+    <span class="hl kwc">notecex</span><span class="hl def">=</span><span class="hl num">2</span><span class="hl def">,</span>
+    <span class="hl kwc">notecol</span><span class="hl def">=</span><span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;subdomains Present in atleast 5% Individuals&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-4.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div></div>
+
+<p>Comparative analysis between/within group for associated subdomains (subdomain)</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+
+########################################################################################################################################################################################################
+
+# Define a custom color palette with distinct colors for each biodomain (different type of Biodomain - color define by Greg Carry)
+custom_colors <- c("Apoptosis" = "#673399", "APP Metabolism" = "#fe6500", "Autophagy" = "#9931fd", "Cell Cycle" = "#18857f", "DNA Repair" = "#f451ad", "Endolysosome" = "#3466cc", "Epigenetic" = "#cb3233", "Immune Response" = "#9ccdcc", "Lipid Metabolism" = "#989898", "Metal Binding and Homeostasis" = "#4b0d20", "Mitochondrial Metabolism" = "#97cb98", "Myelination" = "#996735", "Oxidative Stress" = "#ffcd66", "Proteostasis" = "#c8b269", "RNA Spliceosome" = "#0c9aff", "Structural Stabilization" = "#ff9a9a", "Synapse" = "#329a33", "Tau Homeostasis" = "#cb97cb", "Vasculature" = "#cecd02", "none" = "#7f7f7f")
+
+## AD
+
+# Total number of individual for subdomain enrichment in AD (Male vs Female)
+#ggplot(data_subdomain, aes(x= Total_count_AD_female, y= Total_count_AD_male, color = subdomain_gene_ratio)) +geom_point(alpha=0.3, shape=21, color="black") + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7.5) + geom_smooth(method = 'lm', colour="red", size=0.5) +  scale_color_gradient(low="red", high="black") + theme(text = element_text(size=20))
+
+# Sex specific UP subdomain enrichment in AD (Male vs Female)
+ggplot(data_subdomain, aes(x= UP_ratio_AD_female, y= UP_ratio_AD_male, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors) + labs(color = "Biodomain")
+
+# Sex specific DOWN subdomain enrichment in AD (Male vs Female)
+ggplot(data_subdomain, aes(x= DOWN_ratio_AD_female, y= DOWN_ratio_AD_male, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+
+# UP and DOWN subdomains comparison in AD (Female)
+ggplot(data_subdomain, aes(x= DOWN_ratio_AD_female, y= UP_ratio_AD_female, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+# UP and DOWN subdomains comparison in AD (Male)
+ggplot(data_subdomain, aes(x= DOWN_ratio_AD_male, y= UP_ratio_AD_male, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+########################################################################################################################################################################################################
+## AsymAD
+
+# Sex specific UP subdomain enrichment in AsymAD (Male vs Female)
+ggplot(data_subdomain, aes(x= UP_ratio_AsymAD_female, y= UP_ratio_AsymAD_male, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+# Sex specific DOWN subdomain enrichment in AsymAD (Male vs Female)
+ggplot(data_subdomain, aes(x= DOWN_ratio_AsymAD_female, y= DOWN_ratio_AsymAD_male, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+
+# UP and DOWN subdomains comparison in AsymAD (Female)
+ggplot(data_subdomain, aes(x= DOWN_ratio_AsymAD_female, y= UP_ratio_AsymAD_female, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+# UP and DOWN subdomains comparison in AsymAD (Male)
+ggplot(data_subdomain, aes(x= DOWN_ratio_AsymAD_male, y= UP_ratio_AsymAD_male, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+########################################################################################################################################################################################################
+## AD vs AsymAD
+
+# UP subdomain enrichment in AsymAD vs AD (Female)
+ggplot(data_subdomain, aes(x= UP_ratio_AsymAD_female, y= UP_ratio_AD_female, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+
+# DOWN subdomain enrichment in AsymAD vs AD (Female)
+ggplot(data_subdomain, aes(x= DOWN_ratio_AsymAD_female, y= DOWN_ratio_AD_female, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+
+# UP subdomain enrichment in AsymAD vs AD (Male)
+ggplot(data_subdomain, aes(x= UP_ratio_AsymAD_male, y= UP_ratio_AD_male, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+
+# DOWN subdomain enrichment in AsymAD vs AD (Male)
+ggplot(data_subdomain, aes(x= DOWN_ratio_AsymAD_male, y= DOWN_ratio_AD_male, color = Biodomain, size = Overlapping_gene_ratio)) + geom_point(aes(color=Biodomain), alpha=.3, stroke = 0)  + theme_bw() + geom_text_repel(aes(label = unique_id), size = 7) + geom_smooth(method = 'lm', colour="red", size=0.5) + theme(text = element_text(size=20)) + scale_color_manual(values = custom_colors)  + labs(color = "Biodomain")
+
+
+########################################################################################################################################################################################################
+
+# Convert to interactive plot using plotly
+
+data_subdomain_long <- melt(data_subdomain_new, id.vars = "Biodomain_Subdomain")
+
+p <- ggplot(data_subdomain_long, aes(x = Biodomain_Subdomain, y = value, color = variable, group = variable)) +
+     geom_line(size = 1.2) +              # Line plot
+     geom_point(size = 3) +               # Add points to the line
+     labs(title = "Comparative Plot for AD and AsymAD Ratios",
+          x = "Biodomain_Subdomain Name", 
+          y = "Ratio Value") +
+     theme_minimal() +
+     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 5),  # Rotate x-axis labels for better readability
+           text = element_text(size = 14))
+
+interactive_plot <- ggplotly(p)
+
+interactive_plot
+
+# Save the interactive plot as an HTML file
+htmlwidgets::saveWidget(interactive_plot, "Subdomain_interactive_plot.html")
+
+########################################################################################################################################################################################################
+
+end.rcode-->
+
+<p>Comparative analysis between/within group for associated subdomains (subdomain)</p>
+
+<div class="chunk" id="unnamed-chunk-2"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl com">########################################################################################################################################################################################################</span>
+<span class="hl com"># Male vs Female</span>
+
+<span class="hl com"># Define a custom color palette with distinct colors for each biodomain (different type of Biodomain - color define by Greg Carry)</span>
+<span class="hl def">custom_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Apoptosis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#673399&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;APP Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#fe6500&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Autophagy&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#9931fd&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Cell Cycle&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#18857f&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;DNA Repair&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#f451ad&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Endolysosome&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#3466cc&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Epigenetic&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cb3233&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Immune Response&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#9ccdcc&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Lipid Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#989898&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Metal Binding and Homeostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#4b0d20&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Mitochondrial Metabolism&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#97cb98&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Myelination&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#996735&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Oxidative Stress&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#ffcd66&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Proteostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#c8b269&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;RNA Spliceosome&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#0c9aff&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Structural Stabilization&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#ff9a9a&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Synapse&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#329a33&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Tau Homeostasis&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cb97cb&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Vasculature&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#cecd02&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;none&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;#7f7f7f&quot;</span><span class="hl def">)</span>
+
+<span class="hl com">#  Male vs Female AD</span>
+<span class="hl com"># Open the subdomain file where UP (+) and DOWN (-) subdomains are merged together in a single column and the data is separated as a comparison for Male vs Female subdomains</span>
+<span class="hl com">#data_subdomain_MvF_AD &lt;- read.csv(&quot;Male_Female_comarative_subdomain_results.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl def">data_subdomain_MvF_AD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;Male_Female_comarative_subdomain_results_050525.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl kwd">head</span><span class="hl def">(data_subdomain_MvF_AD,</span> <span class="hl num">5</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Sno   unique_id      Biodomain                              Subdomain_initial
+## 1   1     AM_ac_4 APP Metabolism                         amyloid-beta clearance
+## 2   2     AM_af_5 APP Metabolism                         amyloid-beta formation
+## 3   3  AM_appbp_2 APP Metabolism amyloid precursor protein biosynthetic process
+## 4   4  AM_appmp_3 APP Metabolism    amyloid precursor protein metabolic process
+## 5   5 AM_others_1 APP Metabolism                                          other
+##                                          Subdomain
+## 1                         amyloid-beta clearance +
+## 2                         amyloid-beta formation +
+## 3 amyloid precursor protein biosynthetic process +
+## 4    amyloid precursor protein metabolic process +
+## 5                          APP_Metabolism_others +
+##                                     Biodomain_Subdomain_initial
+## 1                         APP Metabolism_amyloid-beta clearance
+## 2                         APP Metabolism_amyloid-beta formation
+## 3 APP Metabolism_amyloid precursor protein biosynthetic process
+## 4    APP Metabolism_amyloid precursor protein metabolic process
+## 5                                         APP Metabolism _other
+##                                               Biodomain_Subdomain Direction
+## 1                         APP_Metabolism_amyloid-beta_clearance +        UP
+## 2                         APP_Metabolism_amyloid-beta_formation +        UP
+## 3 APP_Metabolism_amyloid_precursor_protein_biosynthetic_process +        UP
+## 4    APP_Metabolism_amyloid_precursor_protein_metabolic_process +        UP
+## 5                                         APP_Metabolism_others +        UP
+##      Female       Male Difference
+## 1 0.1015625 0.08510638 0.01645612
+## 2 0.1875000 0.00000000 0.18750000
+## 3 0.0000000 0.10638298 0.10638298
+## 4 0.0234375 0.04255319 0.01911569
+## 5 0.0234375 0.04255319 0.01911569
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Plot the data as a comparison for Male vs Female subdomains</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(data_subdomain_MvF_AD,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Female,</span> <span class="hl kwc">y</span> <span class="hl def">= Male,</span> <span class="hl kwc">color</span> <span class="hl def">= Biodomain,</span> <span class="hl kwc">size</span> <span class="hl def">= Difference))</span> <span class="hl opt">+</span>
+<span class="hl kwd">geom_point</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span><span class="hl def">=Biodomain,</span> <span class="hl kwc">size</span> <span class="hl def">= Difference),</span> <span class="hl kwc">alpha</span><span class="hl def">=</span><span class="hl num">0.6</span><span class="hl def">,</span> <span class="hl kwc">stroke</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">)</span> <span class="hl opt">+</span>
+ <span class="hl kwd">theme_bw</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl com"># Conditionally label points where AD or AsymAD values are greater than 0.05</span>
+    <span class="hl kwd">geom_text_repel</span><span class="hl def">(</span>
+        <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">((Male</span> <span class="hl opt">&gt;</span> <span class="hl num">0.10</span> <span class="hl opt">&amp;</span> <span class="hl def">Female</span> <span class="hl opt">&lt;</span> <span class="hl num">0.05</span><span class="hl def">)</span> <span class="hl opt">|</span> <span class="hl def">(Female</span> <span class="hl opt">&gt;</span> <span class="hl num">0.07</span> <span class="hl opt">&amp;</span> <span class="hl def">Male</span> <span class="hl opt">&lt;</span> <span class="hl num">0.05</span><span class="hl def">)</span> <span class="hl opt">|</span> <span class="hl def">(Female</span> <span class="hl opt">&gt;</span> <span class="hl num">0.07</span> <span class="hl opt">&amp;</span> <span class="hl def">Male</span> <span class="hl opt">&gt;</span> <span class="hl num">0.07</span><span class="hl def">), Biodomain_Subdomain,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">)),</span>
+       <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">6</span><span class="hl def">,</span> <span class="hl kwc">max.overlaps</span> <span class="hl def">=</span> <span class="hl num">Inf</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;AD Biodomain&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl com"># Add x = y line</span>
+    <span class="hl kwd">geom_abline</span><span class="hl def">(</span><span class="hl kwc">slope</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">intercept</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl com"># Add horizontal and vertical dashed lines</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0.10</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl num">0.10</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Subdomain Comparisons for Female_AD vs Male_AD&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Female (% of subjects)&quot;</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Male (% of subjects)&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+    <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+    <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">)</span>
+  <span class="hl def">)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+## ℹ Please use `linewidth` instead.
+## This warning is displayed once every 8 hours.
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+## generated.
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">########################################################################################################################################################################################################</span>
+
+<span class="hl com"># Wrap long Subdomain names</span>
+<span class="hl com">#data_subdomain_MvF_AD &lt;- data_subdomain_MvF_AD %&gt;%</span>
+    <span class="hl com">#mutate(Subdomain_wrapped = str_wrap(Subdomain, width = 25))</span>
+
+<span class="hl kwd">ggplot</span><span class="hl def">(data_subdomain_MvF_AD,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Male,</span> <span class="hl kwc">y</span> <span class="hl def">= Female,</span> <span class="hl kwc">color</span> <span class="hl def">= Biodomain,</span> <span class="hl kwc">size</span> <span class="hl def">= Difference))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_point</span><span class="hl def">(</span><span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.6</span><span class="hl def">,</span> <span class="hl kwc">stroke</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Increased alpha for better visibility</span>
+    <span class="hl kwd">theme_bw</span><span class="hl def">()</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Conditionally label points where |Male - Female| &gt;= 0.05</span>
+    <span class="hl kwd">geom_text_repel</span><span class="hl def">(</span>
+        <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">((</span><span class="hl kwd">abs</span><span class="hl def">(Female</span> <span class="hl opt">-</span> <span class="hl def">Male)</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.07</span><span class="hl def">)</span> <span class="hl opt">|</span> <span class="hl def">(Female</span> <span class="hl opt">&gt;</span> <span class="hl num">0.07</span> <span class="hl opt">&amp;</span> <span class="hl def">Male</span> <span class="hl opt">&gt;</span> <span class="hl num">0.07</span><span class="hl def">), Subdomain,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">)),</span>
+        <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">8</span><span class="hl def">,</span>
+        <span class="hl kwc">max.overlaps</span> <span class="hl def">=</span> <span class="hl num">Inf</span>  <span class="hl com"># Ensure all significant labels are shown</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+
+   <span class="hl kwd">scale_size</span><span class="hl def">(</span><span class="hl kwc">range</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">.1</span><span class="hl def">,</span> <span class="hl num">10</span><span class="hl def">),</span> <span class="hl kwc">name</span><span class="hl def">=</span><span class="hl sng">&quot;% Difference&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;AD Biodomain&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Add x = y reference line</span>
+    <span class="hl kwd">geom_abline</span><span class="hl def">(</span><span class="hl kwc">slope</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">intercept</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">linewidth</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Add horizontal and vertical threshold lines</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0.10</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl num">0.10</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Subdomain Comparisons for Female_AD vs Male_AD&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Male (% of subjects)&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Female (% of subjects)&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">legend.text</span><span class="hl def">=</span><span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span><span class="hl def">=</span><span class="hl num">16</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-2.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">########################################################################################################################################################################################################</span>
+
+<span class="hl com"># Calculate difference dynamically (Female - Male)</span>
+<span class="hl def">data_subdomain_MvF_AD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_MvF_AD</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">Difference</span> <span class="hl def">= Female</span> <span class="hl opt">-</span> <span class="hl def">Male)</span> <span class="hl opt">%&gt;%</span>  <span class="hl com"># Compute difference</span>
+    <span class="hl kwd">arrange</span><span class="hl def">(Difference)</span>  <span class="hl com"># Sort data: Male-dominant (negative) first, Female-dominant (positive) last</span>
+
+<span class="hl com"># Select top pathways for better visualization</span>
+<span class="hl def">top_n</span> <span class="hl kwb">&lt;-</span> <span class="hl num">20</span>  <span class="hl com"># Adjust this number as needed</span>
+<span class="hl def">data_top</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_MvF_AD[</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl opt">:</span><span class="hl def">(top_n</span><span class="hl opt">/</span><span class="hl num">2</span><span class="hl def">), (</span><span class="hl kwd">nrow</span><span class="hl def">(data_subdomain_MvF_AD)</span> <span class="hl opt">-</span> <span class="hl def">(top_n</span><span class="hl opt">/</span><span class="hl num">2</span><span class="hl def">)</span> <span class="hl opt">+</span> <span class="hl num">1</span><span class="hl def">)</span><span class="hl opt">:</span><span class="hl kwd">nrow</span><span class="hl def">(data_subdomain_MvF_AD)), ]</span>
+
+<span class="hl com"># Create a diverging bar plot with value labels</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(data_top,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">reorder</span><span class="hl def">(Biodomain_Subdomain, Difference),</span> <span class="hl kwc">y</span> <span class="hl def">= Difference,</span> <span class="hl kwc">fill</span> <span class="hl def">= Difference</span> <span class="hl opt">&gt;</span> <span class="hl num">0</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">show.legend</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">coord_flip</span><span class="hl def">()</span> <span class="hl opt">+</span>  <span class="hl com"># Flip for horizontal bars</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>  <span class="hl com"># Blue = Male-dominant, Red = Female-dominant</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Top Male vs Female Subdomains&quot;</span><span class="hl def">,</span>
+         <span class="hl com">#subtitle = &quot;Red = More Female-Dominant | Blue = More Male-Dominant&quot;,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain_Subdomain&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;% Difference&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+          <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-3.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl kwd">ggplot</span><span class="hl def">(data_top,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">reorder</span><span class="hl def">(Biodomain_Subdomain, Difference),</span> <span class="hl kwc">y</span> <span class="hl def">= Difference,</span> <span class="hl kwc">fill</span> <span class="hl def">= Direction))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">show.legend</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">round</span><span class="hl def">(</span><span class="hl kwd">abs</span><span class="hl def">(Difference)</span> <span class="hl opt">*</span> <span class="hl num">100</span><span class="hl def">,</span> <span class="hl num">1</span><span class="hl def">),</span> <span class="hl sng">&quot;%&quot;</span><span class="hl def">)),</span>  <span class="hl com"># absolute value ×100 + % sign</span>
+              <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(data_top</span><span class="hl opt">$</span><span class="hl def">Difference</span> <span class="hl opt">&gt;=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl num">0.1</span><span class="hl def">,</span> <span class="hl num">1.1</span><span class="hl def">),</span>        <span class="hl com"># position text left or right</span>
+              <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">8</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">coord_flip</span><span class="hl def">()</span> <span class="hl opt">+</span>  <span class="hl com"># horizontal bars</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;DOWN&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightcoral&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;UP&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;palegreen&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Top Male vs Female Subdomains&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain_Subdomain&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;% Difference&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Direction&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+          <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">20</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">expand_limits</span><span class="hl def">(</span><span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl kwd">min</span><span class="hl def">(data_top</span><span class="hl opt">$</span><span class="hl def">Difference)</span> <span class="hl opt">*</span> <span class="hl num">1.2</span><span class="hl def">,</span> <span class="hl kwd">max</span><span class="hl def">(data_top</span><span class="hl opt">$</span><span class="hl def">Difference)</span> <span class="hl opt">*</span> <span class="hl num">1.2</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-4.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#######################################################################################################################################################################################################</span>
+<span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'tidyr'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:reshape2':
+## 
+##     smiths
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Select top N subdomains by absolute difference</span>
+<span class="hl def">top_n</span> <span class="hl kwb">&lt;-</span> <span class="hl num">20</span>
+<span class="hl def">data_top</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_MvF_AD</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">Difference</span> <span class="hl def">= Female</span> <span class="hl opt">-</span> <span class="hl def">Male,</span>
+           <span class="hl kwc">AbsDifference</span> <span class="hl def">=</span> <span class="hl kwd">abs</span><span class="hl def">(Difference))</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">arrange</span><span class="hl def">(</span><span class="hl kwd">desc</span><span class="hl def">(AbsDifference))</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">slice</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl opt">:</span><span class="hl def">top_n)</span>
+
+<span class="hl com"># Reshape to long format (Female and Male side-by-side)</span>
+<span class="hl def">data_long</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_top</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">select</span><span class="hl def">(Biodomain_Subdomain_initial, Direction, Female, Male)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">pivot_longer</span><span class="hl def">(</span><span class="hl kwc">cols</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(Female, Male),</span> <span class="hl kwc">names_to</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group&quot;</span><span class="hl def">,</span> <span class="hl kwc">values_to</span> <span class="hl def">=</span> <span class="hl sng">&quot;Value&quot;</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span>
+        <span class="hl kwc">Percent</span> <span class="hl def">= Value</span> <span class="hl opt">*</span> <span class="hl num">100</span><span class="hl def">,</span>
+        <span class="hl com"># Invert values for DOWN direction to go on the left</span>
+        <span class="hl kwc">PlotValue</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(Direction</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl def">Percent, Percent),</span>
+        <span class="hl kwc">Group</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(Group,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Female&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Male&quot;</span><span class="hl def">))</span>
+    <span class="hl def">)</span>
+
+<span class="hl com"># Plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(data_long,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">reorder</span><span class="hl def">(Biodomain_Subdomain_initial, PlotValue),</span> <span class="hl kwc">y</span> <span class="hl def">= PlotValue))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_segment</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">xend</span> <span class="hl def">= Biodomain_Subdomain_initial,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">yend</span> <span class="hl def">= PlotValue,</span> <span class="hl kwc">color</span> <span class="hl def">= Group),</span>
+                 <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">1.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_point</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Group),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">round</span><span class="hl def">(</span><span class="hl kwd">abs</span><span class="hl def">(PlotValue),</span> <span class="hl num">1</span><span class="hl def">),</span> <span class="hl sng">&quot;%&quot;</span><span class="hl def">),</span> <span class="hl kwc">color</span> <span class="hl def">= Group),</span>
+              <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(data_long</span><span class="hl opt">$</span><span class="hl def">PlotValue</span> <span class="hl opt">&gt;</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl num">0.2</span><span class="hl def">,</span> <span class="hl num">1.2</span><span class="hl def">),</span>
+              <span class="hl kwc">nudge_x</span> <span class="hl def">=</span> <span class="hl num">0.4</span><span class="hl def">,</span>
+              <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">coord_flip</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;hotpink4&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightblue4&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Top 10 Diverging Subdomains: Female vs Male&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain (Subdomain)&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Percentage (Direction-Based)&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">15</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;top&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">expand_limits</span><span class="hl def">(</span><span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl opt">-</span><span class="hl kwd">max</span><span class="hl def">(data_long</span><span class="hl opt">$</span><span class="hl def">Percent)</span> <span class="hl opt">*</span> <span class="hl num">1.2</span><span class="hl def">,</span> <span class="hl kwd">max</span><span class="hl def">(data_long</span><span class="hl opt">$</span><span class="hl def">Percent)</span> <span class="hl opt">*</span> <span class="hl num">1.2</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-5.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">########################################################################################################################################################################################################</span>
+<span class="hl com">########################################################################################################################################################################################################</span>
+<span class="hl com">#  AD vs AsymAD </span>
+<span class="hl com"># Open the subdomains where the Male and Female percentages are combined together to get AD and AsymAD specific subdomains</span>
+<span class="hl com"># Further, UP (+) and DOWN (-) subdomains are merged together in a single column and the data is separated as a comparison for AD vs AsymAD subdomains</span>
+
+<span class="hl com">#data_subdomain_ADvAsymAD &lt;- read.csv(&quot;AD_AsymAD_comarative_subdomain_results.csv&quot;, sep =&quot;,&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl def">data_subdomain_ADvAsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;AD_AsymAD_comarative_subdomain_results_050525.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl kwd">head</span><span class="hl def">(data_subdomain_ADvAsymAD,</span> <span class="hl num">5</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Sno   unique_id      Biodomain                              Subdomain_initial
+## 1   1     AM_ac_4 APP Metabolism                         amyloid-beta clearance
+## 2   2     AM_af_5 APP Metabolism                         amyloid-beta formation
+## 3   3  AM_appbp_2 APP Metabolism amyloid precursor protein biosynthetic process
+## 4   4  AM_appmp_3 APP Metabolism    amyloid precursor protein metabolic process
+## 5   5 AM_others_1 APP Metabolism                                          other
+##                                          Subdomain
+## 1                         amyloid-beta clearance +
+## 2                         amyloid-beta formation +
+## 3 amyloid precursor protein biosynthetic process +
+## 4    amyloid precursor protein metabolic process +
+## 5                          APP_Metabolism_others +
+##                                     Biodomain_Subdomain_initial
+## 1                         APP Metabolism_amyloid-beta clearance
+## 2                         APP Metabolism_amyloid-beta formation
+## 3 APP Metabolism_amyloid precursor protein biosynthetic process
+## 4    APP Metabolism_amyloid precursor protein metabolic process
+## 5                                          APP Metabolism_other
+##                                               Biodomain_Subdomain Direction
+## 1                         APP_Metabolism_amyloid-beta_clearance +        UP
+## 2                         APP_Metabolism_amyloid-beta_formation +        UP
+## 3 APP_Metabolism_amyloid_precursor_protein_biosynthetic_process +        UP
+## 4    APP_Metabolism_amyloid_precursor_protein_metabolic_process +        UP
+## 5                                         APP_Metabolism_others +        UP
+##           AD     AsymAD Difference
+## 1 0.18666888 0.09949479 0.08717409
+## 2 0.18750000 0.19001959 0.00251959
+## 3 0.10638298 0.08825652 0.01812646
+## 4 0.06599069 0.02897206 0.03701863
+## 5 0.06599069 0.04783998 0.01815071
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Plot the data as a comparison for AD vs AsymAD pathways</span>
+
+<span class="hl kwd">ggplot</span><span class="hl def">(data_subdomain_ADvAsymAD,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= AD,</span> <span class="hl kwc">y</span> <span class="hl def">= AsymAD,</span> <span class="hl kwc">color</span> <span class="hl def">= Biodomain,</span> <span class="hl kwc">size</span> <span class="hl def">= Difference))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_point</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Biodomain,</span> <span class="hl kwc">size</span> <span class="hl def">= Difference),</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.3</span><span class="hl def">,</span> <span class="hl kwc">stroke</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_bw</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl com"># Conditionally label points based on the specified conditions</span>
+    <span class="hl kwd">geom_text_repel</span><span class="hl def">(</span>
+        <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">((AD</span> <span class="hl opt">&gt;</span> <span class="hl num">0.10</span> <span class="hl opt">&amp;</span> <span class="hl def">Difference</span> <span class="hl opt">&gt;</span> <span class="hl num">0.05</span><span class="hl def">)</span> <span class="hl opt">|</span> <span class="hl def">(AsymAD</span> <span class="hl opt">&gt;</span> <span class="hl num">0.10</span> <span class="hl opt">&amp;</span> <span class="hl def">Difference</span> <span class="hl opt">&gt;</span> <span class="hl num">0.05</span><span class="hl def">)</span> <span class="hl opt">|</span> <span class="hl def">(AD</span> <span class="hl opt">&gt;</span> <span class="hl num">0.15</span> <span class="hl opt">&amp;</span> <span class="hl def">AsymAD</span> <span class="hl opt">&gt;</span> <span class="hl num">0.15</span><span class="hl def">), Subdomain,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">)),</span>
+        <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">8</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;AD Biodomain&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl com"># Add x = y line</span>
+    <span class="hl kwd">geom_abline</span><span class="hl def">(</span><span class="hl kwc">slope</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">intercept</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl com"># Add horizontal and vertical dashed lines</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0.10</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl num">0.10</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Subdomain Comparisons for AD vs AsymAD&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;AD (% of subjects)&quot;</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;AsymAD (% of subjects)&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+    <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+    <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">)</span>
+  <span class="hl def">)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: ggrepel: 1 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-6.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">########################################################################################################################################################################################################</span>
+
+
+<span class="hl com"># Wrap long Subdomain names</span>
+<span class="hl com">#data_subdomain_ADvAsymAD &lt;- data_subdomain_ADvAsymAD %&gt;%</span>
+    <span class="hl com">#mutate(Subdomain_wrapped = str_wrap(Subdomain, width = 25))</span>
+
+
+<span class="hl kwd">ggplot</span><span class="hl def">(data_subdomain_ADvAsymAD,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= AD,</span> <span class="hl kwc">y</span> <span class="hl def">= AsymAD,</span> <span class="hl kwc">color</span> <span class="hl def">= Biodomain,</span> <span class="hl kwc">size</span> <span class="hl def">= Difference))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_point</span><span class="hl def">(</span><span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.3</span><span class="hl def">,</span> <span class="hl kwc">stroke</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Points with transparency</span>
+    <span class="hl kwd">theme_bw</span><span class="hl def">()</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Conditionally label points where |AD - AsymAD| &gt;= 0.05</span>
+    <span class="hl kwd">geom_text_repel</span><span class="hl def">(</span>
+        <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">((</span><span class="hl kwd">abs</span><span class="hl def">(AD</span> <span class="hl opt">-</span> <span class="hl def">AsymAD)</span> <span class="hl opt">&gt;=</span> <span class="hl num">0.06</span><span class="hl def">)</span> <span class="hl opt">|</span> <span class="hl def">(AD</span> <span class="hl opt">&gt;</span> <span class="hl num">0.15</span> <span class="hl opt">&amp;</span> <span class="hl def">AsymAD</span> <span class="hl opt">&gt;</span> <span class="hl num">0.15</span><span class="hl def">), Subdomain,</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">)),</span>
+        <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">8</span><span class="hl def">,</span> <span class="hl kwc">max.overlaps</span> <span class="hl def">=</span> <span class="hl num">Inf</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">scale_size</span><span class="hl def">(</span><span class="hl kwc">range</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">.1</span><span class="hl def">,</span> <span class="hl num">10</span><span class="hl def">),</span> <span class="hl kwc">name</span><span class="hl def">=</span><span class="hl sng">&quot;% Difference&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">= custom_colors)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;AD Biodomain&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Add x = y reference line</span>
+    <span class="hl kwd">geom_abline</span><span class="hl def">(</span><span class="hl kwc">slope</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">intercept</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Add horizontal and vertical threshold lines</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_hline</span><span class="hl def">(</span><span class="hl kwc">yintercept</span> <span class="hl def">=</span> <span class="hl num">0.10</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl num">0.05</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_vline</span><span class="hl def">(</span><span class="hl kwc">xintercept</span> <span class="hl def">=</span> <span class="hl num">0.10</span><span class="hl def">,</span> <span class="hl kwc">linetype</span> <span class="hl def">=</span> <span class="hl sng">&quot;dashed&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Title and axis labels</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Subdomain Comparisons for AD vs AsymAD&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;AD (% of subjects)&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;AsymAD (% of subjects)&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl com"># Theme customization</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">legend.text</span><span class="hl def">=</span><span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span><span class="hl def">=</span><span class="hl num">16</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-7.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#######################################################################################################################################################################################################</span>
+
+<span class="hl com"># Calculate difference dynamically (AD - AsuymAD)</span>
+<span class="hl def">data_subdomain_ADvAsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_ADvAsymAD</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">Difference</span> <span class="hl def">= AD</span> <span class="hl opt">-</span> <span class="hl def">AsymAD)</span> <span class="hl opt">%&gt;%</span>  <span class="hl com"># Compute difference</span>
+    <span class="hl kwd">arrange</span><span class="hl def">(Difference)</span>  <span class="hl com"># Sort data: AD-dominant (negative) first, AsymAD-dominant (positive) last</span>
+
+<span class="hl com"># Select top pathways for better visualization</span>
+<span class="hl def">top_n</span> <span class="hl kwb">&lt;-</span> <span class="hl num">20</span>  <span class="hl com"># Adjust this number as needed</span>
+<span class="hl def">data_top</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_ADvAsymAD[</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl opt">:</span><span class="hl def">(top_n</span><span class="hl opt">/</span><span class="hl num">2</span><span class="hl def">), (</span><span class="hl kwd">nrow</span><span class="hl def">(data_subdomain_ADvAsymAD)</span> <span class="hl opt">-</span> <span class="hl def">(top_n</span><span class="hl opt">/</span><span class="hl num">2</span><span class="hl def">)</span> <span class="hl opt">+</span> <span class="hl num">1</span><span class="hl def">)</span><span class="hl opt">:</span><span class="hl kwd">nrow</span><span class="hl def">(data_subdomain_ADvAsymAD)), ]</span>
+
+<span class="hl com"># Create a diverging bar plot with value labels</span>
+
+<span class="hl kwd">ggplot</span><span class="hl def">(data_top,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">reorder</span><span class="hl def">(Biodomain_Subdomain_initial, Difference),</span> <span class="hl kwc">y</span> <span class="hl def">= Difference,</span> <span class="hl kwc">fill</span> <span class="hl def">= Difference</span> <span class="hl opt">&gt;</span> <span class="hl num">0</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">show.legend</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span> <span class="hl opt">+</span>
+
+    <span class="hl kwd">coord_flip</span><span class="hl def">()</span> <span class="hl opt">+</span>  <span class="hl com"># Flip for horizontal bars</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>  <span class="hl com"># Blue = Male-dominant, Red = Female-dominant</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Top AD vs AsymAD Subdomains&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain_Subdomain&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;% Difference&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+          <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-8.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl kwd">ggplot</span><span class="hl def">(data_top,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">reorder</span><span class="hl def">(Biodomain_Subdomain, Difference),</span> <span class="hl kwc">y</span> <span class="hl def">= Difference,</span> <span class="hl kwc">fill</span> <span class="hl def">= Direction))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">show.legend</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">round</span><span class="hl def">(</span><span class="hl kwd">abs</span><span class="hl def">(Difference)</span> <span class="hl opt">*</span> <span class="hl num">100</span><span class="hl def">,</span> <span class="hl num">1</span><span class="hl def">),</span> <span class="hl sng">&quot;%&quot;</span><span class="hl def">)),</span>  <span class="hl com"># absolute value ×100 + % sign</span>
+              <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(data_top</span><span class="hl opt">$</span><span class="hl def">Difference</span> <span class="hl opt">&gt;=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl num">0.1</span><span class="hl def">,</span> <span class="hl num">1.1</span><span class="hl def">),</span>        <span class="hl com"># position text left or right</span>
+              <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">8</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">coord_flip</span><span class="hl def">()</span> <span class="hl opt">+</span>  <span class="hl com"># horizontal bars</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;DOWN&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightcoral&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;UP&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;palegreen&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Top AD vs AsymAD Subdomains&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain (Subdomain)&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;% Difference&quot;</span><span class="hl def">,</span>
+         <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Direction&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">30</span><span class="hl def">),</span>
+          <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">20</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">expand_limits</span><span class="hl def">(</span><span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl kwd">min</span><span class="hl def">(data_top</span><span class="hl opt">$</span><span class="hl def">Difference)</span> <span class="hl opt">*</span> <span class="hl num">1.2</span><span class="hl def">,</span> <span class="hl kwd">max</span><span class="hl def">(data_top</span><span class="hl opt">$</span><span class="hl def">Difference)</span> <span class="hl opt">*</span> <span class="hl num">1.2</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-9.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#######################################################################################################################################################################################################</span>
+
+<span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+
+<span class="hl com"># Select top N subdomains by absolute difference</span>
+<span class="hl def">top_n</span> <span class="hl kwb">&lt;-</span> <span class="hl num">20</span>
+<span class="hl def">data_top</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_subdomain_ADvAsymAD</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">Difference</span> <span class="hl def">= AD</span> <span class="hl opt">-</span> <span class="hl def">AsymAD,</span>
+           <span class="hl kwc">AbsDifference</span> <span class="hl def">=</span> <span class="hl kwd">abs</span><span class="hl def">(Difference))</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">arrange</span><span class="hl def">(</span><span class="hl kwd">desc</span><span class="hl def">(AbsDifference))</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">slice</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl opt">:</span><span class="hl def">top_n)</span>
+
+<span class="hl com"># Reshape to long format (AD and AsymAD side-by-side)</span>
+<span class="hl def">data_long</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data_top</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">select</span><span class="hl def">(Biodomain_Subdomain_initial, Direction, AD, AsymAD)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">pivot_longer</span><span class="hl def">(</span><span class="hl kwc">cols</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(AD, AsymAD),</span> <span class="hl kwc">names_to</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group&quot;</span><span class="hl def">,</span> <span class="hl kwc">values_to</span> <span class="hl def">=</span> <span class="hl sng">&quot;Value&quot;</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span>
+        <span class="hl kwc">Percent</span> <span class="hl def">= Value</span> <span class="hl opt">*</span> <span class="hl num">100</span><span class="hl def">,</span>
+        <span class="hl com"># Invert values for DOWN direction to go on the left</span>
+        <span class="hl kwc">PlotValue</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(Direction</span> <span class="hl opt">==</span> <span class="hl sng">&quot;DOWN&quot;</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl def">Percent, Percent),</span>
+        <span class="hl kwc">Group</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(Group,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">))</span>
+    <span class="hl def">)</span>
+
+<span class="hl com"># Plot</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(data_long,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">reorder</span><span class="hl def">(Biodomain_Subdomain_initial, PlotValue),</span> <span class="hl kwc">y</span> <span class="hl def">= PlotValue))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_segment</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">xend</span> <span class="hl def">= Biodomain_Subdomain_initial,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl kwc">yend</span> <span class="hl def">= PlotValue,</span> <span class="hl kwc">color</span> <span class="hl def">= Group),</span>
+                 <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">1.5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_point</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">color</span> <span class="hl def">= Group),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">round</span><span class="hl def">(</span><span class="hl kwd">abs</span><span class="hl def">(PlotValue),</span> <span class="hl num">1</span><span class="hl def">),</span> <span class="hl sng">&quot;%&quot;</span><span class="hl def">),</span> <span class="hl kwc">color</span> <span class="hl def">= Group),</span>
+              <span class="hl kwc">hjust</span> <span class="hl def">=</span> <span class="hl kwd">ifelse</span><span class="hl def">(data_long</span><span class="hl opt">$</span><span class="hl def">PlotValue</span> <span class="hl opt">&gt;</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl opt">-</span><span class="hl num">0.2</span><span class="hl def">,</span> <span class="hl num">1.2</span><span class="hl def">),</span>
+              <span class="hl kwc">nudge_x</span> <span class="hl def">=</span> <span class="hl num">0.4</span><span class="hl def">,</span>
+              <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">coord_flip</span><span class="hl def">()</span> <span class="hl opt">+</span>
+    <span class="hl kwd">scale_color_manual</span><span class="hl def">(</span><span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;purple4&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;mediumpurple1&quot;</span><span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Top 10 Diverging Subdomains: AD vs AsymAD&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Biodomain (Subdomain)&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Percentage (Direction-Based)&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;Group&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_minimal</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">15</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">18</span><span class="hl def">),</span>
+        <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;top&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">expand_limits</span><span class="hl def">(</span><span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl opt">-</span><span class="hl kwd">max</span><span class="hl def">(data_long</span><span class="hl opt">$</span><span class="hl def">Percent)</span> <span class="hl opt">*</span> <span class="hl num">1.2</span><span class="hl def">,</span> <span class="hl kwd">max</span><span class="hl def">(data_long</span><span class="hl opt">$</span><span class="hl def">Percent)</span> <span class="hl opt">*</span> <span class="hl num">1.2</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-10.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div></div>
+########################################################################################################################################################################################################
+########################################################################################################################################################################################################
+
+#  Transcriptomics vs Proteomics
+# Open the subdomains where the Male and Female percentages are combined together to get AD specific subdomains in transcriptomics and proteomics analysis
+# Further, UP (+) and DOWN (-) subdomains are merged together in a single column and the data is separated as a comparison for AD vs AsymAD subdomains
+
+data_subdomain_AD_TvsP <- read.csv("AD_trans_prot_comp.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(data_subdomain_AD_TvsP, 5)
+
+
+ggplot(data_subdomain_AD_TvsP, aes(x = AD_Transcriptome, y = AD_proteome, color = Biodomain, size = Difference)) +
+    geom_point(alpha = 0.3, stroke = 0) +  # Points with transparency
+    theme_bw() +
+    
+    # Conditionally label points where |AD_Transcriptome - AD_proteome| >= 0.05
+    geom_text_repel(
+        aes(label = ifelse((abs(AD_Transcriptome - AD_proteome) >= 0.05) | (AD_Transcriptome > 0.10 & AD_proteome > 0.10), Biodomain_Subdomain, "")),
+        size = 6
+    ) +
+    
+    scale_color_manual(values = custom_colors) +
+    labs(color = "Biodomain") +
+    
+    # Add x = y reference line
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray", size = 0.5) +
+    
+    # Add horizontal and vertical threshold lines
+    geom_hline(yintercept = 0.05, linetype = "dashed", color = "gray") +
+    geom_hline(yintercept = 0.10, linetype = "dashed", color = "red") +
+    geom_vline(xintercept = 0.05, linetype = "dashed", color = "gray") +
+    geom_vline(xintercept = 0.10, linetype = "dashed", color = "red") +
+    
+    # Title and axis labels
+    labs(title = "Subdomain Comparisons for Transcriptomics vs Proteomics", 
+         x = "AD_Transcriptome (% of subjects)", 
+         y = "AD_proteome (% of subjects)") +
+    
+    # Theme customization
+    theme(
+        text = element_text(size = 30),
+        legend.position = "right",
+        axis.text = element_text(size = 30),
+        axis.title = element_text(size = 30)
+    )
+
+########################################################################################################################################################################################################
+
+#  Transcriptomics vs Proteomics
+# All eight groups comparison together
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggrepel)
+
+Cases_TvsP <- read.csv("Cases_TvsP.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+head(Cases_TvsP, 5)
+
+
+# Identify column pairs that have "_T" and "_P"
+column_pairs <- unique(gsub("(_T|_P)$", "", names(Cases_TvsP)))
+
+# Create a list to store transformed data
+plot_data <- list()
+
+# Debugging: Print identified column pairs
+print(column_pairs)
+
+# Loop through column pairs and extract matching "_T" and "_P" columns
+for (col in column_pairs) {
+    T_col <- paste0(col, "_T")
+    P_col <- paste0(col, "_P")
+
+    # Debugging: Check if columns exist
+    if (T_col %in% names(Cases_TvsP) & P_col %in% names(Cases_TvsP)) {
+        print(paste("Processing:", T_col, "vs", P_col))  # Debugging info
+
+        # Identify AD vs AsymAD group
+        group_type <- ifelse(grepl("AD_", col), "AD", "AsymAD")
+
+        temp_df <- Cases_TvsP %>%
+            select(unique_id, Biodomain, all_of(T_col), all_of(P_col)) %>%
+            rename(X = all_of(T_col), Y = all_of(P_col)) %>%
+            mutate(Difference = abs(X - Y),
+                   Comparison = col,  # Store column name
+                   Group = group_type)  # Mark whether it's AD or AsymAD
+
+        plot_data[[col]] <- temp_df  # Store in list
+    } else {
+        print(paste("Skipping:", T_col, "or", P_col, "not found"))  # Debugging info
+    }
+}
+
+# Combine all transformed data frames
+final_plot_data <- bind_rows(plot_data)
+
+# Check if final_plot_data is empty
+if (nrow(final_plot_data) == 0) {
+    stop("Error: No valid data available for plotting. Check column names in Cases_TvsP.")
+}
+
+# Ensure `Comparison` is a factor with the correct order: AD groups first, then AsymAD groups
+final_plot_data$Comparison <- factor(final_plot_data$Comparison, levels = unique(final_plot_data$Comparison))
+
+# Ensure AD groups appear first in facets
+final_plot_data$Group <- factor(final_plot_data$Group, levels = c("AD", "AsymAD"))
+
+# Generate the scatter plot with facets
+ggplot(final_plot_data, aes(x = X, y = Y, size = Difference, color = Biodomain)) +
+    geom_point(alpha = 0.5) +
+    scale_color_manual(values = custom_colors) +  # Apply custom colors
+    geom_text_repel(aes(label = unique_id), size = 5) +  # Add labels
+    theme_bw() +
+    facet_wrap(~ Comparison, scales = "free", ncol = 4) +  # Order based on `Comparison`
+    labs(
+        title = "Comparison of Transcriptomic vs Proteomic Ratios (AD and AsymAD)",
+        x = "Transcriptome (% of subjects)",
+        y = "Proteome (% of subjects)",
+        size = "% difference between omics",
+        color = "Biodomain"
+    ) +
+    theme(
+        text = element_text(size = 20),
+        legend.position = "right",
+        axis.text = element_text(size = 20),
+        axis.title = element_text(size = 30),
+        #strip.text = element_text(face = "bold")
+    ) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray", size = 0.5) # Add x = y line
+
+
+########################################################################################################################################################################################################
+
+
+
+end.rcode-->
+
+<p>Graph-based Clustering using subdomain Specific Z score Distributions Results (AD male)</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(reshape2)
+library(dplyr)
+library(igraph)
+library(tidyr)
+library(DT)
+library(pheatmap)
+library(ggraph)
+library(ggplot2)
+library(ggrepel)
+library(tidygraph)
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AD_male
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AD_male.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AD_male <- sig_subdomain_AD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AD_male <- sig_subdomain_AD_male[, !(colnames(sig_subdomain_AD_male) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AD_male)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AD_male_pos <- sig_subdomain_AD_male
+sig_subdomain_AD_male_pos[sig_subdomain_AD_male_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AD_male_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_male_pos_edge <- melt(sig_subdomain_AD_male_pos)
+
+dim(sig_subdomain_AD_male_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_male_pos_edge <- filter(sig_subdomain_AD_male_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AD_male_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_male_pos_edge, file = "sig_subdomain_AD_male_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AD_male_neg <- sig_subdomain_AD_male
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AD_male_neg[, -1] <- lapply(sig_subdomain_AD_male_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AD_male_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_male_neg_edge <- melt(sig_subdomain_AD_male_neg)
+
+dim(sig_subdomain_AD_male_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_male_neg_edge <- filter(sig_subdomain_AD_male_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AD_male_neg_edge$value <- abs(sig_subdomain_AD_male_neg_edge$value)
+
+
+dim(sig_subdomain_AD_male_neg_edge)
+
+head(sig_subdomain_AD_male_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_male_neg_edge, file = "sig_subdomain_AD_male_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AD_female
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AD_female.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AD_female <- sig_subdomain_AD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AD_female <- sig_subdomain_AD_female[, !(colnames(sig_subdomain_AD_female) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AD_female)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AD_female_pos <- sig_subdomain_AD_female
+sig_subdomain_AD_female_pos[sig_subdomain_AD_female_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AD_female_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_female_pos_edge <- melt(sig_subdomain_AD_female_pos)
+
+dim(sig_subdomain_AD_female_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_female_pos_edge <- filter(sig_subdomain_AD_female_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AD_female_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_female_pos_edge, file = "sig_subdomain_AD_female_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AD_female_neg <- sig_subdomain_AD_female
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AD_female_neg[, -1] <- lapply(sig_subdomain_AD_female_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AD_female_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_female_neg_edge <- melt(sig_subdomain_AD_female_neg)
+
+dim(sig_subdomain_AD_female_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_female_neg_edge <- filter(sig_subdomain_AD_female_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AD_female_neg_edge$value <- abs(sig_subdomain_AD_female_neg_edge$value)
+
+
+dim(sig_subdomain_AD_female_neg_edge)
+
+head(sig_subdomain_AD_female_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AD_female_neg_edge, file = "sig_subdomain_AD_female_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AsymAD_male
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AsymAD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AsymAD_male.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AsymAD_male <- sig_subdomain_AsymAD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AsymAD_male <- sig_subdomain_AsymAD_male[, !(colnames(sig_subdomain_AsymAD_male) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AsymAD_male)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AsymAD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AsymAD_male_pos <- sig_subdomain_AsymAD_male
+sig_subdomain_AsymAD_male_pos[sig_subdomain_AsymAD_male_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AsymAD_male_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_male_pos_edge <- melt(sig_subdomain_AsymAD_male_pos)
+
+dim(sig_subdomain_AsymAD_male_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_male_pos_edge <- filter(sig_subdomain_AsymAD_male_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AsymAD_male_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_male_pos_edge, file = "sig_subdomain_AsymAD_male_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AsymAD_male_neg <- sig_subdomain_AsymAD_male
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AsymAD_male_neg[, -1] <- lapply(sig_subdomain_AsymAD_male_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AsymAD_male_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_male_neg_edge <- melt(sig_subdomain_AsymAD_male_neg)
+
+dim(sig_subdomain_AsymAD_male_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_male_neg_edge <- filter(sig_subdomain_AsymAD_male_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AsymAD_male_neg_edge$value <- abs(sig_subdomain_AsymAD_male_neg_edge$value)
+
+
+dim(sig_subdomain_AsymAD_male_neg_edge)
+
+head(sig_subdomain_AsymAD_male_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_male_neg_edge, file = "sig_subdomain_AsymAD_male_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+#########################################################################################################################################################
+#########################################################################################################################################################
+#########################################################################################################################################################
+## AsymAD_female
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AsymAD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain_specific_analysis/sig_subdomain_AsymAD_female.txt", header = TRUE, sep = "\t");
+
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AsymAD_female <- sig_subdomain_AsymAD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AsymAD_female <- sig_subdomain_AsymAD_female[, !(colnames(sig_subdomain_AsymAD_female) %in% c("UP_Count", "DOWN_Count"))]
+
+dim(sig_subdomain_AsymAD_female)
+
+
+# Print the table using DT
+datatable(sig_subdomain_AsymAD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+#########################################################################################################################################################
+
+# Create a data frame with only positive values
+sig_subdomain_AsymAD_female_pos <- sig_subdomain_AsymAD_female
+sig_subdomain_AsymAD_female_pos[sig_subdomain_AsymAD_female_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AsymAD_female_pos)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_female_pos_edge <- melt(sig_subdomain_AsymAD_female_pos)
+
+dim(sig_subdomain_AsymAD_female_pos_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_female_pos_edge <- filter(sig_subdomain_AsymAD_female_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AsymAD_female_pos_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_female_pos_edge, file = "sig_subdomain_AsymAD_female_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+#########################################################################################################################################################
+
+# Create a data frame with only negative values
+sig_subdomain_AsymAD_female_neg <- sig_subdomain_AsymAD_female
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AsymAD_female_neg[, -1] <- lapply(sig_subdomain_AsymAD_female_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AsymAD_female_neg)
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AsymAD_female_neg_edge <- melt(sig_subdomain_AsymAD_female_neg)
+
+dim(sig_subdomain_AsymAD_female_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AsymAD_female_neg_edge <- filter(sig_subdomain_AsymAD_female_neg_edge, !is.na(value))
+
+# use the absolute values for the edges
+sig_subdomain_AsymAD_female_neg_edge$value <- abs(sig_subdomain_AsymAD_female_neg_edge$value)
+
+
+dim(sig_subdomain_AsymAD_female_neg_edge)
+
+head(sig_subdomain_AsymAD_female_neg_edge)
+
+# Write the data frame to a file
+write.table(sig_subdomain_AsymAD_female_neg_edge, file = "sig_subdomain_AsymAD_female_neg_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+end.rcode-->
+
+
+
+
+
+
+# create igraph S3 object
+net_pos_AD_male <- graph.data.frame(sig_subdomain_AD_male_pos_edge, directed = FALSE)
+
+# Get unique vertices from biodomain_subdomain_annotation and variable
+term_name_vertices <- unique(sig_subdomain_AD_male_pos_edge$biodomain_subdomain_annotation)
+variable_vertices <- unique(sig_subdomain_AD_male_pos_edge$variable)
+
+# Assign shape "square" to term_name vertices and "circle" to variable vertices
+vertex_shapes <- rep("circle", vcount(net_pos_AD_male))  # Initialize all vertices as circles
+vertex_shapes[V(net_pos_AD_male)$name %in% term_name_vertices] <- "square"  # Assign square shape to Var1 vertices
+
+# store original margins
+orig_mar <- par()$mar
+
+# set new margins to limit whitespace in plot
+par(mar=rep(.1, 4))
+
+# plot the igraph S3 object
+# We can use various layout algorithms in igraph to generate the layout, such as Fruchterman-Reingold layout (layout_with_fr), Kamada-Kawai layout (layout_with_kk), or circular layout (layout_in_circle)
+plot(net_pos_AD_male,  layout = layout_with_fr(net_pos_AD_male), edge.width = E(net_pos_AD_male)$value, vertex.label.cex = .5, vertex.size = 3, vertex.shape = vertex_shapes)
+
+# Export your igraph object as an edge list
+write.graph(net_pos_AD_male, file = "net_pos_AD_male.graphml", format = "graphml")
+
+
+
+# community detection based on edge betweenness (Newman-Girvan)
+#ceb_pos_AD_male <- cluster_edge_betweenness(net_pos_AD_male, weights = E(net_pos_AD_male)$value)
+
+# community detection based on Infomap Algorithm
+#ceb_pos_AD_male <- cluster_infomap(net_pos_AD_male, e.weights = E(net_pos_AD_male)$value)
+
+# community detection based on Louvain Clustering (Modularity Optimization)
+ceb_pos_AD_male <- cluster_louvain(net_pos_AD_male, weights = E(net_pos_AD_male)$value)
+
+class(ceb_pos_AD_male)
+
+# plot the igraph S3 objec twith sub-cluster
+plot(ceb_pos_AD_male, net_pos_AD_male, layout = layout_with_fr(net_pos_AD_male), edge.width = E(net_pos_AD_male)$value, vertex.label.cex = .5, vertex.size = 3, vertex.shape = vertex_shapes)
+
+
+# community membership for each node
+par(mar=orig_mar)
+
+dendPlot(ceb_pos_AD_male, mode="hclust", cex=.5)
+
+# Get the community membership data
+community_membership_pos_AD_male <- membership(ceb_pos_AD_male)
+
+# Convert it to a data frame with two columns: Node and Community
+community_df_pos_AD_male <- data.frame(Node = names(community_membership_pos_AD_male), Community = as.integer(community_membership_pos_AD_male))
+
+# Count the number of community detected
+unique(community_df_pos_AD_male$Community)
+
+# Write the data frame to a file
+write.table(community_df_pos_AD_male, file = "community_membership_subdomain_pos_AD_male.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+##################################################################################################################################################
+# Make individual community as example
+
+# Subset the graph for Community 5
+community_5_nodes <- V(net_pos_AD_male)[community_df_pos_AD_male$Community == 5]  # Select nodes from Community 5
+
+# Induce a subgraph with only Community 5 nodes
+subgraph_community_5 <- induced_subgraph(net_pos_AD_male, community_5_nodes)
+
+# Assign "circle" shape to all vertices
+V(subgraph_community_5)$shape <- "circle"
+
+# Set "square" shape for vertices that match the term_name_vertices
+V(subgraph_community_5)$shape[V(subgraph_community_5)$name %in% term_name_vertices] <- "square"
+
+# Assign "blue" color to all vertices (default for circles)
+V(subgraph_community_5)$color <- "lightblue"
+
+# Set "red" color for vertices that are squares
+V(subgraph_community_5)$color[V(subgraph_community_5)$shape == "square"] <- "khaki1"
+
+# set new margins to limit whitespace in plot
+#par(mar=rep(.1, 4))
+
+# Plot the subgraph for Community 5
+plot(subgraph_community_5, layout = layout_with_fr(subgraph_community_5), edge.width = E(net_pos_AD_male)$value, vertex.size = 10, vertex.label.cex = 1, vertex.label.color = "black", main = "Community 5 Subgraph")
+
+# Convert igraph object to tbl_graph (a tidygraph object)
+#graph_tbl <- as_tbl_graph(subgraph_community_5)
+
+# Create the ggraph plot
+#ggraph(graph_tbl, layout = 'fr') +  # Fruchterman-Reingold layout
+  #geom_edge_link(aes(width = E(subgraph_community_5)$value), alpha = 0.5) +  # Edges
+  #geom_node_point(aes(color = V(subgraph_community_5)$color, shape = V(subgraph_community_5)$shape), size = 10) +  # Vertices
+  #geom_node_text(aes(label = V(subgraph_community_5)$name), repel = TRUE, size = 10) +  # Non-overlapping labels
+  #theme_void() +  # Minimalist theme
+  #scale_shape_manual(values = c("circle" = 16, "square" = 15)) +  # Map shapes
+  #scale_color_manual(values = c("lightblue", "khaki1"))  # Map colors
+
+
+##################################################################################################################################################
+# Make heatmap for the comunitties
+
+# Select the biodomain_subdomain_annotation and variable entities from the sig_subdomain_AD_male_pos_edge file
+term_name <- sig_subdomain_AD_male_pos_edge$biodomain_subdomain_annotation
+variable <- sig_subdomain_AD_male_pos_edge$variable
+
+# Separate term_name and variable entities based on their community membership and sort the Community column in ascending order
+term_name_nodes <- community_df_pos_AD_male[community_df_pos_AD_male$Node %in% term_name, ]
+term_name_nodes <- term_name_nodes[order(term_name_nodes$Community), ]
+
+
+variable_nodes <- community_df_pos_AD_male[community_df_pos_AD_male$Node %in% variable, ]
+variable_nodes <- variable_nodes[order(variable_nodes$Community), ]
+
+
+head(term_name_nodes)
+
+head(variable_nodes)
+
+# Prepare the row and col entries for a heatmap based on term_name and variable entities
+row_names <- unique(c(term_name_nodes$Node))
+
+col_names <- unique(c(variable_nodes$Node))
+
+# Create a matrix filled with zeros
+matrix_data_AD_male_pos <- matrix(0, nrow = length(row_names), ncol = length(col_names), dimnames = list(row_names, col_names))
+
+# Populate the matrix based on the information in term_name_nodes and variable_nodes
+for (i in 1:nrow(term_name_nodes)) {
+          matrix_data_AD_male_pos[term_name_nodes[i, "Node"], variable_nodes[variable_nodes$Community == term_name_nodes[i, "Community"], "Node"]] <- variable_nodes[variable_nodes$Community == term_name_nodes[i, "Community"], "Community"]
+}
+
+
+write.table(matrix_data_AD_male_pos,"subdomain_matrix_data_pos_AD_male.txt",sep="\t",quote=F)
+
+# Create heatmap with matrix
+matrix_data_AD_male_pos <- as.matrix(matrix_data_AD_male_pos)
+
+# Adjust the margins to make room for the X-axis labels
+par(mar = c(5, 5, 4, 2) + 0.1)
+
+heatmap(matrix_data_AD_male_pos, Rowv = NA, Colv = NA, cex.axis = 0.5, main = "Communities identified by Graph Based Clustering for subdomain Comparative subdomain Enrichment Analysis (Male UP subdomains)")
+
+
+#########################################################################################################################################################
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_male_neg_edge <- melt(sig_subdomain_AD_male_neg)
+
+dim(sig_subdomain_AD_male_neg_edge)
+
+# Remove the edges where value (Z score) is "NA"
+sig_subdomain_AD_male_neg_edge <- filter(sig_subdomain_AD_male_neg_edge, !is.na(value))
+
+dim(sig_subdomain_AD_male_neg_edge)
+
+# Convert the negative values in the 'value' column to absolute value for network construction
+sig_subdomain_AD_male_neg_edge$value <- abs(sig_subdomain_AD_male_neg_edge$value)
+
+# create igraph S3 object
+net_neg_AD_male <- graph.data.frame(sig_subdomain_AD_male_neg_edge, directed = FALSE)
+
+# Get unique vertices from biodomain_subdomain_annotation and variable
+term_name_vertices <- unique(sig_subdomain_AD_male_neg_edge$biodomain_subdomain_annotation)
+variable_vertices <- unique(sig_subdomain_AD_male_neg_edge$variable)
+
+# Assign shape "square" to term_name vertices and "circle" to variable vertices
+vertex_shapes <- rep("circle", vcount(net_neg_AD_male))  # Initialize all vertices as circles
+vertex_shapes[V(net_neg_AD_male)$name %in% term_name_vertices] <- "square"  # Assign square shape to Var1 vertices
+
+# store original margins
+orig_mar <- par()$mar
+
+# set new margins to limit whitespace in plot
+par(mar=rep(.1, 4))
+
+# plot the igraph S3 object
+# We can use various layout algorithms in igraph to generate the layout, such as Fruchterman-Reingold layout (layout_with_fr), Kamada-Kawai layout (layout_with_kk), or circular layout (layout_in_circle)
+plot(net_neg_AD_male,  layout = layout_with_fr(net_neg_AD_male), edge.width = E(net_neg_AD_male)$value, vertex.label.cex = .5, vertex.size = 3, vertex.shape = vertex_shapes)
+
+# community detection based on Weighted Newman-Girvan (Edge Betweenness)
+#ceb_neg_AD_male <- cluster_edge_betweenness(net_neg_AD_male, weights = E(net_neg_AD_male)$value)
+
+# community detection based on Louvain Clustering (Modularity Optimization)
+ceb_neg_AD_male <- cluster_louvain(net_neg_AD_male, weights = E(net_neg_AD_male)$value)
+
+# community detection based on Infomap Algorithm
+#ceb_neg_AD_male <- cluster_infomap(net_neg_AD_male, e.weights = E(net_neg_AD_male)$value)
+
+# community detection based on Walktrap Algorithm
+#ceb_neg_AD_male <- cluster_walktrap(net_neg_AD_male, weights = E(net_neg_AD_male)$value)
+
+
+class(ceb_neg_AD_male)
+
+
+# plot the igraph S3 objec twith sub-cluster
+plot(ceb_neg_AD_male, net_neg_AD_male, layout = layout_with_fr(net_neg_AD_male), edge.width = E(net_neg_AD_male)$value, vertex.label.cex = .5, vertex.size = 3, vertex.shape = vertex_shapes)
+
+# community membership for each node
+par(mar=orig_mar)
+
+dendPlot(ceb_neg_AD_male, mode="hclust", cex=.5)
+
+# Get the community membership data
+community_membership_neg_AD_male <- membership(ceb_neg_AD_male)
+
+# Convert it to a data frame with two columns: Node and Community
+community_df_neg_AD_male <- data.frame(Node = names(community_membership_neg_AD_male), Community = as.integer(community_membership_neg_AD_male))
+
+# Count the number of community detected
+unique(community_df_neg_AD_male$Community)
+
+# Write the data frame to a file
+write.table(community_df_neg_AD_male, file = "community_membership_subdomain_neg_AD_male.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+# Select the biodomain_subdomain_annotation and variable entities from the sig_subdomain_AD_male_neg_edge file
+term_name <- sig_subdomain_AD_male_neg_edge$biodomain_subdomain_annotation
+variable <- sig_subdomain_AD_male_neg_edge$variable
+
+# Separate term_name and variable entities based on their community membership and sort the Community column in ascending order
+term_name_nodes <- community_df_neg_AD_male[community_df_neg_AD_male$Node %in% term_name, ]
+term_name_nodes <- term_name_nodes[order(term_name_nodes$Community), ]
+
+
+variable_nodes <- community_df_neg_AD_male[community_df_neg_AD_male$Node %in% variable, ]
+variable_nodes <- variable_nodes[order(variable_nodes$Community), ]
+
+
+head(term_name_nodes)
+
+head(variable_nodes)
+
+# Prepare the row and col entries for a heatmap based on term_name and variable entities
+row_names <- unique(c(term_name_nodes$Node))
+
+col_names <- unique(c(variable_nodes$Node))
+
+# Create a matrix filled with zeros
+matrix_data_AD_male_neg <- matrix(0, nrow = length(row_names), ncol = length(col_names), dimnames = list(row_names, col_names))
+
+# Populate the matrix based on the information in term_name_nodes and variable_nodes
+for (i in 1:nrow(term_name_nodes)) {
+          matrix_data_AD_male_neg[term_name_nodes[i, "Node"], variable_nodes[variable_nodes$Community == term_name_nodes[i, "Community"], "Node"]] <- variable_nodes[variable_nodes$Community == term_name_nodes[i, "Community"], "Community"]
+}
+
+
+write.table(matrix_data_AD_male_neg,"subdomain_matrix_data_neg_AD_male.txt",sep="\t",quote=F)
+
+# Create heatmap with matrix
+matrix_data_AD_male_neg <- as.matrix(matrix_data_AD_male_neg)
+
+# Adjust the margins to make room for the X-axis labels
+par(mar = c(5, 5, 4, 2) + 0.1)
+
+heatmap(matrix_data_AD_male_neg, Rowv = NA, Colv = NA, cex.axis = 0.5, main = "Communities identified by Graph Based Clustering for subdomain Comparative subdomain Enrichment Analysis (Male DOWN subdomains)")
+
+
+
+end.rcode-->
+
+#<p>Graph-based Clustering using subdomain Specific Z score Distributions Results (AD female)</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(reshape2)
+library(dplyr)
+library(igraph)
+library(tidyr)
+library(DT)
+
+## AD_male
+
+# Open the subdomain-specifc Z score distribution file
+sig_subdomain_AD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/Biodomain_mapping/Subdomain/subdomain_specific_analysis/sig_subdomain_AD_female.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs`
+sig_subdomain_AD_female <- sig_subdomain_AD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+
+# Copy the Biodomain_subdomain annotation from data_subdomain
+biodomain_subdomain_annotation <- data_subdomain$Biodomain_Subdomain
+
+#head(biodomain_subdomain_name)
+
+# Merge the biodomain_subdomain annotation file to the Z score distribution file to get biodomain_subdomain_name column
+sig_subdomain_AD_female<- cbind(biodomain_subdomain_annotation, sig_subdomain_AD_female)
+
+# Remove the other columns from the Z score distribution file and keep unique_id and Sample_IDs columns only
+sig_subdomain_AD_female <- sig_subdomain_AD_female[, !(colnames(sig_subdomain_AD_female) %in% c("unique_id", "UP_Count", "DOWN_Count"))]
+
+
+dim(sig_subdomain_AD_female)
+
+# Print the table using DT
+datatable(sig_subdomain_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a data frame with only positive values
+sig_subdomain_AD_female_pos <- sig_subdomain_AD_female
+sig_subdomain_AD_female_pos[sig_subdomain_AD_female_pos <= 0] <- NA  # Replace all non-positive values with NA
+
+#head(sig_subdomain_AD_female_pos)
+
+# Create a data frame with only negative values
+sig_subdomain_AD_female_neg <- sig_subdomain_AD_female
+
+# Replace all non-negative values with NA in the numeric columns only
+sig_subdomain_AD_female_neg[, -1] <- lapply(sig_subdomain_AD_female_neg[, -1], function(x) {
+  x[x >= 0] <- NA
+  return(x)
+})
+
+#head(sig_subdomain_AD_female_neg)
+
+#########################################################################################################################################################
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_female_pos_edge <- melt(sig_subdomain_AD_female_pos)
+
+dim(sig_subdomain_AD_female_pos_edge)
+
+# select the edges where value (Z score) is "NA"
+sig_subdomain_AD_female_pos_edge <- filter(sig_subdomain_AD_female_pos_edge, !is.na(value))
+
+dim(sig_subdomain_AD_female_pos_edge)
+
+write.table(sig_subdomain_AD_female_pos_edge, file = "sig_subdomain_AD_female_pos_edge.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+# create igraph S3 object
+net_pos_AD_female <- graph.data.frame(sig_subdomain_AD_female_pos_edge, directed = FALSE)
+
+# Get unique vertices from biodomain_subdomain_annotation and variable
+term_name_vertices <- unique(sig_subdomain_AD_female_pos_edge$biodomain_subdomain_annotation)
+variable_vertices <- unique(sig_subdomain_AD_female_pos_edge$variable)
+
+# Assign shape "square" to term_name vertices and "circle" to variable vertices
+vertex_shapes <- rep("circle", vcount(net_pos_AD_female))  # Initialize all vertices as circles
+vertex_shapes[V(net_pos_AD_female)$name %in% term_name_vertices] <- "square"  # Assign square shape to Var1 vertices
+
+# store original margins
+orig_mar <- par()$mar
+
+# set new margins to limit whitespace in plot
+par(mar=rep(.1, 4))
+
+# plot the igraph S3 object
+# We can use various layout algorithms in igraph to generate the layout, such as Fruchterman-Reingold layout (layout_with_fr), Kamada-Kawai layout (layout_with_kk), or circular layout (layout_in_circle)
+plot(net_pos_AD_female,  layout = layout_with_fr(net_pos_AD_female), edge.width = E(net_pos_AD_female)$value, vertex.label.cex = .5, vertex.size = 3, vertex.shape = vertex_shapes)
+
+# community detection based on edge betweenness (Newman-Girvan)
+#ceb_pos_AD_female <- cluster_edge_betweenness(net_pos_AD_female)
+
+# community detection based on Infomap Algorithm
+#ceb_pos_AD_female <- cluster_infomap(net_pos_AD_female, e.weights = E(net_pos_AD_female)$value)
+
+# community detection based on Louvain Clustering (Modularity Optimization)
+ceb_pos_AD_female <- cluster_louvain(net_pos_AD_female, weights = E(net_pos_AD_female)$value)
+
+class(ceb_pos_AD_female)
+
+# plot the igraph S3 objec twith sub-cluster
+plot(ceb_pos_AD_female, net_pos_AD_female, layout = layout_with_fr(net_pos_AD_female), edge.width = E(net_pos_AD_female)$value, vertex.label.cex = .5, vertex.size = 3, vertex.shape = vertex_shapes)
+
+# community membership for each node
+par(mar=orig_mar)
+
+dendPlot(ceb_pos_AD_female, mode="hclust", cex=.5)
+
+# Get the community membership data
+community_membership_pos_AD_female <- membership(ceb_pos_AD_female)
+
+# Convert it to a data frame with two columns: Node and Community
+community_df_pos_AD_female <- data.frame(Node = names(community_membership_pos_AD_female), Community = as.integer(community_membership_pos_AD_female))
+
+# Count the number of community detected
+unique(community_df_pos_AD_female$Community)
+
+# Write the data frame to a file
+write.table(community_df_pos_AD_female, file = "community_membership_subdomain_pos_AD_female.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+# Select the biodomain_subdomain_annotation and variable entities from the sig_subdomain_AD_female_pos_edge file
+term_name <- sig_subdomain_AD_female_pos_edge$biodomain_subdomain_annotation
+variable <- sig_subdomain_AD_female_pos_edge$variable
+
+# Separate term_name and variable entities based on their community membership and sort the Community column in ascending order
+term_name_nodes <- community_df_pos_AD_female[community_df_pos_AD_female$Node %in% term_name, ]
+term_name_nodes <- term_name_nodes[order(term_name_nodes$Community), ]
+
+
+variable_nodes <- community_df_pos_AD_female[community_df_pos_AD_female$Node %in% variable, ]
+variable_nodes <- variable_nodes[order(variable_nodes$Community), ]
+
+
+head(term_name_nodes)
+
+head(variable_nodes)
+
+# Prepare the row and col entries for a heatmap based on term_name and variable entities
+row_names <- unique(c(term_name_nodes$Node))
+
+col_names <- unique(c(variable_nodes$Node))
+
+# Create a matrix filled with zeros
+matrix_data_AD_female_pos <- matrix(0, nrow = length(row_names), ncol = length(col_names), dimnames = list(row_names, col_names))
+
+# Populate the matrix based on the information in term_name_nodes and variable_nodes
+for (i in 1:nrow(term_name_nodes)) {
+          matrix_data_AD_female_pos[term_name_nodes[i, "Node"], variable_nodes[variable_nodes$Community == term_name_nodes[i, "Community"], "Node"]] <- variable_nodes[variable_nodes$Community == term_name_nodes[i, "Community"], "Community"]
+}
+
+
+write.table(matrix_data_AD_female_pos,"subdomain_matrix_data_pos_AD_female.txt",sep="\t",quote=F)
+
+# Create heatmap with matrix
+matrix_data_AD_female_pos <- as.matrix(matrix_data_AD_female_pos)
+
+# Adjust the margins to make room for the X-axis labels
+par(mar = c(5, 5, 4, 2) + 0.1)
+
+heatmap(matrix_data_AD_female_pos, Rowv = NA, Colv = NA, cex.axis = 0.5, main = "Communities identified by Graph Based Clustering for subdomain Comparative subdomain Enrichment Analysis (Female UP subdomains)")
+
+
+
+#########################################################################################################################################################
+
+# tranfer the data matrix into two column interaction data
+sig_subdomain_AD_female_neg_edge <- melt(sig_subdomain_AD_female_neg)
+
+dim(sig_subdomain_AD_female_neg_edge)
+
+# select the edges where value (Z score) is "NA"
+sig_subdomain_AD_female_neg_edge <- filter(sig_subdomain_AD_female_neg_edge, !is.na(value))
+
+dim(sig_subdomain_AD_female_neg_edge)
+
+# Convert the negative values in the 'value' column to absolute value for network construction
+sig_subdomain_AD_female_neg_edge$value <- abs(sig_subdomain_AD_female_neg_edge$value)
+
+# create igraph S3 object
+net_neg_AD_female <- graph.data.frame(sig_subdomain_AD_female_neg_edge, directed = FALSE)
+
+# Get unique vertices from biodomain_subdomain_annotation and variable
+term_name_vertices <- unique(sig_subdomain_AD_female_neg_edge$biodomain_subdomain_annotation)
+variable_vertices <- unique(sig_subdomain_AD_female_neg_edge$variable)
+
+# Assign shape "square" to term_name vertices and "circle" to variable vertices
+vertex_shapes <- rep("circle", vcount(net_neg_AD_female))  # Initialize all vertices as circles
+vertex_shapes[V(net_neg_AD_female)$name %in% term_name_vertices] <- "square"  # Assign square shape to Var1 vertices
+
+# store original margins
+orig_mar <- par()$mar
+
+# set new margins to limit whitespace in plot
+par(mar=rep(.1, 4))
+
+# plot the igraph S3 object
+# We can use various layout algorithms in igraph to generate the layout, such as Fruchterman-Reingold layout (layout_with_fr), Kamada-Kawai layout (layout_with_kk), or circular layout (layout_in_circle)
+plot(net_neg_AD_female,  layout = layout_with_fr(net_neg_AD_female), edge.width = E(net_neg_AD_female)$value, vertex.label.cex = .5, vertex.size = 3, vertex.shape = vertex_shapes)
+
+# community detection based on edge betweenness (Newman-Girvan)
+#ceb_neg_AD_female <- cluster_edge_betweenness(net_neg_AD_female)
+
+# community detection based on Infomap Algorithm
+#ceb_neg_AD_female <- cluster_infomap(net_neg_AD_female, e.weights = E(net_neg_AD_female)$value)
+
+# community detection based on Louvain Clustering (Modularity Optimization)
+ceb_neg_AD_female <- cluster_louvain(net_neg_AD_female, weights = E(net_neg_AD_female)$value)
+
+class(ceb_neg_AD_female)
+
+# plot the igraph S3 objec twith sub-cluster
+plot(ceb_neg_AD_female, net_neg_AD_female, layout = layout_with_fr(net_neg_AD_female), edge.width = E(net_neg_AD_female)$value, vertex.label.cex = .5, vertex.size = 3, vertex.shape = vertex_shapes)
+
+# community membership for each node
+par(mar=orig_mar)
+
+dendPlot(ceb_neg_AD_female, mode="hclust", cex=.5)
+
+# Get the community membership data
+community_membership_neg_AD_female <- membership(ceb_neg_AD_female)
+
+# Convert it to a data frame with two columns: Node and Community
+community_df_neg_AD_female <- data.frame(Node = names(community_membership_neg_AD_female), Community = as.integer(community_membership_neg_AD_female))
+
+# Count the number of community detected
+unique(community_df_neg_AD_female$Community)
+
+# Write the data frame to a file
+write.table(community_df_neg_AD_female, file = "community_membership_subdomain_neg_AD_female.txt", row.names = FALSE, col.names = TRUE, sep = "\t")
+
+# Select the biodomain_subdomain_annotation and variable entities from the sig_subdomain_AD_female_neg_edge file
+term_name <- sig_subdomain_AD_female_neg_edge$biodomain_subdomain_annotation
+variable <- sig_subdomain_AD_female_neg_edge$variable
+
+# Separate term_name and variable entities based on their community membership and sort the Community column in ascending order
+term_name_nodes <- community_df_neg_AD_female[community_df_neg_AD_female$Node %in% term_name, ]
+term_name_nodes <- term_name_nodes[order(term_name_nodes$Community), ]
+
+
+variable_nodes <- community_df_neg_AD_female[community_df_neg_AD_female$Node %in% variable, ]
+variable_nodes <- variable_nodes[order(variable_nodes$Community), ]
+
+
+head(term_name_nodes)
+
+head(variable_nodes)
+
+# Prepare the row and col entries for a heatmap based on term_name and variable entities
+row_names <- unique(c(term_name_nodes$Node))
+
+col_names <- unique(c(variable_nodes$Node))
+
+# Create a matrix filled with zeros
+matrix_data_AD_female_neg <- matrix(0, nrow = length(row_names), ncol = length(col_names), dimnames = list(row_names, col_names))
+
+# Populate the matrix based on the information in term_name_nodes and variable_nodes
+for (i in 1:nrow(term_name_nodes)) {
+          matrix_data_AD_female_neg[term_name_nodes[i, "Node"], variable_nodes[variable_nodes$Community == term_name_nodes[i, "Community"], "Node"]] <- variable_nodes[variable_nodes$Community == term_name_nodes[i, "Community"], "Community"]
+}
+
+
+write.table(matrix_data_AD_female_neg,"subdomain_matrix_data_neg_AD_female.txt",sep="\t",quote=F)
+
+# Create heatmap with matrix
+matrix_data_AD_female_neg <- as.matrix(matrix_data_AD_female_neg)
+
+# Adjust the margins to make room for the X-axis labels
+par(mar = c(5, 5, 4, 2) + 0.1)
+
+heatmap(matrix_data_AD_female_neg, Rowv = NA, Colv = NA, cex.axis = 0.5, main = "Communities identified by Graph Based Clustering for subdomain Comparative subdomain Enrichment Analysis (Female DOWN subdomains)")
+
+
+#tiff("matrix_data.tiff", width = 20, height = 15, units = "in", res = 300)  # Increase width, height, and resolution
+end.rcode-->
+
+<p>Save individual matrix file as .tiff format</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+
+# List of matrix data
+matrix_list <- list(matrix_data_AD_male_pos, matrix_data_AD_male_neg, matrix_data_AD_female_pos, matrix_data_AD_female_neg)
+
+# Corresponding file names for each heatmap
+file_names <- c("matrix_data_AD_male_pos.tiff", "matrix_data_AD_male_neg.tiff", "matrix_data_AD_female_pos.tiff", "matrix_data_AD_female_neg.tiff")
+
+# Loop through each matrix and save heatmap as a TIFF file
+for (i in 1:length(matrix_list)) {
+  # Open TIFF device with specific resolution and size
+  tiff(file = file_names[i], width = 20, height = 10, units = "in", res = 300)
+  
+  # Plot the heatmap (you can customize the heatmap function as needed)
+  heatmap(matrix_list[[i]], Rowv = NA, Colv = NA, cexRow = 0.5, cexCol = 0.5, main = paste("Heatmap", i))
+  
+  # Close the device to save the file
+  dev.off()
+}
+
+end.rcode-->
+
+
+
+</body>
+</html>

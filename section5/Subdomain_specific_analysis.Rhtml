@@ -1,0 +1,1827 @@
+<html>
+
+<head>
+<title>Avijit Podder Date: Oct 17, 2024</title>
+
+<head color="blue">
+
+<h1><font color="blue">Individual subdomain Specific Z score Calculation using TMT Proteomic Data from the ROSMAP Cohort</font></h1>
+
+</head>
+
+<body>
+
+<!--begin.rcode fig.width=25, fig.height=15
+library(jpeg)
+
+# Load the .jpeg image
+img <- readJPEG("/Users/poddea/Desktop/ROSMAP_data_100623/subdomain_specific_Zscore.jpg")
+
+# Display the image
+plot(1:2, type = "n", xlab = "", ylab = "", axes = FALSE)
+rasterImage(img, 1, 1, 2, 2)
+
+
+end.rcode-->
+
+<p>Open Protein-wise Zscore for CT, AD and AsymAD Individuals (Male and Female Separately):</p>
+
+<!--begin.rcode fig.width=7, fig.height=6
+library(dplyr)
+library(tidyr)
+
+## Open individual Zscore distribution files for CT and AD individuals
+
+zscore_CT_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/z_stat_result_CT_male.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+zscore_CT_male <- zscore_CT_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(zscore_CT_male)
+
+zscore_CT_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/z_stat_result_CT_female.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+zscore_CT_female <- zscore_CT_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(zscore_CT_female)
+
+zscore_AD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/z_stat_result_AD_male.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+zscore_AD_male <- zscore_AD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(zscore_AD_male)
+
+zscore_AD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/z_stat_result_AD_female.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+zscore_AD_female <- zscore_AD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(zscore_AD_female)
+
+zscore_AsymAD_male <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/z_stat_result_AsymAD_male.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+zscore_AsymAD_male <- zscore_AsymAD_male %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(zscore_AsymAD_male)
+
+zscore_AsymAD_female <- read.delim("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/z_stat_result_AsymAD_female.txt", header = TRUE, sep = "\t");
+
+# Ensure column names to` match `IDs` in `zscore_` files
+zscore_AsymAD_female <- zscore_AsymAD_female %>% rename_with(~ gsub("X", "", .), starts_with("X"))
+
+dim(zscore_AsymAD_female)
+
+
+
+end.rcode-->
+
+<p>Compare Gene-wise Zscore for CT and AD Individuals across subdomains (Example for Alzheimer's Disease subdomain):</p>
+
+#<!--begin.rcode fig.width=7, fig.height=6
+library(dplyr)
+library(tidyr)
+library(DT)
+
+setwd("/Users/poddea/Desktop/ROSMAP_data_100623/RNASeq_Harmonization_Study/subdomain_specific_analysis/subdomain_genesets")
+
+# Open individual subdomain subdomain file
+RS_others_1 <- read.delim("RS_others_1.txt", header = TRUE, sep = "\t");
+
+dim(RS_others_1)
+
+head(RS_others_1, 5)
+
+# Print the table using DT
+datatable(RS_others_1, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Merge the data frames
+RS_others_1_Zscore_AD_male <- merge(RS_others_1, zscore_AD_male, by.x = "ensembl_id", by.y = "Gene_ID", all.x = TRUE)
+
+#head(RS_others_1_Zscore_AD_male, 2)
+
+
+# Print the table using DT
+datatable(RS_others_1_Zscore_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+write.table(RS_others_1_Zscore_AD_male,"/Users/poddea/Desktop/RS_others_1_Zscore_AD_male.txt",sep="\t",quote=F, row.name= FALSE)
+
+# Identify columns ending with "_Zscore"
+zscore_columns <- grep("_Zscore$", names(RS_others_1_Zscore_AD_male), value = TRUE)
+
+# Calculate the average for each of these columns
+average_zscores <- colMeans(RS_others_1_Zscore_AD_male[, zscore_columns], na.rm = TRUE)
+
+# Remove "_Zscore" suffix from the Sample_ID names
+sample_ids <- sub("_Zscore$", "", zscore_columns)
+
+# Create a new data frame with "Sample_ID" and the calculated averages
+subdomain_zscore_AD_male <- data.frame(Sample_ID = sample_ids, RS_others_1_Zscore_AD_male = average_zscores)
+
+#head(subdomain_zscore_AD_female)
+
+# Print the table using DT
+datatable(subdomain_zscore_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Write the new data frame to a file
+#write.table(subdomain_zscore_AD_female, "/Users/poddea/Desktop/subdomain_zscore_AD_female.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+end.rcode-->
+
+<p>Compare Gene-wise Zscore for CT, AD and AsymAD Individuals across Biological Subdomain:</p>
+
+<!--begin.rcode fig.width=30, fig.height=15
+library(ggplot2)
+library(gplots)
+library(RColorBrewer)
+library(dplyr)
+library(tidyr)
+library(DT)
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## AD_female
+
+# Function to process each file
+process_subdomain_file <- function(file_path, zscore_data) {
+  # Read the subdomain subdomain file
+  subdomain_data <- read.delim(file_path, header = TRUE, sep = "\t")
+  
+  # Merge with zscore_data
+  merged_data <- merge(subdomain_data, zscore_data, by.x = "symbol", by.y = "Protein_name", all.x = TRUE)
+  
+  # Identify columns ending with "_Zscore"
+  zscore_columns <- grep("_Zscore$", names(merged_data), value = TRUE)
+  
+  # Calculate Stouffer's combined Z-scores for each column
+  stouffer_zscores <- apply(merged_data[, zscore_columns], 2, function(z_scores) {
+    # Remove NA values
+    z_scores <- na.omit(z_scores)
+    
+    # Calculate the Stouffer's Z-score
+    stouffer_z <- sum(z_scores) / sqrt(length(z_scores))
+    
+    return(stouffer_z)
+  })
+  
+  # Remove "_Zscore" suffix from the Sample_ID names
+  sample_ids <- sub("_Zscore$", "", zscore_columns)
+  
+  # Create a new data frame with "Sample_ID" and the calculated Stouffer's Z-scores
+  unique_id <- unique(subdomain_data$unique_id)[1]
+  colname <- paste0(unique_id, "_Zscore")
+  results_df <- data.frame(Sample_ID = sample_ids)
+  results_df[[colname]] <- stouffer_zscores
+  
+  return(results_df)
+}
+
+# Path to the directory containing biodomain_subdomain.txt files
+dir_path <- "/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain/Subdomain_geneset"
+
+# Read the zscore_AD_female data
+#zscore_AD_female <- read.delim("zscore_AD_female.txt", header = TRUE, sep = "\t")
+
+# List all hsa*.txt files in the directory
+subdomain_files <- list.files(path = dir_path, pattern = "*.txt$", full.names = TRUE)
+
+# Initialize an empty list to store the results
+all_results <- list()
+
+# Process each subdomain file
+for (file in subdomain_files) {
+  result <- process_subdomain_file(file, zscore_AD_female)
+  all_results[[file]] <- result
+}
+
+# Combine all results into one data frame by merging them on Sample_ID
+final_results_AD_female <- Reduce(function(x, y) merge(x, y, by = "Sample_ID", all = TRUE), all_results)
+
+# Write the final results to a file
+write.table(final_results_AD_female, "subdomain_zscore_AD_female_summary.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+###########################################################################################################################################################
+# Transpose the file to count 1st and 99th percentile of the Z score distributions in individual subdomain
+final_results_AD_female_t <- as.data.frame(t(final_results_AD_female[,-1]))
+
+colnames(final_results_AD_female_t) <- final_results_AD_female$Sample_ID
+
+# Convert the row names to a new column named "unique_id"
+final_results_AD_female_t$unique_id <- rownames(final_results_AD_female_t)
+
+# Reorder the columns so that "unique_id" comes first
+final_results_AD_female_t <- final_results_AD_female_t[, c("unique_id", names(final_results_AD_female_t)[-ncol(final_results_AD_female_t)])]
+
+# Reset the row names as they are no longer needed
+rownames(final_results_AD_female_t) <- NULL
+
+# Print the table using DT
+datatable(final_results_AD_female_t, options = list(pageLength = 5, autoWidth = TRUE))
+
+###########################################################################################################################################################
+# Plot tha data
+# Set rownames to Sample_ID and remove Sample_ID column
+rownames(final_results_AD_female) <- final_results_AD_female$Sample_ID
+
+final_results_AD_female <- final_results_AD_female[, -1]
+
+# Remove columns with NA values
+final_results_AD_female <- final_results_AD_female[, colSums(is.na(final_results_AD_female)) == 0]
+
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap using heatmap.2
+heatmap.2(
+as.matrix(final_results_AD_female),
+Rowv = TRUE,
+Colv = TRUE,
+col = color_scale,
+scale = "column",  # Scale rows (genes) to Z-scores
+trace = "none",  # Turn off row and column annotations
+margins = c(20, 20),  # Set margins for row and column labels
+#col = cm.colors(256),  # Set the color map (256 colors)
+key = TRUE,  # Include a color key
+keysize = 1,  # Size of the color key
+cexCol = 1,  # Set column label size
+cexRow = 0.8,  # Set row label size
+dendrogram = "both",  # Show both row and column dendrograms
+main="subdomain-specific Z score for AD Individuals (female)"
+)
+
+############################################################################################################################################################################
+## Count the number of gene identified in each subdomain
+
+# Function to process each file
+process_subdomain_file <- function(file_path, zscore_data) {
+  # Read the subdomain subdomain file
+  subdomain_data <- read.delim(file_path, header = TRUE, sep = "\t")
+  
+  # Merge with zscore_data
+  merged_data <- merge(subdomain_data, zscore_data, by.x = "symbol", by.y = "Protein_name", all.x = TRUE)
+  
+  # Identify columns ending with "_Zscore"
+  zscore_columns <- grep("_Zscore$", names(merged_data), value = TRUE)
+  
+  # Calculate the number of non-NA values (mapped genes) for each sample
+  gene_counts <- apply(merged_data[, zscore_columns], 2, function(z_scores) {
+    return(sum(!is.na(z_scores)))
+  })
+  
+  # Remove "_Zscore" suffix from the Sample_ID names
+  sample_ids <- sub("_Zscore$", "", zscore_columns)
+  
+  # Create a new data frame with "Sample_ID" and the number of mapped genes
+  unique_id <- unique(subdomain_data$unique_id)[1]
+  colname <- paste0(unique_id, "_gene_count")
+  gene_count_df <- data.frame(Sample_ID = sample_ids)
+  gene_count_df[[colname]] <- gene_counts
+  
+  return(gene_count_df)
+}
+
+# Path to the directory containing hsa*.txt files
+dir_path <- "/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain/Subdomain_geneset"
+
+# Read the zscore_AD_female data
+# zscore_AD_female <- read.delim("zscore_AD_female.txt", header = TRUE, sep = "\t")
+
+# List all hsa*.txt files in the directory
+subdomain_files <- list.files(path = dir_path, pattern = "*.txt$", full.names = TRUE)
+
+# Initialize an empty list to store the results
+all_gene_counts <- list()
+
+# Process each subdomain file to count the number of mapped genes
+for (file in subdomain_files) {
+  gene_count_result <- process_subdomain_file(file, zscore_AD_female)
+  all_gene_counts[[file]] <- gene_count_result
+}
+
+# Combine all gene count results into one data frame by merging them on Sample_ID
+final_gene_counts_AD_female <- Reduce(function(x, y) merge(x, y, by = "Sample_ID", all = TRUE), all_gene_counts)
+
+# Write the final gene counts to a file
+write.table(final_gene_counts_AD_female, "subdomain_gene_count_AD_female_summary.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## AD_male
+
+# Function to process each file
+process_subdomain_file <- function(file_path, zscore_data) {
+  # Read the subdomain subdomain file
+  subdomain_data <- read.delim(file_path, header = TRUE, sep = "\t")
+  
+  # Merge with zscore_data
+  merged_data <- merge(subdomain_data, zscore_data, by.x = "symbol", by.y = "Protein_name", all.x = TRUE)
+  
+  # Identify columns ending with "_Zscore"
+  zscore_columns <- grep("_Zscore$", names(merged_data), value = TRUE)
+  
+  # Calculate Stouffer's combined Z-scores for each column
+  stouffer_zscores <- apply(merged_data[, zscore_columns], 2, function(z_scores) {
+    # Remove NA values
+    z_scores <- na.omit(z_scores)
+    
+    # Calculate the Stouffer's Z-score
+    stouffer_z <- sum(z_scores) / sqrt(length(z_scores))
+    
+    return(stouffer_z)
+  })
+  
+  # Remove "_Zscore" suffix from the Sample_ID names
+  sample_ids <- sub("_Zscore$", "", zscore_columns)
+  
+  # Create a new data frame with "Sample_ID" and the calculated Stouffer's Z-scores
+  unique_id <- unique(subdomain_data$unique_id)[1]
+  colname <- paste0(unique_id, "_Zscore")
+  results_df <- data.frame(Sample_ID = sample_ids)
+  results_df[[colname]] <- stouffer_zscores
+  
+  return(results_df)
+}
+
+# Path to the directory containing hsa*.txt files
+dir_path <- "/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain/Subdomain_geneset"
+
+# Read the zscore_AD_female data
+#zscore_AD_female <- read.delim("zscore_AD_male.txt", header = TRUE, sep = "\t")
+
+# List all hsa*.txt files in the directory
+subdomain_files <- list.files(path = dir_path, pattern = "*.txt$", full.names = TRUE)
+
+# Initialize an empty list to store the results
+all_results <- list()
+
+# Process each subdomain file
+for (file in subdomain_files) {
+  result <- process_subdomain_file(file, zscore_AD_male)
+  all_results[[file]] <- result
+}
+
+# Combine all results into one data frame by merging them on Sample_ID
+final_results_AD_male <- Reduce(function(x, y) merge(x, y, by = "Sample_ID", all = TRUE), all_results)
+
+# Write the final results to a file
+write.table(final_results_AD_male, "subdomain_zscore_AD_male_summary.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+###########################################################################################################################################################
+# Transpose the file to count 1st and 99th percentile of the Z score distributions in individual subdomain
+final_results_AD_male_t <- as.data.frame(t(final_results_AD_male[,-1]))
+
+colnames(final_results_AD_male_t) <- final_results_AD_male$Sample_ID
+
+# Convert the row names to a new column named "unique_id"
+final_results_AD_male_t$unique_id <- rownames(final_results_AD_male_t)
+
+# Reorder the columns so that "unique_id" comes first
+final_results_AD_male_t <- final_results_AD_male_t[, c("unique_id", names(final_results_AD_male_t)[-ncol(final_results_AD_male_t)])]
+
+# Reset the row names as they are no longer needed
+rownames(final_results_AD_male_t) <- NULL
+
+# Print the table using DT
+datatable(final_results_AD_male_t, options = list(pageLength = 5, autoWidth = TRUE))
+
+###########################################################################################################################################################
+# Plot tha data
+# Set rownames to Sample_ID and remove Sample_ID column
+rownames(final_results_AD_male) <- final_results_AD_male$Sample_ID
+
+final_results_AD_male <- final_results_AD_male[, -1]
+
+# Remove columns with NA values
+final_results_AD_male <- final_results_AD_male[, colSums(is.na(final_results_AD_male)) == 0]
+
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap using heatmap.2
+heatmap.2(
+as.matrix(final_results_AD_male),
+Rowv = TRUE,
+Colv = TRUE,
+col = color_scale,
+scale = "column",  # Scale rows (genes) to Z-scores
+trace = "none",  # Turn off row and column annotations
+margins = c(20, 20),  # Set margins for row and column labels
+#col = cm.colors(256),  # Set the color map (256 colors)
+key = TRUE,  # Include a color key
+keysize = 1,  # Size of the color key
+cexCol = 1,  # Set column label size
+cexRow = 0.8,  # Set row label size
+dendrogram = "both",  # Show both row and column dendrograms
+main="subdomain-specific Z score for AD Individuals (male)"
+)
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## AsymAD_female
+
+# Function to process each file
+process_subdomain_file <- function(file_path, zscore_data) {
+  # Read the subdomain subdomain file
+  subdomain_data <- read.delim(file_path, header = TRUE, sep = "\t")
+  
+  # Merge with zscore_data
+  merged_data <- merge(subdomain_data, zscore_data, by.x = "symbol", by.y = "Protein_name", all.x = TRUE)
+  
+  # Identify columns ending with "_Zscore"
+  zscore_columns <- grep("_Zscore$", names(merged_data), value = TRUE)
+  
+  # Calculate Stouffer's combined Z-scores for each column
+  stouffer_zscores <- apply(merged_data[, zscore_columns], 2, function(z_scores) {
+    # Remove NA values
+    z_scores <- na.omit(z_scores)
+    
+    # Calculate the Stouffer's Z-score
+    stouffer_z <- sum(z_scores) / sqrt(length(z_scores))
+    
+    return(stouffer_z)
+  })
+  
+  # Remove "_Zscore" suffix from the Sample_ID names
+  sample_ids <- sub("_Zscore$", "", zscore_columns)
+  
+  # Create a new data frame with "Sample_ID" and the calculated Stouffer's Z-scores
+  unique_id <- unique(subdomain_data$unique_id)[1]
+  colname <- paste0(unique_id, "_Zscore")
+  results_df <- data.frame(Sample_ID = sample_ids)
+  results_df[[colname]] <- stouffer_zscores
+  
+  return(results_df)
+}
+
+# Path to the directory containing hsa*.txt files
+dir_path <- "/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain/Subdomain_geneset"
+
+# Read the zscore_AsymAD_female data
+#zscore_AsymAD_female <- read.delim("zscore_AsymAD_female.txt", header = TRUE, sep = "\t")
+
+# List all hsa*.txt files in the directory
+subdomain_files <- list.files(path = dir_path, pattern = "*.txt$", full.names = TRUE)
+
+# Initialize an empty list to store the results
+all_results <- list()
+
+# Process each subdomain file
+for (file in subdomain_files) {
+  result <- process_subdomain_file(file, zscore_AsymAD_female)
+  all_results[[file]] <- result
+}
+
+# Combine all results into one data frame by merging them on Sample_ID
+final_results_AsymAD_female <- Reduce(function(x, y) merge(x, y, by = "Sample_ID", all = TRUE), all_results)
+
+# Write the final results to a file
+write.table(final_results_AsymAD_female, "subdomain_zscore_AsymAD_female_summary.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+###########################################################################################################################################################
+# Transpose the file to count 1st and 99th percentile of the Z score distributions in individual subdomain
+final_results_AsymAD_female_t <- as.data.frame(t(final_results_AsymAD_female[,-1]))
+
+colnames(final_results_AsymAD_female_t) <- final_results_AsymAD_female$Sample_ID
+
+# Convert the row names to a new column named "unique_id"
+final_results_AsymAD_female_t$unique_id <- rownames(final_results_AsymAD_female_t)
+
+# Reorder the columns so that "unique_id" comes first
+final_results_AsymAD_female_t <- final_results_AsymAD_female_t[, c("unique_id", names(final_results_AsymAD_female_t)[-ncol(final_results_AsymAD_female_t)])]
+
+# Reset the row names as they are no longer needed
+rownames(final_results_AsymAD_female_t) <- NULL
+
+# Print the table using DT
+datatable(final_results_AsymAD_female_t, options = list(pageLength = 5, autoWidth = TRUE))
+
+###########################################################################################################################################################
+# Plot tha data
+# Set rownames to Sample_ID and remove Sample_ID column
+rownames(final_results_AsymAD_female) <- final_results_AsymAD_female$Sample_ID
+
+final_results_AsymAD_female <- final_results_AsymAD_female[, -1]
+
+# Remove columns with NA values
+final_results_AsymAD_female <- final_results_AsymAD_female[, colSums(is.na(final_results_AsymAD_female)) == 0]
+
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap using heatmap.2
+heatmap.2(
+as.matrix(final_results_AsymAD_female),
+Rowv = TRUE,
+Colv = TRUE,
+col = color_scale,
+scale = "column",  # Scale rows (genes) to Z-scores
+trace = "none",  # Turn off row and column annotations
+margins = c(20, 20),  # Set margins for row and column labels
+#col = cm.colors(256),  # Set the color map (256 colors)
+key = TRUE,  # Include a color key
+keysize = 1,  # Size of the color key
+cexCol = 1,  # Set column label size
+cexRow = 0.8,  # Set row label size
+dendrogram = "both",  # Show both row and column dendrograms
+main="subdomain-specific Z score for AsymAD Individuals (female)"
+)
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## AsymAD_male
+
+# Function to process each file
+process_subdomain_file <- function(file_path, zscore_data) {
+  # Read the subdomain subdomain file
+  subdomain_data <- read.delim(file_path, header = TRUE, sep = "\t")
+  
+  # Merge with zscore_data
+  merged_data <- merge(subdomain_data, zscore_data, by.x = "symbol", by.y = "Protein_name", all.x = TRUE)
+  
+  # Identify columns ending with "_Zscore"
+  zscore_columns <- grep("_Zscore$", names(merged_data), value = TRUE)
+  
+  # Calculate Stouffer's combined Z-scores for each column
+  stouffer_zscores <- apply(merged_data[, zscore_columns], 2, function(z_scores) {
+    # Remove NA values
+    z_scores <- na.omit(z_scores)
+    
+    # Calculate the Stouffer's Z-score
+    stouffer_z <- sum(z_scores) / sqrt(length(z_scores))
+    
+    return(stouffer_z)
+  })
+  
+  # Remove "_Zscore" suffix from the Sample_ID names
+  sample_ids <- sub("_Zscore$", "", zscore_columns)
+  
+  # Create a new data frame with "Sample_ID" and the calculated Stouffer's Z-scores
+  unique_id <- unique(subdomain_data$unique_id)[1]
+  colname <- paste0(unique_id, "_Zscore")
+  results_df <- data.frame(Sample_ID = sample_ids)
+  results_df[[colname]] <- stouffer_zscores
+  
+  return(results_df)
+}
+
+# Path to the directory containing hsa*.txt files
+dir_path <- "/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain/Subdomain_geneset"
+
+# Read the zscore_AsymAD_female data
+#zscore_AsymAD_female <- reAsymAD.delim("zscore_AsymAD_male.txt", heAsymADer = TRUE, sep = "\t")
+
+# List all hsa*.txt files in the directory
+subdomain_files <- list.files(path = dir_path, pattern = "*.txt$", full.names = TRUE)
+
+# Initialize an empty list to store the results
+all_results <- list()
+
+# Process each subdomain file
+for (file in subdomain_files) {
+  result <- process_subdomain_file(file, zscore_AsymAD_male)
+  all_results[[file]] <- result
+}
+
+# Combine all results into one data frame by merging them on Sample_ID
+final_results_AsymAD_male <- Reduce(function(x, y) merge(x, y, by = "Sample_ID", all = TRUE), all_results)
+
+# Write the final results to a file
+write.table(final_results_AsymAD_male, "subdomain_zscore_AsymAD_male_summary.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+###########################################################################################################################################################
+# Transpose the file to count 1st and 99th percentile of the Z score distributions in individual subdomain
+final_results_AsymAD_male_t <- as.data.frame(t(final_results_AsymAD_male[,-1]))
+
+colnames(final_results_AsymAD_male_t) <- final_results_AsymAD_male$Sample_ID
+
+# Convert the row names to a new column named "unique_id"
+final_results_AsymAD_male_t$unique_id <- rownames(final_results_AsymAD_male_t)
+
+# Reorder the columns so that "unique_id" comes first
+final_results_AsymAD_male_t <- final_results_AsymAD_male_t[, c("unique_id", names(final_results_AsymAD_male_t)[-ncol(final_results_AsymAD_male_t)])]
+
+# Reset the row names as they are no longer needed
+rownames(final_results_AsymAD_male_t) <- NULL
+
+# Print the table using DT
+datatable(final_results_AsymAD_male_t, options = list(pageLength = 5, autoWidth = TRUE))
+
+###########################################################################################################################################################
+# Plot tha data
+# Set rownames to Sample_ID and remove Sample_ID column
+rownames(final_results_AsymAD_male) <- final_results_AsymAD_male$Sample_ID
+
+final_results_AsymAD_male <- final_results_AsymAD_male[, -1]
+
+# Remove columns with NA values
+final_results_AsymAD_male <- final_results_AsymAD_male[, colSums(is.na(final_results_AsymAD_male)) == 0]
+
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap using heatmap.2
+heatmap.2(
+as.matrix(final_results_AsymAD_male),
+Rowv = TRUE,
+Colv = TRUE,
+col = color_scale,
+scale = "column",  # Scale rows (genes) to Z-scores
+trace = "none",  # Turn off row and column annotations
+margins = c(20, 20),  # Set margins for row and column labels
+#col = cm.colors(256),  # Set the color map (256 colors)
+key = TRUE,  # Include a color key
+keysize = 1,  # Size of the color key
+cexCol = 1,  # Set column label size
+cexRow = 0.8,  # Set row label size
+dendrogram = "both",  # Show both row and column dendrograms
+main="subdomain-specific Z score for AsymAD Individuals (male)"
+)
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## CT_female
+
+# Function to process each file
+process_subdomain_file <- function(file_path, zscore_data) {
+  # Read the subdomain subdomain file
+  subdomain_data <- read.delim(file_path, header = TRUE, sep = "\t")
+  
+  # Merge with zscore_data
+  merged_data <- merge(subdomain_data, zscore_data, by.x = "symbol", by.y = "Protein_name", all.x = TRUE)
+  
+  # Identify columns ending with "_Zscore"
+  zscore_columns <- grep("_Zscore$", names(merged_data), value = TRUE)
+  
+  # Calculate Stouffer's combined Z-scores for each column
+  stouffer_zscores <- apply(merged_data[, zscore_columns], 2, function(z_scores) {
+    # Remove NA values
+    z_scores <- na.omit(z_scores)
+    
+    # Calculate the Stouffer's Z-score
+    stouffer_z <- sum(z_scores) / sqrt(length(z_scores))
+    
+    return(stouffer_z)
+  })
+  
+  # Remove "_Zscore" suffix from the Sample_ID names
+  sample_ids <- sub("_Zscore$", "", zscore_columns)
+  
+  # Create a new data frame with "Sample_ID" and the calculated Stouffer's Z-scores
+  unique_id <- unique(subdomain_data$unique_id)[1]
+  colname <- paste0(unique_id, "_Zscore")
+  results_df <- data.frame(Sample_ID = sample_ids)
+  results_df[[colname]] <- stouffer_zscores
+  
+  return(results_df)
+}
+
+# Path to the directory containing hsa*.txt files
+dir_path <- "/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain/Subdomain_geneset"
+
+# Read the zscore_AD_female data
+#zscore_AD_female <- read.delim("zscore_AD_female.txt", header = TRUE, sep = "\t")
+
+# List all hsa*.txt files in the directory
+subdomain_files <- list.files(path = dir_path, pattern = "*.txt$", full.names = TRUE)
+
+# Initialize an empty list to store the results
+all_results <- list()
+
+# Process each subdomain file
+for (file in subdomain_files) {
+  result <- process_subdomain_file(file, zscore_CT_female)
+  all_results[[file]] <- result
+}
+
+# Combine all results into one data frame by merging them on Sample_ID
+final_results_CT_female <- Reduce(function(x, y) merge(x, y, by = "Sample_ID", all = TRUE), all_results)
+
+# Write the final results to a file
+write.table(final_results_CT_female, "subdomain_zscore_CT_female_summary.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+###########################################################################################################################################################
+# Transpose the file to count 1st and 99th percentile of the Z score distributions in individual subdomain
+final_results_CT_female_t <- as.data.frame(t(final_results_CT_female[,-1]))
+
+colnames(final_results_CT_female_t) <- final_results_CT_female$Sample_ID
+
+# Convert the row names to a new column named "unique_id"
+final_results_CT_female_t$unique_id <- rownames(final_results_CT_female_t)
+
+# Reorder the columns so that "unique_id" comes first
+final_results_CT_female_t <- final_results_CT_female_t[, c("unique_id", names(final_results_CT_female_t)[-ncol(final_results_CT_female_t)])]
+
+# Reset the row names as they are no longer needed
+rownames(final_results_CT_female_t) <- NULL
+
+# Print the table using DT
+datatable(final_results_CT_female_t, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Function to calculate percentiles
+calc_percentiles <- function(x) {
+  lower <- quantile(x, probs = 0.01, na.rm = TRUE)
+  upper <- quantile(x, probs = 0.99, na.rm = TRUE)
+  return(c(lower, upper))
+}
+
+# Apply the function to each row
+percentiles <- t(apply(final_results_CT_female_t[,-1], 1, calc_percentiles))
+
+# Add the percentiles to the data frame
+final_results_CT_female_t_percentile <- cbind(final_results_CT_female_t, lower_1st_percentile = percentiles[, 1], upper_99th_percentile = percentiles[, 2])
+
+# Define a dataframe with thresold values for each gene within the control sample
+zscored_threshold_female <- final_results_CT_female_t_percentile[,c("unique_id", "lower_1st_percentile", "upper_99th_percentile")]
+
+# Write the z-scored and 5th and 95th Percentiles for Each Gene to a text file
+write.table(zscored_threshold_female, "zscored_percentiles_subdomain_data_DLPFC_contorl_female.txt", sep="\t", quote=FALSE, row.names=FALSE)
+
+# Print the table using DT
+datatable(zscored_threshold_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+############################################################################################################################################################
+# Plot the data
+
+# Set rownames to Sample_ID and remove Sample_ID column
+rownames(final_results_CT_female) <- final_results_CT_female$Sample_ID
+
+final_results_CT_female <- final_results_CT_female[, -1]
+
+# Remove columns with NA values
+final_results_CT_female <- final_results_CT_female[, colSums(is.na(final_results_CT_female)) == 0]
+
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap using heatmap.2
+heatmap.2(
+as.matrix(final_results_CT_female),
+Rowv = TRUE,
+Colv = TRUE,
+col = color_scale,
+scale = "column",  # Scale rows (genes) to Z-scores
+trace = "none",  # Turn off row and column annotations
+margins = c(20, 20),  # Set margins for row and column labels
+#col = cm.colors(256),  # Set the color map (256 colors)
+key = TRUE,  # Include a color key
+keysize = 1,  # Size of the color key
+cexCol = 1,  # Set column label size
+cexRow = 0.8,  # Set row label size
+dendrogram = "both",  # Show both row and column dendrograms
+main="subdomain-specific Z score for CT Individuals (female)"
+)
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## CT_male
+
+# Function to process each file
+process_subdomain_file <- function(file_path, zscore_data) {
+  # Read the subdomain subdomain file
+  subdomain_data <- read.delim(file_path, header = TRUE, sep = "\t")
+  
+  # Merge with zscore_data
+  merged_data <- merge(subdomain_data, zscore_data, by.x = "symbol", by.y = "Protein_name", all.x = TRUE)
+  
+  # Identify columns ending with "_Zscore"
+  zscore_columns <- grep("_Zscore$", names(merged_data), value = TRUE)
+  
+  # Calculate Stouffer's combined Z-scores for each column
+  stouffer_zscores <- apply(merged_data[, zscore_columns], 2, function(z_scores) {
+    # Remove NA values
+    z_scores <- na.omit(z_scores)
+    
+    # Calculate the Stouffer's Z-score
+    stouffer_z <- sum(z_scores) / sqrt(length(z_scores))
+    
+    return(stouffer_z)
+  })
+  
+  # Remove "_Zscore" suffix from the Sample_ID names
+  sample_ids <- sub("_Zscore$", "", zscore_columns)
+  
+  # Create a new data frame with "Sample_ID" and the calculated Stouffer's Z-scores
+  unique_id <- unique(subdomain_data$unique_id)[1]
+  colname <- paste0(unique_id, "_Zscore")
+  results_df <- data.frame(Sample_ID = sample_ids)
+  results_df[[colname]] <- stouffer_zscores
+  
+  return(results_df)
+}
+
+# Path to the directory containing hsa*.txt files
+dir_path <- "/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/Subdomain/Subdomain_geneset"
+
+# Read the zscore_AD_female data
+#zscore_AD_female <- read.delim("zscore_AD_female.txt", header = TRUE, sep = "\t")
+
+# List all hsa*.txt files in the directory
+subdomain_files <- list.files(path = dir_path, pattern = "*.txt$", full.names = TRUE)
+
+# Initialize an empty list to store the results
+all_results <- list()
+
+# Process each subdomain file
+for (file in subdomain_files) {
+  result <- process_subdomain_file(file, zscore_CT_male)
+  all_results[[file]] <- result
+}
+
+# Combine all results into one data frame by merging them on Sample_ID
+final_results_CT_male <- Reduce(function(x, y) merge(x, y, by = "Sample_ID", all = TRUE), all_results)
+
+# Write the final results to a file
+write.table(final_results_CT_male, "subdomain_zscore_CT_male_summary.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+###########################################################################################################################################################
+# Transpose the file to count 1st and 99th percentile of the Z score distributions in individual subdomain
+final_results_CT_male_t <- as.data.frame(t(final_results_CT_male[,-1]))
+
+colnames(final_results_CT_male_t) <- final_results_CT_male$Sample_ID
+
+# Convert the row names to a new column named "unique_id"
+final_results_CT_male_t$unique_id <- rownames(final_results_CT_male_t)
+
+# Reorder the columns so that "unique_id" comes first
+final_results_CT_male_t <- final_results_CT_male_t[, c("unique_id", names(final_results_CT_male_t)[-ncol(final_results_CT_male_t)])]
+
+# Reset the row names as they are no longer needed
+rownames(final_results_CT_male_t) <- NULL
+
+
+# Print the table using DT
+datatable(final_results_CT_male_t, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Function to calculate percentiles
+calc_percentiles <- function(x) {
+  lower <- quantile(x, probs = 0.01, na.rm = TRUE)
+  upper <- quantile(x, probs = 0.99, na.rm = TRUE)
+  return(c(lower, upper))
+}
+
+# Apply the function to each row
+percentiles <- t(apply(final_results_CT_male_t[,-1], 1, calc_percentiles))
+
+# Add the percentiles to the data frame
+final_results_CT_male_t_percentile <- cbind(final_results_CT_male_t, lower_1st_percentile = percentiles[, 1], upper_99th_percentile = percentiles[, 2])
+
+# Define a dataframe with thresold values for each gene within the control sample
+zscored_threshold_male <- final_results_CT_male_t_percentile[,c("unique_id", "lower_1st_percentile", "upper_99th_percentile")]
+
+# Write the z-scored and 5th and 95th Percentiles for Each Gene to a text file
+write.table(zscored_threshold_male, "zscored_percentiles_subdomain_data_DLPFC_contorl_male.txt", sep="\t", quote=FALSE, row.names=FALSE)
+
+# Print the table using DT
+datatable(zscored_threshold_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+############################################################################################################################################################
+# Plot the data
+
+# Set rownames to Sample_ID and remove Sample_ID column
+rownames(final_results_CT_male) <- final_results_CT_male$Sample_ID
+
+final_results_CT_male <- final_results_CT_male[, -1]
+
+# Remove columns with NA values
+final_results_CT_male <- final_results_CT_male[, colSums(is.na(final_results_CT_male)) == 0]
+
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap using heatmap.2
+heatmap.2(
+as.matrix(final_results_CT_male),
+Rowv = TRUE,
+Colv = TRUE,
+col = color_scale,
+scale = "column",  # Scale rows (genes) to Z-scores
+trace = "none",  # Turn off row and column annotations
+margins = c(20, 20),  # Set margins for row and column labels
+#col = cm.colors(256),  # Set the color map (256 colors)
+key = TRUE,  # Include a color key
+keysize = 1,  # Size of the color key
+cexCol = 1,  # Set column label size
+cexRow = 0.8,  # Set row label size
+dendrogram = "both",  # Show both row and column dendrograms
+main="subdomain-specific Z score for CT Individuals (male)"
+)
+
+end.rcode-->
+
+<p>Identfy significant subdomains for AD and AsymAD (male and female) using the Z-score thresold (percentile upper and lower bound) from control samples</p>
+
+<!--begin.rcode fig.width=30, fig.height=15
+library(ggplot2)
+library(tidyr)
+library(ggdendro)
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## AD_male
+
+# Merge both the data frame by unique_id
+merged_data_male_AD <- merge(zscored_threshold_male, final_results_AD_male_t, by = "unique_id")
+
+# Initialize an empty data frame to store results
+sig_subdomain_AD_male <- data.frame(unique_id = merged_data_male_AD$unique_id)
+
+
+# Iterate over each column in final_results_AD_female_t (excluding the unique_id)
+for (col_name in colnames(final_results_AD_male_t)[-1]) {
+
+  # Apply the conditions and store the actual value or 0 in a new column in sig_subdomain_AD_male
+  sig_subdomain_AD_male[[col_name]] <- ifelse(
+    merged_data_male_AD[[col_name]] < merged_data_male_AD$lower_1st_percentile, 
+    merged_data_male_AD[[col_name]],  # Retrieve the value if it's less than the lower 1st percentile
+    ifelse(
+      merged_data_male_AD[[col_name]] > merged_data_male_AD$upper_99th_percentile, 
+      merged_data_male_AD[[col_name]],  # Retrieve the value if it's greater than the upper 99th percentile
+      0  # Otherwise, set to 0
+    )
+  )
+}
+
+# Select only numeric columns (assuming all columns except unique_id are numeric)
+numeric_columns <- sig_subdomain_AD_male[, sapply(sig_subdomain_AD_male, is.numeric)]
+
+# Calculate UP_count (count of positive values) for each row
+sig_subdomain_AD_male$UP_Count <- rowSums(numeric_columns > 0)
+
+# Calculate DOWN_count (count of negative values) for each row
+sig_subdomain_AD_male$DOWN_Count <- rowSums(numeric_columns < 0)
+
+# Write the output to a .txt file
+write.table(sig_subdomain_AD_male, "sig_subdomain_AD_male.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+# Print the table using DT
+datatable(sig_subdomain_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+###################################################################################################################################################
+# Plot the data
+
+# Remove the UP_Count and DOWN_Count columns
+heatmap_data_AD_male <- sig_subdomain_AD_male[, !(colnames(sig_subdomain_AD_male) %in% c("UP_Count", "DOWN_Count"))]
+
+# Set the row names to unique_id and remove the unique_id column
+row.names(heatmap_data_AD_male) <- sig_subdomain_AD_male$unique_id
+heatmap_data_AD_male$unique_id <- NULL
+
+# Check and handle NA/NaN/Inf values
+heatmap_data_AD_male[is.na(heatmap_data_AD_male)] <- 0  # Replace NA values with 0
+heatmap_data_AD_male[is.infinite(heatmap_data_AD_male)] <- 0  # Replace Inf/-Inf values with 0
+
+# Convert the data to numeric type (if it's not already)
+heatmap_data_AD_male <- as.matrix(heatmap_data_AD_male)
+
+# Define the color palette
+color_palette <- colorRampPalette(c("red", "white", "blue"))(100)
+
+# Generate the heatmap
+out_heatmap_AD_male <- heatmap.2(
+  heatmap_data_AD_male,              # Data matrix
+  Rowv = TRUE,                 # Row dendrogram
+  Colv = TRUE,                 # Column dendrogram
+  col = color_palette,         # Color palette
+  scale = "row",              # No scaling
+  trace = "none",              # Turn off trace lines
+  margins = c(10, 10),         # Set margins for labels
+  key = TRUE,                  # Include color key
+  key.title = "Z-Score",       # Key title
+  keysize = 1.5,               # Size of the key
+  cexRow = 0.8,                # Size of row labels
+  cexCol = 0.8,                # Size of column labels
+  dendrogram = "both",         # Show both row and column dendrograms
+  main = "subdomain Specific Z-Scores Distribution (AD male)"  # Main title
+)
+
+# Plot the dendogram
+ggdendrogram(out_heatmap_AD_male$colDendrogram, theme_dendro = FALSE)
+
+
+# Convert data from wide to long format
+long_sig_subdomain_AD_male <- gather(sig_subdomain_AD_male, key = "Direction", value = "Count", UP_Count, DOWN_Count)
+
+# Create the line plot
+ggplot(long_sig_subdomain_AD_male, aes(x = unique_id, y = Count, color = Direction, group = Direction)) +
+  geom_line(size = 1) +    # Add lines between points
+  geom_point(size = 2) +   # Add points at each unique_id
+  theme_minimal() +
+  labs(title = "UP and DOWN Count for Each subdomain (AD male)", x = "subdomain ID", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +  # Rotate x-axis labels if needed
+  scale_color_manual(values = c("UP_Count" = "lightblue", "DOWN_Count" = "pink")) +  # Customize colors
+  theme(text = element_text(size=20))
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## AD_female
+
+# Merge both the data frame by unique_id
+merged_data_female_AD <- merge(zscored_threshold_female, final_results_AD_female_t, by = "unique_id")
+
+# Initialize an empty data frame to store results
+sig_subdomain_AD_female <- data.frame(unique_id = merged_data_female_AD$unique_id)
+
+# Iterate over each column in B (excluding the unique_id)
+#for (col_name in colnames(final_results_AD_female_t)[-1]) {
+  
+  # Apply the conditions and store the result in a new column in Output
+  #sig_subdomain_AD_female[[col_name]] <- ifelse(merged_data_female_AD[[col_name]] < merged_data_female_AD$lower_1st_percentile, 
+                               #"DOWN", 
+                               #ifelse(merged_data_female_AD[[col_name]] > merged_data_female_AD$upper_99th_percentile, 
+                                      #"UP", 
+                                      #"0"))
+#}
+
+# Add a column to count the number of "UP" occurrences in each row
+#sig_subdomain_AD_female$UP_Count <- rowSums(sig_subdomain_AD_female == "UP")
+
+# Add a column to count the number of "DOWN" occurrences in each row
+#sig_subdomain_AD_female$DOWN_Count <- rowSums(sig_subdomain_AD_female == "DOWN")
+
+
+# Iterate over each column in final_results_AD_female_t (excluding the unique_id)
+for (col_name in colnames(final_results_AD_female_t)[-1]) {
+
+  # Apply the conditions and store the actual value or 0 in a new column in sig_subdomain_AD_female
+  sig_subdomain_AD_female[[col_name]] <- ifelse(
+    merged_data_female_AD[[col_name]] < merged_data_female_AD$lower_1st_percentile, 
+    merged_data_female_AD[[col_name]],  # Retrieve the value if it's less than the lower 1st percentile
+    ifelse(
+      merged_data_female_AD[[col_name]] > merged_data_female_AD$upper_99th_percentile, 
+      merged_data_female_AD[[col_name]],  # Retrieve the value if it's greater than the upper 99th percentile
+      0  # Otherwise, set to 0
+    )
+  )
+}
+
+# Select only numeric columns (assuming all columns except unique_id are numeric)
+numeric_columns <- sig_subdomain_AD_female[, sapply(sig_subdomain_AD_female, is.numeric)]
+
+# Calculate UP_count (count of positive values) for each row
+sig_subdomain_AD_female$UP_Count <- rowSums(numeric_columns > 0)
+
+# Calculate DOWN_count (count of negative values) for each row
+sig_subdomain_AD_female$DOWN_Count <- rowSums(numeric_columns < 0)
+
+# Write the output to a .txt file
+write.table(sig_subdomain_AD_female, "sig_subdomain_AD_female.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+# Print the table using DT
+datatable(sig_subdomain_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+###################################################################################################################################################
+# Plot the data
+
+# Remove the UP_Count and DOWN_Count columns
+heatmap_data_AD_female <- sig_subdomain_AD_female[, !(colnames(sig_subdomain_AD_female) %in% c("UP_Count", "DOWN_Count"))]
+
+# Set the row names to unique_id and remove the unique_id column
+row.names(heatmap_data_AD_female) <- sig_subdomain_AD_female$unique_id
+heatmap_data_AD_female$unique_id <- NULL
+
+# Check and handle NA/NaN/Inf values
+heatmap_data_AD_female[is.na(heatmap_data_AD_female)] <- 0  # Replace NA values with 0
+heatmap_data_AD_female[is.infinite(heatmap_data_AD_female)] <- 0  # Replace Inf/-Inf values with 0
+
+# Convert the data to numeric type (if it's not already)
+heatmap_data_AD_female <- as.matrix(heatmap_data_AD_female)
+
+# Define the color palette
+color_palette <- colorRampPalette(c("red", "white", "blue"))(100)
+
+# Generate the heatmap
+out_heatmap_AD_female <- heatmap.2(
+  heatmap_data_AD_female,              # Data matrix
+  Rowv = TRUE,                 # Row dendrogram
+  Colv = TRUE,                 # Column dendrogram
+  col = color_palette,         # Color palette
+  scale = "row",              # No scaling
+  trace = "none",              # Turn off trace lines
+  margins = c(10, 10),         # Set margins for labels
+  key = TRUE,                  # Include color key
+  key.title = "Z-Score",       # Key title
+  keysize = 1.5,               # Size of the key
+  cexRow = 0.8,                # Size of row labels
+  cexCol = 0.8,                # Size of column labels
+  dendrogram = "both",         # Show both row and column dendrograms
+  main = "subdomain Specific Z-Scores Distribution (AD female)"  # Main title
+)
+
+# Plot the dendogram
+ggdendrogram(out_heatmap_AD_female$colDendrogram, theme_dendro = TRUE)
+
+# Convert data from wide to long format
+long_sig_subdomain_AD_female <- gather(sig_subdomain_AD_female, key = "Direction", value = "Count", UP_Count, DOWN_Count)
+
+# Create the bar plot
+ggplot(long_sig_subdomain_AD_female, aes(x = unique_id, y = Count, color = Direction, group = Direction)) +
+  geom_line(size = 1) +    # Add lines between points
+  geom_point(size = 2) +   # Add points at each unique_id
+  theme_minimal() +
+  labs(title = "UP and DOWN Count for Each subdomain (AD female)", x = "subdomain ID", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +  # Rotate x-axis labels if needed
+  scale_color_manual(values = c("UP_Count" = "lightblue", "DOWN_Count" = "pink")) +  # Customize colors
+  theme(text = element_text(size=20))
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## AsymAD_male
+
+# Merge both the data frame by unique_id
+merged_data_male_AsymAD <- merge(zscored_threshold_male, final_results_AsymAD_male_t, by = "unique_id")
+
+# Initialize an empty data frame to store results
+sig_subdomain_AsymAD_male <- data.frame(unique_id = merged_data_male_AsymAD$unique_id)
+
+
+# Iterate over each column in final_results_AsymAD_female_t (excluding the unique_id)
+for (col_name in colnames(final_results_AsymAD_male_t)[-1]) {
+
+  # Apply the conditions and store the actual value or 0 in a new column in sig_subdomain_AsymAD_male
+  sig_subdomain_AsymAD_male[[col_name]] <- ifelse(
+    merged_data_male_AsymAD[[col_name]] < merged_data_male_AsymAD$lower_1st_percentile, 
+    merged_data_male_AsymAD[[col_name]],  # Retrieve the value if it's less than the lower 1st percentile
+    ifelse(
+      merged_data_male_AsymAD[[col_name]] > merged_data_male_AsymAD$upper_99th_percentile, 
+      merged_data_male_AsymAD[[col_name]],  # Retrieve the value if it's greater than the upper 99th percentile
+      0  # Otherwise, set to 0
+    )
+  )
+}
+
+# Select only numeric columns (assuming all columns except unique_id are numeric)
+numeric_columns <- sig_subdomain_AsymAD_male[, sapply(sig_subdomain_AsymAD_male, is.numeric)]
+
+# Calculate UP_count (count of positive values) for each row
+sig_subdomain_AsymAD_male$UP_Count <- rowSums(numeric_columns > 0)
+
+# Calculate DOWN_count (count of negative values) for each row
+sig_subdomain_AsymAD_male$DOWN_Count <- rowSums(numeric_columns < 0)
+
+# Write the output to a .txt file
+write.table(sig_subdomain_AsymAD_male, "sig_subdomain_AsymAD_male.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+# Print the table using DT
+datatable(sig_subdomain_AsymAD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+###################################################################################################################################################
+# Plot the data
+
+# Remove the UP_Count and DOWN_Count columns
+heatmap_data_AsymAD_male <- sig_subdomain_AsymAD_male[, !(colnames(sig_subdomain_AsymAD_male) %in% c("UP_Count", "DOWN_Count"))]
+
+# Set the row names to unique_id and remove the unique_id column
+row.names(heatmap_data_AsymAD_male) <- sig_subdomain_AsymAD_male$unique_id
+heatmap_data_AsymAD_male$unique_id <- NULL
+
+# Check and handle NA/NaN/Inf values
+heatmap_data_AsymAD_male[is.na(heatmap_data_AsymAD_male)] <- 0  # Replace NA values with 0
+heatmap_data_AsymAD_male[is.infinite(heatmap_data_AsymAD_male)] <- 0  # Replace Inf/-Inf values with 0
+
+# Convert the data to numeric type (if it's not already)
+heatmap_data_AsymAD_male <- as.matrix(heatmap_data_AsymAD_male)
+
+# Define the color palette
+color_palette <- colorRampPalette(c("red", "white", "blue"))(100)
+
+# Generate the heatmap
+out_heatmap_AsymAD_male <- heatmap.2(
+  heatmap_data_AsymAD_male,              # Data matrix
+  Rowv = TRUE,                 # Row dendrogram
+  Colv = TRUE,                 # Column dendrogram
+  col = color_palette,         # Color palette
+  scale = "row",              # No scaling
+  trace = "none",              # Turn off trace lines
+  margins = c(10, 10),         # Set margins for labels
+  key = TRUE,                  # Include color key
+  key.title = "Z-Score",       # Key title
+  keysize = 1.5,               # Size of the key
+  cexRow = 0.8,                # Size of row labels
+  cexCol = 0.8,                # Size of column labels
+  dendrogram = "both",         # Show both row and column dendrograms
+  main = "subdomain Specific Z-Scores Distribution (AsymAD male)"  # Main title
+)
+
+# Plot the dendogram
+ggdendrogram(out_heatmap_AsymAD_male$colDendrogram, theme_dendro = FALSE)
+
+
+# Convert data from wide to long format
+long_sig_subdomain_AsymAD_male <- gather(sig_subdomain_AsymAD_male, key = "Direction", value = "Count", UP_Count, DOWN_Count)
+
+# Create the line plot
+ggplot(long_sig_subdomain_AsymAD_male, aes(x = unique_id, y = Count, color = Direction, group = Direction)) +
+  geom_line(size = 1) +    # Add lines between points
+  geom_point(size = 2) +   # Add points at each unique_id
+  theme_minimal() +
+  labs(title = "UP and DOWN Count for Each subdomain (AsymAD male)", x = "subdomain ID", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +  # Rotate x-axis labels if needed
+  scale_color_manual(values = c("UP_Count" = "lightblue", "DOWN_Count" = "pink")) +  # Customize colors
+  theme(text = element_text(size=20))
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## AsymAD_female
+
+# Merge both the data frame by unique_id
+merged_data_female_AsymAD <- merge(zscored_threshold_female, final_results_AsymAD_female_t, by = "unique_id")
+
+# Initialize an empty data frame to store results
+sig_subdomain_AsymAD_female <- data.frame(unique_id = merged_data_female_AsymAD$unique_id)
+
+# Iterate over each column in B (excluding the unique_id)
+#for (col_name in colnames(final_results_AsymAD_female_t)[-1]) {
+  
+  # Apply the conditions and store the result in a new column in Output
+  #sig_subdomain_AsymAD_female[[col_name]] <- ifelse(merged_data_female_AsymAD[[col_name]] < merged_data_female_AsymAD$lower_1st_percentile, 
+                               #"DOWN", 
+                               #ifelse(merged_data_female_AsymAD[[col_name]] > merged_data_female_AsymAD$upper_99th_percentile, 
+                                      #"UP", 
+                                      #"0"))
+#}
+
+# Add a column to count the number of "UP" occurrences in each row
+#sig_subdomain_AsymAD_female$UP_Count <- rowSums(sig_subdomain_AsymAD_female == "UP")
+
+# Add a column to count the number of "DOWN" occurrences in each row
+#sig_subdomain_AsymAD_female$DOWN_Count <- rowSums(sig_subdomain_AsymAD_female == "DOWN")
+
+
+# Iterate over each column in final_results_AsymAD_female_t (excluding the unique_id)
+for (col_name in colnames(final_results_AsymAD_female_t)[-1]) {
+
+  # Apply the conditions and store the actual value or 0 in a new column in sig_subdomain_AsymAD_female
+  sig_subdomain_AsymAD_female[[col_name]] <- ifelse(
+    merged_data_female_AsymAD[[col_name]] < merged_data_female_AsymAD$lower_1st_percentile, 
+    merged_data_female_AsymAD[[col_name]],  # Retrieve the value if it's less than the lower 1st percentile
+    ifelse(
+      merged_data_female_AsymAD[[col_name]] > merged_data_female_AsymAD$upper_99th_percentile, 
+      merged_data_female_AsymAD[[col_name]],  # Retrieve the value if it's greater than the upper 99th percentile
+      0  # Otherwise, set to 0
+    )
+  )
+}
+
+# Select only numeric columns (assuming all columns except unique_id are numeric)
+numeric_columns <- sig_subdomain_AsymAD_female[, sapply(sig_subdomain_AsymAD_female, is.numeric)]
+
+# Calculate UP_count (count of positive values) for each row
+sig_subdomain_AsymAD_female$UP_Count <- rowSums(numeric_columns > 0)
+
+# Calculate DOWN_count (count of negative values) for each row
+sig_subdomain_AsymAD_female$DOWN_Count <- rowSums(numeric_columns < 0)
+
+# Write the output to a .txt file
+write.table(sig_subdomain_AsymAD_female, "sig_subdomain_AsymAD_female.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+# Print the table using DT
+datatable(sig_subdomain_AsymAD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+###################################################################################################################################################
+# Plot the data
+
+# Remove the UP_Count and DOWN_Count columns
+heatmap_data_AsymAD_female <- sig_subdomain_AsymAD_female[, !(colnames(sig_subdomain_AsymAD_female) %in% c("UP_Count", "DOWN_Count"))]
+
+# Set the row names to unique_id and remove the unique_id column
+row.names(heatmap_data_AsymAD_female) <- sig_subdomain_AsymAD_female$unique_id
+heatmap_data_AsymAD_female$unique_id <- NULL
+
+# Check and handle NA/NaN/Inf values
+heatmap_data_AsymAD_female[is.na(heatmap_data_AsymAD_female)] <- 0  # Replace NA values with 0
+heatmap_data_AsymAD_female[is.infinite(heatmap_data_AsymAD_female)] <- 0  # Replace Inf/-Inf values with 0
+
+# Convert the data to numeric type (if it's not already)
+heatmap_data_AsymAD_female <- as.matrix(heatmap_data_AsymAD_female)
+
+# Define the color palette
+color_palette <- colorRampPalette(c("red", "white", "blue"))(100)
+
+# Generate the heatmap
+out_heatmap_AsymAD_female <- heatmap.2(
+  heatmap_data_AsymAD_female,              # Data matrix
+  Rowv = TRUE,                 # Row dendrogram
+  Colv = TRUE,                 # Column dendrogram
+  col = color_palette,         # Color palette
+  scale = "row",              # No scaling
+  trace = "none",              # Turn off trace lines
+  margins = c(10, 10),         # Set margins for labels
+  key = TRUE,                  # Include color key
+  key.title = "Z-Score",       # Key title
+  keysize = 1.5,               # Size of the key
+  cexRow = 0.8,                # Size of row labels
+  cexCol = 0.8,                # Size of column labels
+  dendrogram = "both",         # Show both row and column dendrograms
+  main = "subdomain Specific Z-Scores Distribution (AsymAD female)"  # Main title
+)
+
+# Plot the dendogram
+ggdendrogram(out_heatmap_AsymAD_female$colDendrogram, theme_dendro = TRUE)
+
+# Convert data from wide to long format
+long_sig_subdomain_AsymAD_female <- gather(sig_subdomain_AsymAD_female, key = "Direction", value = "Count", UP_Count, DOWN_Count)
+
+# Create the bar plot
+ggplot(long_sig_subdomain_AsymAD_female, aes(x = unique_id, y = Count, color = Direction, group = Direction)) +
+  geom_line(size = 1) +    # Add lines between points
+  geom_point(size = 2) +   # Add points at each unique_id
+  theme_minimal() +
+  labs(title = "UP and DOWN Count for Each subdomain (AsymAD female)", x = "subdomain ID", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +  # Rotate x-axis labels if needed
+  scale_color_manual(values = c("UP_Count" = "lightblue", "DOWN_Count" = "pink")) +  # Customize colors
+  theme(text = element_text(size=20))
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+## CT_female
+
+# Merge both data frames by unique_id
+merged_data_female_CT <- merge(zscored_threshold_female, final_results_CT_female_t, by = "unique_id", all.x = TRUE)
+
+# Initialize an empty data frame to store results
+sig_subdomain_CT_female <- data.frame(unique_id = merged_data_female_CT$unique_id)
+
+# Iterate over each column in final_results_CT_female_t (excluding the unique_id)
+for (col_name in colnames(final_results_CT_female_t)[-1]) {
+
+  # Apply the conditions and store the actual value or 0 in a new column in sig_subdomain_CT_female
+  sig_subdomain_CT_female[[col_name]] <- ifelse(
+    merged_data_female_CT[[col_name]] < merged_data_female_CT$lower_1st_percentile, 
+    merged_data_female_CT[[col_name]],  # Retrieve the value if it's less than the lower 1st percentile
+    ifelse(
+      merged_data_female_CT[[col_name]] > merged_data_female_CT$upper_99th_percentile, 
+      merged_data_female_CT[[col_name]],  # Retrieve the value if it's greater than the upper 99th percentile
+      0  # Otherwise, set to 0
+    )
+  )
+}
+
+# Select only numeric columns (assuming all columns except unique_id are numeric)
+numeric_columns <- sig_subdomain_CT_female[, sapply(sig_subdomain_CT_female, is.numeric)]
+
+# Calculate UP_count (count of positive values) for each row
+sig_subdomain_CT_female$UP_Count <- rowSums(numeric_columns > 0)
+
+# Calculate DOWN_count (count of negative values) for each row
+sig_subdomain_CT_female$DOWN_Count <- rowSums(numeric_columns < 0)
+
+# Write the output to a .txt file
+write.table(sig_subdomain_CT_female, "sig_subdomain_CT_female.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+# Print the table using DT
+datatable(sig_subdomain_CT_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+###################################################################################################################################################
+# Plot the data
+
+# Remove the UP_Count and DOWN_Count columns
+heatmap_data_CT_female <- sig_subdomain_CT_female[, !(colnames(sig_subdomain_CT_female) %in% c("UP_Count", "DOWN_Count"))]
+
+# Set the row names to unique_id and remove the unique_id column
+row.names(heatmap_data_CT_female) <- sig_subdomain_CT_female$unique_id
+heatmap_data_CT_female$unique_id <- NULL
+
+# Check and handle NA/NaN/Inf values
+heatmap_data_CT_female[is.na(heatmap_data_CT_female)] <- 0  # Replace NA values with 0
+heatmap_data_CT_female[is.infinite(heatmap_data_CT_female)] <- 0  # Replace Inf/-Inf values with 0
+
+# Convert the data to numeric type (if it's not already)
+heatmap_data_CT_female <- as.matrix(heatmap_data_CT_female)
+
+# Define the color palette
+color_palette <- colorRampPalette(c("red", "white", "blue"))(100)
+
+# Generate the heatmap
+heatmap.2(
+  heatmap_data_CT_female,              # Data matrix
+  Rowv = TRUE,                 # Row dendrogram
+  Colv = TRUE,                 # Column dendrogram
+  col = color_palette,         # Color palette
+  scale = "row",              # No scaling
+  trace = "none",              # Turn off trace lines
+  margins = c(10, 10),         # Set margins for labels
+  key = TRUE,                  # Include color key
+  key.title = "Z-Score",       # Key title
+  keysize = 1.5,               # Size of the key
+  cexRow = 0.8,                # Size of row labels
+  cexCol = 0.8,                # Size of column labels
+  dendrogram = "both",         # Show both row and column dendrograms
+  main = "subdomain Specific Z-Scores Distribution (CT female)"  # Main title
+)
+
+
+# Convert data from wide to long format
+long_sig_subdomain_CT_female <- gather(sig_subdomain_CT_female, key = "Direction", value = "Count", UP_Count, DOWN_Count)
+
+# Create the bar plot
+ggplot(long_sig_subdomain_CT_female, aes(x = unique_id, y = Count, fill = Direction)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "UP and DOWN Count for Each subdomain (CT female)", x = "subdomain ID", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 0.5)) +  # Rotate x-axis labels if needed
+  scale_fill_manual(values = c("UP_Count" = "lightblue", "DOWN_Count" = "pink"))  # Customize colors
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+
+## CT_male
+
+# Merge both data frames by unique_id
+merged_data_male_CT <- merge(zscored_threshold_male, final_results_CT_male_t, by = "unique_id", all.x = TRUE)
+
+# Initialize an empty data frame to store results
+sig_subdomain_CT_male <- data.frame(unique_id = merged_data_male_CT$unique_id)
+
+# Iterate over each column in final_results_CT_female_t (excluding the unique_id)
+for (col_name in colnames(final_results_CT_male_t)[-1]) {
+
+  # Apply the conditions and store the actual value or 0 in a new column in sig_subdomain_CT_male
+  sig_subdomain_CT_male[[col_name]] <- ifelse(
+    merged_data_male_CT[[col_name]] < merged_data_male_CT$lower_1st_percentile, 
+    merged_data_male_CT[[col_name]],  # Retrieve the value if it's less than the lower 1st percentile
+    ifelse(
+      merged_data_male_CT[[col_name]] > merged_data_male_CT$upper_99th_percentile, 
+      merged_data_male_CT[[col_name]],  # Retrieve the value if it's greater than the upper 99th percentile
+      0  # Otherwise, set to 0
+    )
+  )
+}
+
+# Select only numeric columns (assuming all columns except unique_id are numeric)
+numeric_columns <- sig_subdomain_CT_male[, sapply(sig_subdomain_CT_male, is.numeric)]
+
+# Calculate UP_count (count of positive values) for each row
+sig_subdomain_CT_male$UP_Count <- rowSums(numeric_columns > 0)
+
+# Calculate DOWN_count (count of negative values) for each row
+sig_subdomain_CT_male$DOWN_Count <- rowSums(numeric_columns < 0)
+
+# Write the output to a .txt file
+write.table(sig_subdomain_CT_male, "sig_subdomain_CT_male.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+# Print the table using DT
+datatable(sig_subdomain_CT_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+###################################################################################################################################################
+# Plot the data
+
+# Remove the UP_Count and DOWN_Count columns
+heatmap_data_CT_male <- sig_subdomain_CT_male[, !(colnames(sig_subdomain_CT_male) %in% c("UP_Count", "DOWN_Count"))]
+
+# Set the row names to unique_id and remove the unique_id column
+row.names(heatmap_data_CT_male) <- sig_subdomain_CT_male$unique_id
+heatmap_data_CT_male$unique_id <- NULL
+
+# Check and handle NA/NaN/Inf values
+heatmap_data_CT_male[is.na(heatmap_data_CT_male)] <- 0  # Replace NA values with 0
+heatmap_data_CT_male[is.infinite(heatmap_data_CT_male)] <- 0  # Replace Inf/-Inf values with 0
+
+# Convert the data to numeric type (if it's not already)
+heatmap_data_CT_male <- as.matrix(heatmap_data_CT_male)
+
+# Define the color palette
+color_palette <- colorRampPalette(c("red", "white", "blue"))(100)
+
+# Generate the heatmap
+heatmap.2(
+  heatmap_data_CT_male,              # Data matrix
+  Rowv = TRUE,                 # Row dendrogram
+  Colv = TRUE,                 # Column dendrogram
+  col = color_palette,         # Color palette
+  scale = "row",              # No scaling
+  trace = "none",              # Turn off trace lines
+  margins = c(10, 10),         # Set margins for labels
+  key = TRUE,                  # Include color key
+  key.title = "Z-Score",       # Key title
+  keysize = 1.5,               # Size of the key
+  cexRow = 0.8,                # Size of row labels
+  cexCol = 0.8,                # Size of column labels
+  dendrogram = "both",         # Show both row and column dendrograms
+  main = "subdomain Specific Z-Scores Distribution (CT male)"  # Main title
+)
+
+# Convert data from wide to long format
+long_sig_subdomain_CT_male <- gather(sig_subdomain_CT_male, key = "Direction", value = "Count", UP_Count, DOWN_Count)
+
+# Create the bar plot
+ggplot(long_sig_subdomain_CT_male, aes(x = unique_id, y = Count, fill = Direction)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "UP and DOWN Count for Each subdomain (CT male)", x = "subdomain ID", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 0.5)) +  # Rotate x-axis labels if needed
+  scale_fill_manual(values = c("UP_Count" = "lightblue", "DOWN_Count" = "pink"))  # Customize colors
+
+
+
+end.rcode-->
+
+<p>Compare subdomain-specific Zscore Distributions for CT and AD Individuals across RNA_Spliceosome_others subdomain :</p>
+
+<!--begin.rcode fig.width=15, fig.height=10
+library(ggplot2)
+library(ggridges)
+library(reshape2)
+library(ggbreak)
+
+# Select subdomain-specific (eg: RS_others_1) Zscore from all four groups
+
+# Find the maximum length of the vectors
+max_length <- max(
+  length(final_results_AD_female$RS_others_1_Zscore),
+  length(final_results_AD_male$RS_others_1_Zscore),
+  length(final_results_AsymAD_female$RS_others_1_Zscore),
+  length(final_results_AsymAD_male$RS_others_1_Zscore),
+  length(final_results_CT_female$RS_others_1_Zscore),
+  length(final_results_CT_male$RS_others_1_Zscore)
+)
+
+# Function to pad a vector with NA values
+pad_vector <- function(vec, length_out) {
+  c(vec, rep(NA, length_out - length(vec)))
+}
+
+# Pad each vector to the maximum length
+RS_others_1_AD_female_padded <- pad_vector(final_results_AD_female$RS_others_1_Zscore, max_length)
+RS_others_1_AD_male_padded <- pad_vector(final_results_AD_male$RS_others_1_Zscore, max_length)
+RS_others_1_AsymAD_female_padded <- pad_vector(final_results_AsymAD_female$RS_others_1_Zscore, max_length)
+RS_others_1_AsymAD_male_padded <- pad_vector(final_results_AsymAD_male$RS_others_1_Zscore, max_length)
+RS_others_1_CT_female_padded <- pad_vector(final_results_CT_female$RS_others_1_Zscore, max_length)
+RS_others_1_CT_male_padded <- pad_vector(final_results_CT_male$RS_others_1_Zscore, max_length)
+
+# Combine into a single data frame
+RS_others_1_Zscore_summary <- data.frame(
+  RS_others_1_AD_female = RS_others_1_AD_female_padded,
+  RS_others_1_AD_male = RS_others_1_AD_male_padded,
+  RS_others_1_AsymAD_female = RS_others_1_AsymAD_female_padded,
+  RS_others_1_AsymAD_male = RS_others_1_AsymAD_male_padded,
+  RS_others_1_CT_female = RS_others_1_CT_female_padded,
+  RS_others_1_CT_male = RS_others_1_CT_male_padded
+)
+
+# View the combined data frame
+#head(RS_others_1_Zscore_summary)
+
+# Print the table using DT
+datatable(RS_others_1_Zscore_summary, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+#write.table(RS_others_1_Zscore_summary, "/Users/poddea/Desktop/RS_others_1_Zscore_summary.txt", sep = "\t", quote = FALSE, row.names = FALSE)
+
+# Transform the data to long format
+RS_others_1_Zscore_summary_long <- melt(RS_others_1_Zscore_summary, variable.name = "Condition", value.name = "Value")
+
+# Remove NA values (if any)
+RS_others_1_Zscore_summary_long <- RS_others_1_Zscore_summary_long[complete.cases(RS_others_1_Zscore_summary_long), ]
+
+# Create the Ridgeline Plot:
+ggplot(RS_others_1_Zscore_summary_long, aes(x = Value, y = Condition, fill = Condition)) +
+  geom_density_ridges(scale = 1) +
+  theme_ridges() + 
+  theme(legend.position = "none") +
+  labs(title = "Comparison of Pathway-specific Zscore Distributions for CT, AD and AsymAD Individuals across RNA_Spliceosome_others", x = "Value", y = "Condition") +
+  scale_fill_manual(values = c("tomato", "blue", "coral", "cornflowerblue", "pink", "lightblue"))
+
+##############################################################################################################################################################
+
+# Filter the data for Female_CT and Female_AD
+data_filtered_AD_mf <- subset(RS_others_1_Zscore_summary_long, Condition %in% c("RS_others_1_AD_female", "RS_others_1_AD_male"))
+
+data_filtered_CTAD_m <- subset(RS_others_1_Zscore_summary_long, Condition %in% c("RS_others_1_CT_male", "RS_others_1_AD_male"))
+
+data_filtered_CTAD_f <- subset(RS_others_1_Zscore_summary_long, Condition %in% c("RS_others_1_CT_female", "RS_others_1_AD_female"))
+
+# Create the overlapping density plot
+ggplot(data_filtered_AD_mf, aes(x = Value, fill = Condition)) +
+  geom_density(alpha = 0.5) +  # Set transparency for overlapping densities
+  theme_minimal() +
+  labs(title = "Density Plot for AD_male and AD_female across RNA_Spliceosome_others",
+       x = "Z score",
+       y = "Density") +
+  scale_fill_manual(values = c("RS_others_1_AD_female" = "red", "RS_others_1_AD_male" = "blue")) +
+  theme_minimal(base_size = 14) +
+  theme(
+    text = element_text(size = 20),
+    legend.position = "right"
+  ) 
+
+result_AD_mf <- wilcox.test(RS_others_1_Zscore_summary$RS_others_1_AD_male, RS_others_1_Zscore_summary$RS_others_1_AD_female, paired = TRUE, na.rm = TRUE)
+
+print(result_AD_mf)
+
+
+ggplot(data_filtered_CTAD_m, aes(x = Value, fill = Condition)) +
+  geom_density(alpha = 0.5) +  # Set transparency for overlapping densities
+  theme_minimal() +
+  labs(title = "Density Plot for CT_male and AD_male across RNA_Spliceosome_others",
+       x = "Z score",
+       y = "Density") +
+  scale_fill_manual(values = c("RS_others_1_CT_male" = "lightblue", "RS_others_1_AD_male" = "blue")) +
+  theme(legend.title = element_blank())
+
+result_CTAD_m <- wilcox.test(RS_others_1_Zscore_summary$RS_others_1_CT_male, RS_others_1_Zscore_summary$RS_others_1_AD_male, paired = TRUE, na.rm = TRUE)
+
+print(result_CTAD_m)
+
+
+ggplot(data_filtered_CTAD_f, aes(x = Value, fill = Condition)) +
+  geom_density(alpha = 0.5) +  # Set transparency for overlapping densities
+  theme_minimal() +
+  labs(title = "Density Plot for CT_female and AD_female across RNA_Spliceosome_others",
+       x = "Z score",
+       y = "Density") +
+  scale_fill_manual(values = c("RS_others_1_CT_female" = "pink", "RS_others_1_AD_female" = "red")) +
+  theme(legend.title = element_blank())
+
+result_CTAD_f <- wilcox.test(RS_others_1_Zscore_summary$RS_others_1_CT_female, RS_others_1_Zscore_summary$RS_others_1_AD_female, paired = TRUE, na.rm = TRUE)
+
+print(result_CTAD_f)
+
+########################################################################################################################################################################
+
+# Calculate the 1st and 99th percentiles of pathway-specific Z scores for the RS_others_1 pathway within the Control individuals
+RS_others_1_CT_female_1st <- quantile(RS_others_1_Zscore_summary$RS_others_1_CT_female, 0.01, na.rm = TRUE)
+RS_others_1_CT_female_99th <- quantile(RS_others_1_Zscore_summary$RS_others_1_CT_female, 0.99, na.rm = TRUE)
+ 
+RS_others_1_CT_male_1st <- quantile(RS_others_1_Zscore_summary$RS_others_1_CT_male, 0.01, na.rm = TRUE)
+RS_others_1_CT_male_99th <- quantile(RS_others_1_Zscore_summary$RS_others_1_CT_male, 0.99, na.rm = TRUE)
+ 
+
+ggplot(RS_others_1_Zscore_summary, aes(x = RS_others_1_CT_female)) +
+  geom_density(fill = "pink", alpha = 0.5) +  # Density plot for Female_CT
+  geom_point(aes(x = RS_others_1_AD_female, y = 0), position = position_jitter(height = 0.02), color = "red") +  # Dots for Female_AD
+  labs(title = "Density Plot for Female_CT with Female_AD as Dots acrossRNA_Spliceosome_others",
+       x = "Z score",
+       y = "Density") +
+  theme_minimal() +
+  geom_vline(xintercept = RS_others_1_CT_female_1st, color = "black", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = RS_others_1_CT_female_99th, color = "black", linetype = "dashed", size = 1) +
+  theme(text = element_text(size=20))
+
+###############################################################################################################################
+
+ggplot() +
+  # Density plot for Female_CT
+  geom_density(
+    data = RS_others_1_Zscore_summary,
+    aes(x = RS_others_1_CT_female, fill = "Female_CT"),
+    alpha = 0.5
+  ) +
+  # Density plot for Female_AD
+  geom_density(
+    data = RS_others_1_Zscore_summary,
+    aes(x = RS_others_1_AD_female, fill = "Female_AD"),
+    alpha = 0.5
+  ) +
+  # Mimic rug plot for Female_CT
+  geom_point(
+  data = RS_others_1_Zscore_summary,
+  aes(x = RS_others_1_CT_female, y = -0.01, color = "Female_CT"),
+  size = 10, shape = "|"
+) +
+# Mimic rug plot for Female_AsymAD
+geom_point(
+  data = RS_others_1_Zscore_summary,
+  aes(x = RS_others_1_AsymAD_female, y = -0.03, color = "Female_AsymAD"),
+  size = 10, shape = "|"
+) +
+# Mimic rug plot for Female_AD
+geom_point(
+  data = RS_others_1_Zscore_summary,
+  aes(x = RS_others_1_AD_female, y = -0.05, color = "Female_AD"),
+  size = 10, shape = "|"
+) +
+  # Labels and themes
+  labs(
+    title = "Distributions of Pathway-specific Z scores across RNA_Spliceosome_others",
+    x = "Z score",
+    y = "Density",
+    fill = "Z Score Value",
+    color = "Sample Category"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    text = element_text(size = 20),
+    legend.position = "right"
+  ) +
+  # Vertical dashed lines for Female_CT
+  geom_vline(xintercept = RS_others_1_CT_female_1st, color = "black", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = RS_others_1_CT_female_99th, color = "black", linetype = "dashed", size = 1) +
+  # Manually specify the color scales for the legends
+  scale_fill_manual(
+    values = c("Female_CT" = "pink", "Female_AD" = "tomato"),
+    labels = c("Female_AD", "Female_CT")
+  ) +
+  scale_color_manual(
+    values = c("Female_CT" = "pink",  "Female_AsymAD" = "coral", "Female_AD" = "tomato"),
+    labels = c("Female_CT",  "Female_AsymAD", "Female_AD")
+  ) +
+ # Break the X axis manually to make the plot more visible 
+ scale_x_break(c(50, 300), scales = 0.3, ticklabels = c(50, 300))
+
+        
+###############################################################################################################################
+
+ggplot(RS_others_1_Zscore_summary, aes(x = RS_others_1_CT_male)) +
+  geom_density(fill = "lightblue", alpha = 0.5) +  # Density plot for Female_CT
+  geom_point(aes(x = RS_others_1_AD_male, y = 0), position = position_jitter(height = 0.02), color = "blue") +  # Dots for Male_AD
+  labs(title = "Density Plot for Male_CT with Male_AD as Dots across RNA_Spliceosome_others",
+       x = "Z score",
+       y = "Density") +
+  theme_minimal() +
+  geom_vline(xintercept = RS_others_1_CT_male_1st, color = "black", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = RS_others_1_CT_male_99th, color = "black", linetype = "dashed", size = 1) +
+  theme(text = element_text(size=20))
+
+###############################################################################################################################
+
+ggplot() +
+  # Density plot for Male_CT
+  geom_density(
+    data = RS_others_1_Zscore_summary,
+    aes(x = RS_others_1_CT_male, fill = "Male_CT"),
+    alpha = 0.5
+  ) +
+  # Density plot for Male_AD
+  geom_density(
+    data = RS_others_1_Zscore_summary,
+    aes(x = RS_others_1_AD_male, fill = "Male_AD"),
+    alpha = 0.5
+  ) +
+  # Mimic rug plot for Male_CT
+  geom_point(
+    data = RS_others_1_Zscore_summary,
+    aes(x = RS_others_1_CT_male, y = -0.01, color = "Male_CT"),
+    size = 10, shape = "|"
+  ) +
+    # Mimic rug plot for Male_AsymAD
+  geom_point(
+    data = RS_others_1_Zscore_summary,
+    aes(x = RS_others_1_AsymAD_male, y = -0.03, color = "Male_AsymAD"),
+    size = 10, shape = "|"
+  ) +
+  # Mimic rug plot for Male_AD
+  geom_point(
+    data = RS_others_1_Zscore_summary,
+    aes(x = RS_others_1_AD_male, y = -0.05, color = "Male_AD"),
+    size = 10, shape = "|"
+  ) +
+
+  # Labels and themes
+  labs(
+    title = "Distributions of Pathway-specific Z scores across RNA_Spliceosome_others",
+    x = "Z score",
+    y = "Density",
+    fill = "Z Score Value",
+    color = "Sample Category"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    text = element_text(size = 20),
+    legend.position = "right"
+  ) +
+  # Vertical dashed lines for Male_CT
+  geom_vline(xintercept = RS_others_1_CT_male_1st, color = "black", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = RS_others_1_CT_male_99th, color = "black", linetype = "dashed", size = 1) +
+  # Manually specify the color scales for the legends
+  scale_fill_manual(
+    values = c("Male_CT" = "lightblue", "Male_AD" = "blue"),
+    labels = c("Male_AD", "Male_CT")
+  ) +
+  scale_color_manual(
+    values = c("Male_CT" = "lightblue", "Male_AsymAD" = "cornflowerblue", "Male_AD" = "blue"),
+    labels = c("Male_CT", "Male_AsymAD", "Male_AD")
+  ) +
+   # Break the X axis manually to make the plot more visible 
+  scale_x_break(c(50, 400), scales = 0.5, ticklabels = c(50, 400))
+
+end.rcode-->
+
+
+
+</body>
+</html>
