@@ -2,28 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Proteomics Analysis Workflows</title>
   <style>
-    body { font-family: Arial, Helvetica, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 16px; }
-    h1 { margin-bottom: 0.3rem; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      max-width: 960px;
+      margin: 40px auto;
+      padding: 0 16px;
+      line-height: 1.6;
+    }
+    h1 { margin-bottom: 0.4rem; }
+    .intro {
+      margin-top: 0;
+      color: #333;
+      font-size: 1.05rem;
+      margin-bottom: 1.25rem;
+    }
+    .schematic {
+      margin: 1.75rem 0 2rem;
+      text-align: center;
+    }
+    .schematic img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .caption {
+      font-size: 0.92rem;
+      color: #555;
+      margin-top: 0.5rem;
+    }
+    h2 { margin-top: 2rem; }
     ul { padding-left: 1.2rem; }
-    li { margin: 0.4rem 0; }
+    li { margin: 0.45rem 0; }
   </style>
 </head>
+
 <body>
+  <h1>Proteomics Analysis Workflows</h1>
 
-<h1>Proteomics Analysis Workflows</h1>
+  <p class="intro">
+    This site provides the rendered HTML workflows and supporting code for the analyses reported in our manuscript "Single-subject Proteomic Signatures in Alzheimer’s Disease Reflect Clinical Phenotypes and Distinguish Asymptomatic from Symptomatic Cases"
+    The reports cover TMT proteomics processing, single-subject differential expression analysis, pathway/subdomain profiling, graph-based clustering, and clinical correlation analyses.
+  </p>
 
-<ul>
-  <li><a href="section1/TMT_ROSMAP_round2_description.html">TMT ROSMAP Round 2 — Description</a></li>
-  <li><a href="section2/TMT_ROSMAP_round2_single_sample_analysis.html">TMT ROSMAP Round 2 — Single sample analysis</a></li>
-  <li><a href="section3/Pathway_specific_analysis.html">Pathway-specific analysis</a></li>
-  <li><a href="section4/Comparative_pathway_profiling_TMT.html">Comparative pathway profiling (TMT)</a></li>
-  <li><a href="section5/Subdomain_specific_analysis.html">Subdomain-specific analysis</a></li>
-  <li><a href="section6/Comparative_subdomain_profiling.html">Comparative subdomain profiling</a></li>
-  <li><a href="section7/Clinical_correlation_proteomics_ADvsAsymAD.html">Clinical correlation — Proteomics (AD vs AsymAD)</a></li>
-  <li><a href="section8/Graph_clustering_ptoteomics.html">Graph clustering — Proteomics</a></li>
-</ul>
+  <div class="schematic">
+    <!-- IMPORTANT: make sure the filename matches exactly what’s in your repo -->
+    <img src="assets/homepage_schematic.jpeg" alt="Overview schematic of the proteomics analysis workflow">
+    <div class="caption">
+      Schematic overview of the analysis pipeline used in this study.
+    </div>
+  </div>
 
+  <h2>Reports</h2>
+  <ul>
+    <li><a href="section1/TMT_ROSMAP_round2_description.html">TMT ROSMAP Round 2 — Description</a></li>
+    <li><a href="section2/TMT_ROSMAP_round2_single_sample_analysis.html">TMT ROSMAP Round 2 — Single sample analysis</a></li>
+    <li><a href="section3/Pathway_specific_analysis.html">Pathway-specific analysis</a></li>
+    <li><a href="section4/Comparative_pathway_profiling_TMT.html">Comparative pathway profiling (TMT)</a></li>
+    <li><a href="section5/Subdomain_specific_analysis.html">Subdomain-specific analysis</a></li>
+    <li><a href="section6/Comparative_subdomain_profiling.html">Comparative subdomain profiling</a></li>
+    <li><a href="section7/Clinical_correlation_proteomics_ADvsAsymAD.html">Clinical correlation — Proteomics (AD vs AsymAD)</a></li>
+    <li><a href="section8/Graph_clustering_ptoteomics.html">Graph clustering — Proteomics</a></li>
+  </ul>
 </body>
 </html>
