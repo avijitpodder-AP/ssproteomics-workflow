@@ -1,0 +1,2068 @@
+<html>
+
+<head>
+<style type="text/css">
+.inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.sng {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.def {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+<title>Avijit Podder Date: Aug 26, 2024</title>
+
+<head color="blue">
+
+<h1><font color="blue">Single Sample Pathway-specific Heterogeneity Analysis using TMT Proteomics Data From The ROSMAP Cohort</font></h1>
+
+</head>
+
+<body>
+
+<p>PHASE 1 and 2 TMT PROTEOMICS MERGED: ROSMAP TMT-proteomics Data (read count file) </p>
+
+<div class="chunk" id="unnamed-chunk-1"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(stringr)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'dplyr'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: package 'ggplot2' was built under R version 4.5.2
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(DT)</span>
+
+<span class="hl com"># Data set: ROSMAP (N=610), Minimally regressed, batch- and set-corrected protein abundance. Batch within set, and inter-set (ROSMAP set1 and set2) correction handled by separate repeats of TAMPOR (proteins kept with &lt;50% missing values within sets); 610 total cases (syn28723003)</span>
+
+<span class="hl def">protein_data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/2a.Zero-centered_log2(abundance)-ROSMAP610.R1+R2-2xTAMPORcorrected.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7814  611
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#head(protein_data)</span>
+
+<span class="hl com"># Split the protein_ID column by &quot;|&quot;</span>
+<span class="hl def">split_protein_data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">str_split_fixed</span><span class="hl def">(protein_data</span><span class="hl opt">$</span><span class="hl def">X,</span> <span class="hl sng">&quot;\\|&quot;</span><span class="hl def">,</span> <span class="hl num">2</span><span class="hl def">)</span>
+
+<span class="hl com"># Combine the split data with the original dataframe</span>
+<span class="hl def">protein_data</span><span class="hl opt">$</span><span class="hl def">Protein_name</span> <span class="hl kwb">&lt;-</span> <span class="hl def">split_protein_data[,</span> <span class="hl num">1</span><span class="hl def">]</span>
+<span class="hl def">protein_data</span><span class="hl opt">$</span><span class="hl def">Uniprot_ID</span> <span class="hl kwb">&lt;-</span> <span class="hl def">split_protein_data[,</span> <span class="hl num">2</span><span class="hl def">]</span>
+
+<span class="hl com"># Count the repetitive Protein_name</span>
+<span class="hl def">count_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">group_by</span><span class="hl def">(Protein_name)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">summarise</span><span class="hl def">(</span><span class="hl kwc">count</span> <span class="hl def">=</span> <span class="hl kwd">n</span><span class="hl def">())</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(count</span> <span class="hl opt">&gt;</span> <span class="hl num">1</span><span class="hl def">)</span>
+
+<span class="hl com"># Print the number of repetitive protein_name</span>
+<span class="hl kwd">cat</span><span class="hl def">(</span><span class="hl sng">&quot;Number of repetitive protein_name:&quot;</span><span class="hl def">,</span> <span class="hl kwd">nrow</span><span class="hl def">(count_data),</span> <span class="hl sng">&quot;\n&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Number of repetitive protein_name: 8
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a horizontal bar chart</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(count_data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">reorder</span><span class="hl def">(Protein_name,</span> <span class="hl opt">-</span><span class="hl def">count),</span> <span class="hl kwc">y</span> <span class="hl def">= count))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;steelblue&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count of Repetitive protein_names&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Protein_name&quot;</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">= count),</span> <span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">0.5</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Add text annotations +</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span><span class="hl def">=</span><span class="hl num">16</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-1.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Find the row (Protein_name) with the highest absolute row sum across all columns for each repetitive Protein_name</span>
+<span class="hl def">protein_data_filtered</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">group_by</span><span class="hl def">(Protein_name)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">slice</span><span class="hl def">(</span><span class="hl kwd">which.max</span><span class="hl def">(</span><span class="hl kwd">abs</span><span class="hl def">(</span><span class="hl kwd">rowSums</span><span class="hl def">(</span><span class="hl kwd">across</span><span class="hl def">(</span><span class="hl kwd">starts_with</span><span class="hl def">(</span><span class="hl sng">&quot;b&quot;</span><span class="hl def">), is.numeric),</span> <span class="hl kwc">na.rm</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))))</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">ungroup</span><span class="hl def">()</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_filtered)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7801  613
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#################################################################################################################################################################</span>
+<span class="hl com">## INPUT data File Filtering - Remove proteins without given name (symbol)</span>
+<span class="hl com">## Used &quot;Protein_name as first column in the data file&quot;</span>
+
+<span class="hl com"># Filter rows where Protein_name is not 0</span>
+<span class="hl def">protein_data_filtered</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered[protein_data_filtered</span><span class="hl opt">$</span><span class="hl def">Protein_name</span> <span class="hl opt">!=</span> <span class="hl sng">&quot;0&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Print the number of IDs with protein_name</span>
+<span class="hl kwd">cat</span><span class="hl def">(</span><span class="hl sng">&quot;Number of IDs with protein_name:&quot;</span><span class="hl def">,</span> <span class="hl kwd">nrow</span><span class="hl def">(protein_data_filtered),</span> <span class="hl sng">&quot;\n&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Number of IDs with protein_name: 7800
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Remove the Uniprot_ID column</span>
+<span class="hl def">protein_data_filtered</span><span class="hl opt">$</span><span class="hl def">Uniprot_ID</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">NULL</span>
+
+<span class="hl com"># Replace the first column with Protein_name</span>
+<span class="hl com">#protein_data_filtered$X &lt;- protein_data_filtered$Protein_name</span>
+
+<span class="hl com"># Move Protein_name to the first column</span>
+<span class="hl def">protein_data_filtered</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered[,</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Protein_name&quot;</span><span class="hl def">,</span> <span class="hl kwd">setdiff</span><span class="hl def">(</span><span class="hl kwd">names</span><span class="hl def">(protein_data_filtered),</span> <span class="hl sng">&quot;Protein_name&quot;</span><span class="hl def">))]</span>
+
+<span class="hl com"># Remove the &quot;X&quot; column</span>
+<span class="hl def">protein_data_filtered</span><span class="hl opt">$</span><span class="hl def">X</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">NULL</span>
+
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_filtered)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800  611
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_filtered,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-2.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div></div>
+
+<p>Data Missingness</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+
+##Calculate the missingness for samples
+
+# Remove the  "Protein_name" column from the file
+protein_data_ROSMAP_sample_missingness <- protein_data_filtered[, -1]
+
+#write.table(protein_data_ROSMAP_new,"/Users/poddea/Desktop/protein_data_ROSMAP_new.txt",sep="\t",quote=T)
+
+# Transpose gene expression data to have samples as rows
+protein_data_ROSMAP_sample_missingness_t <- t(protein_data_ROSMAP_sample_missingness)
+
+dim(protein_data_ROSMAP_sample_missingness_t)
+
+# Calculate the number of NA values in each row
+na_counts_sample <- apply(protein_data_ROSMAP_sample_missingness_t, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_samples_with_na <- sum(na_counts_sample > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of sample with at least one NA value:", num_samples_with_na, "\n")
+
+# Create a barplot for the NA counts with adjusted margins
+barplot(na_counts_sample, main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_sample, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_sample[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+#########################################################################################################################################
+
+##Calculate the missingness for Protein
+
+# Store the protein names separately before removing the first row
+protein_names <- protein_data_filtered$Protein_name
+
+# Remove the first row "Protein_name" from the file
+protein_data_ROSMAP_gene_missingness <- protein_data_filtered[-1, ]
+
+# Calculate the number of NA values in each row
+na_counts_genes <- apply(protein_data_ROSMAP_gene_missingness, 1, function(x) sum(is.na(x)))
+
+
+write.table(na_counts_genes,"na_counts_genes.txt",sep="\t",quote=F)
+
+# Ensure the length of protein_names and na_counts_genes matches
+if (length(protein_names) == length(na_counts_genes)) {
+  # Create a new data frame with Protein_name and NA_count
+  na_counts_df <- data.frame(
+    Protein_name = protein_names,  # Add the Protein_name column back
+    NA_count = na_counts_genes  # Count of NAs per row
+  )
+
+  # Write the table to a file
+  write.table(na_counts_df, "protein_na_counts.txt",
+              sep = "\t", quote = FALSE, row.names = FALSE)
+
+  # Print the first few rows to verify
+  head(na_counts_df)
+} else {
+  cat("Error: Mismatch in the number of rows between protein names and NA counts.\n")
+}
+
+
+
+# Count the number of rows with at least one NA value
+num_genes_with_na <- sum(na_counts_genes > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of gene with at least one NA value:", num_genes_with_na, "\n")
+
+# Count the frequency of each unique NA value
+na_counts_freq <- table(na_counts_genes)
+
+#write.table(na_counts_freq,"/Users/poddea/Desktop/na_counts_freq.txt",sep="\t",quote=F)
+
+# Remove the entry for 0 NAs
+na_counts_freq <- na_counts_freq[names(na_counts_freq) != "0"]
+
+
+# Create the barplot and store the bar positions
+bar_positions <- barplot(na_counts_freq,
+                         main = "Frequency of Individual Counts per Protein",
+                         xlab = "Number of missing Protein",
+                         ylab = "Frequency of Individual with Missing Protein",
+                         col = "blue",
+                         las = 2,
+                         cex.names = 0.8)
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_freq, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_freq[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Frequency of Individual Counts per Protein",
+        xlab = "Number of missing Protein",
+        ylab = "Frequency of Individual with Missing Protein",
+        col = "blue",
+        las = 2,
+        cex.names = 0.8)
+
+
+end.rcode-->
+
+<p>PHASE 1 and 2 TMT PROTEOMICS MERGED: ROSMAP TMT-proteomics Metadata (samples description file) </p>
+
+<div class="chunk" id="unnamed-chunk-2"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(stringr)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(DT)</span>
+
+<span class="hl com"># Read the TMT metadata file for ROSMAP individuals</span>
+<span class="hl def">protein_metadata_ROSMAP</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/2c.traits-ROSMAP610.R1+R2-2xTAMPORcorrected.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com">#protein_metadata_ROSMAP &lt;- read.table(&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/ROSMAP_Covariates_ages_censored.tsv&quot;, sep =&quot;\t&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_metadata_ROSMAP)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 610  41
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Define the catagory (diagnosis) based on the braaksc, CERAD and cogdx</span>
+<span class="hl com">#protein_metadata_ROSMAP$category &lt;- with(protein_metadata_ROSMAP, ifelse(braaksc &gt;= 4 &amp; ceradsc_RADCnonStd &lt;= 2 &amp; cogdx == 4, &quot;AD&quot;,</span>
+                               <span class="hl com">#ifelse(braaksc &lt;= 3 &amp; ceradsc_RADCnonStd &gt;= 3 &amp; cogdx == 1, &quot;CT&quot;, &quot;OTHER&quot;)))</span>
+
+
+<span class="hl com"># Define the category based on Braak, CERAD, and MMSE (cognitive status)</span>
+<span class="hl def">protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">category</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">with</span><span class="hl def">(protein_metadata_ROSMAP,</span>
+    <span class="hl kwd">ifelse</span><span class="hl def">((CERAD</span> <span class="hl opt">%in%</span> <span class="hl num">0</span><span class="hl opt">:</span><span class="hl num">1</span> <span class="hl opt">&amp;</span> <span class="hl def">braaksc</span> <span class="hl opt">%in%</span> <span class="hl num">0</span><span class="hl opt">:</span><span class="hl num">2</span> <span class="hl opt">&amp;</span> <span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&gt;=</span> <span class="hl num">24</span><span class="hl def">)</span> <span class="hl opt">|</span>
+           <span class="hl def">(CERAD</span> <span class="hl opt">==</span> <span class="hl num">0</span> <span class="hl opt">&amp;</span> <span class="hl def">braaksc</span> <span class="hl opt">==</span> <span class="hl num">3</span> <span class="hl opt">&amp;</span> <span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&gt;=</span> <span class="hl num">24</span><span class="hl def">),</span> <span class="hl sng">&quot;Control&quot;</span><span class="hl def">,</span>
+    <span class="hl kwd">ifelse</span><span class="hl def">(CERAD</span> <span class="hl opt">%in%</span> <span class="hl num">1</span><span class="hl opt">:</span><span class="hl num">3</span> <span class="hl opt">&amp;</span> <span class="hl def">braaksc</span> <span class="hl opt">%in%</span> <span class="hl num">3</span><span class="hl opt">:</span><span class="hl num">6</span> <span class="hl opt">&amp;</span> <span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&gt;=</span> <span class="hl num">24</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">,</span>
+    <span class="hl kwd">ifelse</span><span class="hl def">(CERAD</span> <span class="hl opt">%in%</span> <span class="hl num">2</span><span class="hl opt">:</span><span class="hl num">3</span> <span class="hl opt">&amp;</span> <span class="hl def">braaksc</span> <span class="hl opt">%in%</span> <span class="hl num">3</span><span class="hl opt">:</span><span class="hl num">6</span> <span class="hl opt">&amp;</span> <span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&lt;</span> <span class="hl num">24</span><span class="hl def">,</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span><span class="hl def">))))</span>
+
+
+<span class="hl com"># Define the category based on Braak, CERAD, and MMSE (cognitive status)</span>
+<span class="hl com">#protein_metadata_ROSMAP$category &lt;- with(protein_metadata_ROSMAP, </span>
+    <span class="hl com">#ifelse((CERAD %in% 0:1 &amp; braaksc %in% 0:2 &amp; cts_mmse30_lv &gt;= 24) | </span>
+           <span class="hl com">#(CERAD == 0 &amp; braaksc == 3 &amp; cts_mmse30_lv &gt;= 24), &quot;Control&quot;,</span>
+    <span class="hl com">#ifelse(CERAD %in% 1:3 &amp; braaksc %in% 3:6 &amp; cts_mmse30_lv &gt;= 24, &quot;AsymAD&quot;,</span>
+    <span class="hl com">#ifelse(CERAD %in% 2:3 &amp; braaksc %in% 3:6 &amp; cts_mmse30_lv &lt; 24, &quot;AD&quot;, &quot;Exclude&quot;))))</span>
+
+
+<span class="hl com"># Define the sex_type (sex) based on the msex value</span>
+<span class="hl def">protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">with</span><span class="hl def">(protein_metadata_ROSMAP,</span> <span class="hl kwd">ifelse</span><span class="hl def">(msex</span> <span class="hl opt">==</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl sng">&quot;female&quot;</span><span class="hl def">,</span>
+                                <span class="hl kwd">ifelse</span><span class="hl def">(msex</span> <span class="hl opt">==</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;NA&quot;</span><span class="hl def">)))</span>
+
+<span class="hl kwd">write.table</span><span class="hl def">(protein_metadata_ROSMAP,</span><span class="hl sng">&quot;Protein_metadata_ROSMAP_catagory.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=F)</span>
+
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(protein_metadata_ROSMAP,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#####################################################################################################################################################################################</span>
+<span class="hl com">#####################################################################################################################################################################################</span>
+
+<span class="hl com"># Group the data by tissue, JohnsonDx, and sex</span>
+<span class="hl com"># Ensure JohnsonDx is ordered as CT, AsymAD, AD, Exclude</span>
+
+<span class="hl def">count_protein_metadata</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_metadata_ROSMAP</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">group_by</span><span class="hl def">(tissue, category, sex)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">summarise</span><span class="hl def">(</span><span class="hl kwc">count</span> <span class="hl def">=</span> <span class="hl kwd">n</span><span class="hl def">(),</span> <span class="hl kwc">.groups</span> <span class="hl def">=</span> <span class="hl sng">'drop'</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span>
+    <span class="hl kwc">JohnsonDx</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(category,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span><span class="hl def">))</span>
+  <span class="hl def">)</span>
+
+<span class="hl com"># Create a grouped and stacked bar plot with manual color coding</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(count_protein_metadata,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= category,</span> <span class="hl kwc">y</span> <span class="hl def">= count,</span> <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl kwd">interaction</span><span class="hl def">(sex, category)))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl sng">&quot;stack&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Stacked by sex within each JohnsonDx</span>
+  <span class="hl kwd">facet_wrap</span><span class="hl def">(</span><span class="hl opt">~</span> <span class="hl def">tissue)</span> <span class="hl opt">+</span>  <span class="hl com"># Create separate plots for each tissue</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span>
+    <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Comparison of Individuals by Tissue with JohnsonDx Staged by Sex&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;JohnsonDx&quot;</span><span class="hl def">,</span>
+    <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Individual Count&quot;</span>
+  <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span>
+    <span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+      <span class="hl sng">&quot;male.AD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;mediumblue&quot;</span><span class="hl def">,</span>
+      <span class="hl sng">&quot;female.AD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;tomato&quot;</span><span class="hl def">,</span>
+      <span class="hl sng">&quot;male.AsymAD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;dodgerblue&quot;</span><span class="hl def">,</span>
+      <span class="hl sng">&quot;female.AsymAD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;coral&quot;</span><span class="hl def">,</span>
+      <span class="hl sng">&quot;male.Control&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;skyblue&quot;</span><span class="hl def">,</span>
+      <span class="hl sng">&quot;female.Control&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightpink&quot;</span><span class="hl def">,</span>
+      <span class="hl sng">&quot;male.Exclude&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray48&quot;</span><span class="hl def">,</span>
+      <span class="hl sng">&quot;female.Exclude&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray68&quot;</span>
+    <span class="hl def">)</span>
+  <span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">= count),</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_stack</span><span class="hl def">(</span><span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">),</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">15</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Add counts inside bars</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span>
+    <span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">60</span><span class="hl def">),</span>
+    <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">50</span><span class="hl def">)</span>  <span class="hl com"># Adjust axis text size</span>
+  <span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-2.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#####################################################################################################################################################################################</span>
+<span class="hl com">#####################################################################################################################################################################################</span>
+
+
+<span class="hl com">#  Alluvial plots implemented here to visualize frequency distributions of braaksc, CERAD and MMSE stages over the diagnosis catagories </span>
+
+<span class="hl kwd">library</span><span class="hl def">(ggalluvial)</span>
+
+
+<span class="hl com"># Create a subset of the DLPFC sample description file with male samples only</span>
+<span class="hl def">sample_data_DLPFC_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_metadata_ROSMAP[protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Create a subset of the DLPFC sample description file with female samples only</span>
+<span class="hl def">sample_data_DLPFC_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_metadata_ROSMAP[protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;female&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl com">## Male</span>
+
+<span class="hl com"># Prepare the data for the alluvial plot</span>
+<span class="hl def">sample_data_DLPFC_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC_male</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span>
+        <span class="hl kwc">BRAAK</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(BRAAKSC,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(BRAAKSC))),</span>
+        <span class="hl kwc">CERAD</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(ceradsc_RADCnonStd,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(ceradsc_RADCnonStd))),</span>
+        <span class="hl kwc">JohnsonDx</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(category,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span><span class="hl def">))</span>
+    <span class="hl def">)</span>
+
+
+<span class="hl com"># Create the plot with the updated intervals and proper labels</span>
+
+<span class="hl kwd">ggplot</span><span class="hl def">(sample_data_DLPFC_male,</span>
+       <span class="hl kwd">aes</span><span class="hl def">(</span>
+           <span class="hl kwc">axis1</span> <span class="hl def">= BRAAK,</span>
+           <span class="hl kwc">axis2</span> <span class="hl def">= CERAD,</span>
+           <span class="hl kwc">axis3</span> <span class="hl def">= cts_mmse30_lv,</span>
+           <span class="hl kwc">fill</span> <span class="hl def">= JohnsonDx</span>
+       <span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_alluvium</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">= JohnsonDx),</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.7</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl opt">/</span><span class="hl num">12</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Ribbons</span>
+    <span class="hl kwd">geom_stratum</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl opt">/</span><span class="hl num">12</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Stratum rectangles in white</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span>
+        <span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;skyblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;dodgerblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Alluvial Plot of BRAAK, CERAD, and MMSE with JohnsonDx Classification&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Diagnosis&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_classic</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">axis.line</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.ticks</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>  <span class="hl com"># Remove X-axis text</span>
+        <span class="hl kwc">axis.ticks.x</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>  <span class="hl com"># Remove X-axis ticks</span>
+        <span class="hl kwc">axis.title.x</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>  <span class="hl com"># Remove X-axis title</span>
+        <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">),</span>
+        <span class="hl kwc">plot.margin</span> <span class="hl def">=</span> <span class="hl kwd">margin</span><span class="hl def">(</span><span class="hl kwc">t</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">r</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">b</span> <span class="hl def">=</span> <span class="hl num">40</span><span class="hl def">,</span> <span class="hl kwc">l</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">)</span>  <span class="hl com"># Extra space for labels</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">annotate</span><span class="hl def">(</span><span class="hl sng">&quot;text&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl sng">&quot;BRAAK&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">fontface</span> <span class="hl def">=</span> <span class="hl sng">&quot;bold&quot;</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">annotate</span><span class="hl def">(</span><span class="hl sng">&quot;text&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl sng">&quot;CERAD&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">fontface</span> <span class="hl def">=</span> <span class="hl sng">&quot;bold&quot;</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">annotate</span><span class="hl def">(</span><span class="hl sng">&quot;text&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl sng">&quot;MMSE&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">fontface</span> <span class="hl def">=</span> <span class="hl sng">&quot;bold&quot;</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in to_lodes_form(data = data, axes = axis_ind, discern =
+## params$discern): Some strata appear at multiple axes.
+
+## Warning in to_lodes_form(data = data, axes = axis_ind, discern =
+## params$discern): Some strata appear at multiple axes.
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-3.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#####################################################################################################################################################################################</span>
+
+<span class="hl com">## Female</span>
+
+<span class="hl com"># Prepare the data for the alluvial plot</span>
+<span class="hl def">sample_data_DLPFC_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC_female</span> <span class="hl opt">%&gt;%</span>
+    <span class="hl kwd">mutate</span><span class="hl def">(</span>
+        <span class="hl kwc">BRAAK</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(BRAAKSC,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(BRAAKSC))),</span>
+        <span class="hl kwc">ceradsc</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(ceradsc_RADCnonStd,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">sort</span><span class="hl def">(</span><span class="hl kwd">unique</span><span class="hl def">(ceradsc_RADCnonStd))),</span>
+        <span class="hl kwc">JohnsonDx</span> <span class="hl def">=</span> <span class="hl kwd">factor</span><span class="hl def">(category,</span> <span class="hl kwc">levels</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span><span class="hl def">))</span>
+    <span class="hl def">)</span>
+
+
+<span class="hl com"># Create the plot with the updated intervals and proper labels</span>
+
+<span class="hl kwd">ggplot</span><span class="hl def">(sample_data_DLPFC_female,</span>
+       <span class="hl kwd">aes</span><span class="hl def">(</span>
+           <span class="hl kwc">axis1</span> <span class="hl def">= BRAAK,</span>
+           <span class="hl kwc">axis2</span> <span class="hl def">= ceradsc,</span>
+           <span class="hl kwc">axis3</span> <span class="hl def">= cts_mmse30_lv,</span>
+           <span class="hl kwc">fill</span> <span class="hl def">= JohnsonDx</span>
+       <span class="hl def">))</span> <span class="hl opt">+</span>
+    <span class="hl kwd">geom_alluvium</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">= JohnsonDx),</span> <span class="hl kwc">alpha</span> <span class="hl def">=</span> <span class="hl num">0.7</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl opt">/</span><span class="hl num">12</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Ribbons</span>
+    <span class="hl kwd">geom_stratum</span><span class="hl def">(</span><span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl opt">/</span><span class="hl num">12</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Stratum rectangles in white</span>
+    <span class="hl kwd">scale_fill_manual</span><span class="hl def">(</span>
+        <span class="hl kwc">values</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;pink&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;coral&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;red&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">)</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">labs</span><span class="hl def">(</span>
+        <span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Alluvial Plot of BRAAK, CERAD, and MMSE with JohnsonDx Classification&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Diagnosis&quot;</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme_classic</span><span class="hl def">(</span><span class="hl kwc">base_size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">theme</span><span class="hl def">(</span>
+        <span class="hl kwc">axis.line</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.ticks</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.text.x</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>  <span class="hl com"># Remove X-axis text</span>
+        <span class="hl kwc">axis.ticks.x</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>  <span class="hl com"># Remove X-axis ticks</span>
+        <span class="hl kwc">axis.title.x</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>  <span class="hl com"># Remove X-axis title</span>
+        <span class="hl kwc">axis.text.y</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">14</span><span class="hl def">),</span>
+        <span class="hl kwc">legend.title</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">16</span><span class="hl def">),</span>
+        <span class="hl kwc">plot.margin</span> <span class="hl def">=</span> <span class="hl kwd">margin</span><span class="hl def">(</span><span class="hl kwc">t</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">r</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">b</span> <span class="hl def">=</span> <span class="hl num">40</span><span class="hl def">,</span> <span class="hl kwc">l</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">)</span>  <span class="hl com"># Extra space for labels</span>
+    <span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">annotate</span><span class="hl def">(</span><span class="hl sng">&quot;text&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">15</span><span class="hl def">,</span> <span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl sng">&quot;BRAAK&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">fontface</span> <span class="hl def">=</span> <span class="hl sng">&quot;bold&quot;</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">annotate</span><span class="hl def">(</span><span class="hl sng">&quot;text&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">15</span><span class="hl def">,</span> <span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl sng">&quot;CERAD&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">fontface</span> <span class="hl def">=</span> <span class="hl sng">&quot;bold&quot;</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">)</span> <span class="hl opt">+</span>
+    <span class="hl kwd">annotate</span><span class="hl def">(</span><span class="hl sng">&quot;text&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl num">3</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">15</span><span class="hl def">,</span> <span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl sng">&quot;MMSE&quot;</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">,</span> <span class="hl kwc">fontface</span> <span class="hl def">=</span> <span class="hl sng">&quot;bold&quot;</span><span class="hl def">,</span> <span class="hl kwc">angle</span> <span class="hl def">=</span> <span class="hl num">45</span><span class="hl def">)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in to_lodes_form(data = data, axes = axis_ind, discern =
+## params$discern): Some strata appear at multiple axes.
+
+## Warning in to_lodes_form(data = data, axes = axis_ind, discern =
+## params$discern): Some strata appear at multiple axes.
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-4.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div></div>
+
+<p>Genes by Variance: PCA plot for most variance genes in the read count data (Tissue: DLPFC) </p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+
+# Genes by Variance: PCA plot for most variance genes in the read count data (Tissue: DLPFC)
+
+# Load the necessary library for row-wise variance
+library(matrixStats)
+library(tidyverse)
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(FactoMineR)
+library(impute)  # Load impute package
+
+
+# Get the list of proteins from the protein_data_filtered
+protein_name <- protein_data_filtered$Protein_name
+
+# Remove the protein_name column from the data file
+protein_data_filtered <- protein_data_filtered[, -1]
+
+# Convert the data to a matrix
+protein_matrix <- as.matrix(protein_data_filtered)
+
+# Calculate variance while **ignoring NA values**
+protein_variances <- rowVars(protein_matrix, na.rm = TRUE)
+
+# Calculate protein variances
+#protein_variances <- rowVars(as.matrix(protein_data_filtered))
+
+# Convert the protein_data_filtered matrix to a data frame
+protein_data_filtered <- as.data.frame(protein_data_filtered)
+
+# Add protein variances as a new column
+protein_data_filtered$Variance <- protein_variances
+
+# add protein names as a column
+protein_data_filtered$protein_name <- protein_name
+
+# Move the protein column to the first position (optional)
+protein_data_filtered <- protein_data_filtered[, c("protein_name", "Variance", setdiff(names(protein_data_filtered), c("protein_name", "Variance")))]
+
+
+write.table(protein_data_filtered,"protein_data_filtered_with_variance.txt",sep="\t",quote=F)
+
+
+# Filter the top n proteins based on variance (from high to low)
+top_500_proteins <- protein_data_filtered %>%
+  arrange(desc(Variance)) %>%  # Arrange rows by variance in descending order
+  slice_head(n = 14)          # Select the top 500 rows
+
+
+
+# Optionally, extract the protein names into a list
+top_500_protein_list <- top_500_proteins$protein_name
+
+head(top_500_protein_list, 20)
+
+# Extract the expression values (remove protein and Variance columns)
+top_500_expression <- top_500_proteins %>%
+  select(-Variance, -protein_name) %>%
+  as.matrix()  # Convert to matrix for PCA
+
+# Impute missing values using k-nearest neighbors (KNN) before performing PCA
+top_500_expression_imputed <- impute.knn(as.matrix(top_500_expression))$data
+
+
+# Ensure sample_data_DLPFC rows match columns of top_500_expression
+rownames(protein_metadata_ROSMAP) <- protein_metadata_ROSMAP$batch.channel  # Set rownames for metadata
+
+# Perform PCA on the top 500 protein expression matrix
+#pca_result <- prcomp(t(top_500_expression), scale. = TRUE)
+
+pca_result <- prcomp(t(top_500_expression_imputed), scale. = TRUE)
+
+# Extract PCA components into a dataframe
+pca_data <- data.frame(
+  Sample = colnames(top_500_expression),  # Sample IDs
+  PC1 = pca_result$x[, 1],               # First principal component
+  PC2 = pca_result$x[, 2]                # Second principal component
+)
+
+# Merge metadata with PCA results using Sample IDs
+pca_data <- pca_data %>%
+  left_join(protein_metadata_ROSMAP, by = c("Sample" = "batch.channel"))
+
+# Calculate variance explained by each principal component
+pca_variance <- pca_result$sdev^2 / sum(pca_result$sdev^2)
+pc1_variance <- round(pca_variance[1] * 100, 1)  # PC1 variance in percentage
+pc2_variance <- round(pca_variance[2] * 100, 1)  # PC2 variance in percentage
+
+
+# PCA plot with gene loading information on axes
+ggplot(pca_data, aes(x = PC1, y = PC2, color = sex, shape = JohnsonDx)) +
+  geom_point(size = 4, alpha = 0.8) +  # Plot points with size and transparency
+  stat_ellipse(aes(group = sex), type = "norm", linetype = "dashed", size = 1) +  # Ellipses by 'sex'
+  labs(
+    title = "PCA Plot for Top Most Variable Proteins",
+    x = paste0("Principal Component 1 (", pc1_variance, "%)"),
+    y = paste0("Principal Component 2 (", pc2_variance, "%)"),
+    color = "Sex",
+    shape = "Diagnosis (JohnsonDx)"
+  ) +
+  theme_minimal(base_size = 15) +
+  scale_color_manual(values = c("male" = "cadetblue", "female" = "brown")) +  # Custom colors
+  theme(
+    text = element_text(size = 30),
+    legend.position = "right",
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+    axis.text = element_text(size = 30),
+    axis.title = element_text(size = 30)
+  )
+
+
+#####################################################################################################################################################################################
+
+# Load necessary libraries
+library(biomaRt)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# Step 1: Connect to Ensembl Biomart to fetch chromosome info
+mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+
+# Step 2: Get Chromosome information for protein_name (Gene Symbols)
+gene_mapping <- getBM(
+  attributes = c("hgnc_symbol", "chromosome_name"),
+  filters = "hgnc_symbol",
+  values = protein_data_filtered$protein_name,
+  mart = mart
+)
+
+# Step 3: Merge chromosome info with variance data
+protein_data_annotated <- merge(protein_data_filtered, gene_mapping, 
+                                by.x = "protein_name", by.y = "hgnc_symbol", 
+                                all.x = TRUE)
+
+# Step 4: Keep **ALL** chromosomes (including X and Y)
+protein_data_annotated <- protein_data_annotated %>%
+  filter(chromosome_name %in% c(1:22, "X", "Y"))  # Include X & Y chromosomes
+
+# Step 5: Convert chromosome names to numeric where possible
+protein_data_annotated$chromosome_name <- factor(protein_data_annotated$chromosome_name, 
+                                                 levels = c(1:22, "X", "Y"))
+
+# Step 6: Assign positions for genes within chromosomes
+protein_data_annotated <- protein_data_annotated %>%
+  arrange(chromosome_name) %>%
+  mutate(BP = row_number())  # Assigning a sequential base-pair position
+
+write.table(protein_data_annotated,"protein_data_annotated_with_variance.txt",sep="\t",quote=F)
+
+# Create the ggplot
+ggplot(protein_data_annotated, aes(x = chromosome_name, y = Variance, color = chromosome_name)) +
+  geom_jitter(width = 0.2, size = 3, alpha = 0.7) +  # Jitter for better visibility
+  scale_color_manual(values = rep(c("blue", "orange"), length.out = length(unique(protein_data_annotated$chromosome_name)))) +
+  
+  # Highlight and label proteins with Variance > 1
+  geom_text_repel(data = subset(protein_data_annotated, Variance > 1), 
+                  aes(label = protein_name), 
+                  size = 10, 
+                  box.padding = 0.5, 
+                  point.padding = 0.3,
+                  segment.color = "black") +
+  
+  labs(title = "Chromosome-wise Variance Plot",
+       x = "Chromosome",
+       y = "Variance Effect") +
+   theme_minimal(base_size = 20) +
+  theme(axis.text.x = element_text(size = 20, hjust = 1),  # Bigger x-axis labels
+        axis.text.y = element_text(size = 20),  # Bigger y-axis labels
+        axis.title.x = element_text(size = 20, face = "bold"),  # Bigger x-axis title
+        axis.title.y = element_text(size = 20, face = "bold"),  # Bigger y-axis title
+        legend.position = "none")  # Remove legend
+
+
+end.rcode-->
+
+<p>Data Missingness</p>
+
+<div class="chunk" id="unnamed-chunk-3"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl com"># Load required libraries</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+
+<span class="hl com"># Step 1: Calculate missing values per sample</span>
+<span class="hl def">protein_data_ROSMAP_sample_missingness</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>  <span class="hl com"># Remove &quot;Protein_name&quot; column</span>
+<span class="hl def">protein_data_ROSMAP_sample_missingness_t</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">t</span><span class="hl def">(protein_data_ROSMAP_sample_missingness)</span>  <span class="hl com"># Transpose</span>
+
+<span class="hl com"># Calculate the number of NA values for each sample</span>
+<span class="hl def">na_counts_sample</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">apply</span><span class="hl def">(protein_data_ROSMAP_sample_missingness_t,</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">x</span><span class="hl def">)</span> <span class="hl kwd">sum</span><span class="hl def">(</span><span class="hl kwd">is.na</span><span class="hl def">(x)))</span>
+
+<span class="hl com"># Convert to DataFrame</span>
+<span class="hl def">missingness_df</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(</span><span class="hl kwc">SampleID</span> <span class="hl def">=</span> <span class="hl kwd">rownames</span><span class="hl def">(protein_data_ROSMAP_sample_missingness_t),</span>
+                             <span class="hl kwc">MissingCount</span> <span class="hl def">= na_counts_sample)</span>
+
+<span class="hl com">#####################################################################################################################################################################################</span>
+
+
+<span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">dim</span><span class="hl def">(missingness_df))</span>  <span class="hl com"># Check dimensions</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 610   2
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">head</span><span class="hl def">(missingness_df))</span>  <span class="hl com"># View first few rows</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##          SampleID MissingCount
+## b01.127N b01.127N         1517
+## b01.127C b01.127C         1517
+## b01.128N b01.128N         1517
+## b01.128C b01.128C         1517
+## b01.129N b01.129N         1517
+## b01.129C b01.129C         1518
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Check column names</span>
+<span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">colnames</span><span class="hl def">(protein_metadata_ROSMAP))</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##  [1] "batch.channel"      "projid.ROSMAP"      "study.ROSMAP"      
+##  [4] "scaled_to.ROSMAP"   "apoe_genotype"      "ApoE4.Dose"        
+##  [7] "ApoE.Risk"          "age_first_ad_dx"    "cogdx"             
+## [10] "cogdx_stroke"       "dxpark"             "cogn_global_lv"    
+## [13] "cts_mmse30_lv"      "age_death"          "educ"              
+## [16] "msex"               "race7"              "braaksc"           
+## [19] "BRAAKSC"            "ceradsc_RADCnonStd" "gpath"             
+## [22] "niareagansc"        "pmi"                "amyloid"           
+## [25] "amyloid_mf"         "dlbdx"              "mglia123_mf"       
+## [28] "mglia23_mf"         "mglia3_mf"          "nft"               
+## [31] "tangles"            "tangles_mf"         "tdp_cs_6reg"       
+## [34] "tdp_st4"            "brainwt"            "CERAD"             
+## [37] "JohnsonDx"          "Batch"              "GIS"               
+## [40] "BatchColor"         "tissue"             "category"          
+## [43] "sex"
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">colnames</span><span class="hl def">(missingness_df))</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] "SampleID"     "MissingCount"
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Check if Sample IDs match between datasets</span>
+<span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">setdiff</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">SampleID, protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">batch.channel))</span>  <span class="hl com"># SampleIDs in missingness_df but not in metadata</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## character(0)
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">setdiff</span><span class="hl def">(protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">batch.channel, missingness_df</span><span class="hl opt">$</span><span class="hl def">SampleID))</span>  <span class="hl com"># SampleIDs in metadata but not in missingness_df</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## character(0)
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl def">protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">batch.channel</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">trimws</span><span class="hl def">(protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">batch.channel)</span>
+<span class="hl def">missingness_df</span><span class="hl opt">$</span><span class="hl def">SampleID</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">trimws</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">SampleID)</span>
+
+<span class="hl def">missingness_df</span><span class="hl opt">$</span><span class="hl def">SampleID</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">tolower</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">SampleID)</span>
+<span class="hl def">protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">batch.channel</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">tolower</span><span class="hl def">(protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">batch.channel)</span>
+
+
+<span class="hl com"># Step 2: Merge with Metadata (Fix column name mismatch)</span>
+<span class="hl def">missingness_df</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">merge</span><span class="hl def">(missingness_df, protein_metadata_ROSMAP,</span>
+                        <span class="hl kwc">by.x</span> <span class="hl def">=</span> <span class="hl sng">&quot;SampleID&quot;</span><span class="hl def">,</span> <span class="hl kwc">by.y</span> <span class="hl def">=</span> <span class="hl sng">&quot;batch.channel&quot;</span><span class="hl def">,</span> <span class="hl kwc">all.x</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span>
+
+<span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">dim</span><span class="hl def">(missingness_df))</span>  <span class="hl com"># Should NOT be 0 rows</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 610  44
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">head</span><span class="hl def">(missingness_df))</span>  <span class="hl com"># Check merged data</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   SampleID MissingCount projid.ROSMAP study.ROSMAP scaled_to.ROSMAP
+## 1 b01.127c         1517      33477756         MAP            ROSMAP
+## 2 b01.127n         1517      20271359         ROS            ROSMAP
+## 3 b01.128c         1517      10100736         ROS            ROSMAP
+## 4 b01.128n         1517      38967303         MAP            ROSMAP
+## 5 b01.129c         1518      46291609         MAP            ROSMAP
+## 6 b01.129n         1517      10298957         ROS            ROSMAP
+##   apoe_genotype ApoE4.Dose ApoE.Risk age_first_ad_dx cogdx cogdx_stroke dxpark
+## 1           e33          0         0              NA     1            2      2
+## 2           e33          0         0           90.00     4            2      2
+## 3           e34          1         1              NA     1            2      2
+## 4           e33          0         0              NA     1            1      2
+## 5           e33          0         0              NA     2            2      2
+## 6           e33          0         0           81.65     4            2      1
+##   cogn_global_lv cts_mmse30_lv age_death educ msex race7 braaksc BRAAKSC
+## 1           0.00            28     90.00   16    0     1       3       3
+## 2          -0.36            25     90.00   18    0     1       4       2
+## 3           0.39            28     90.00   14    1     1       4       2
+## 4           0.45            28     84.83   11    0     1       3       3
+## 5          -0.08            24     87.59   14    0     1       4       2
+## 6          -1.63            10     82.37   24    1     1       3       3
+##   ceradsc_RADCnonStd gpath niareagansc   pmi amyloid amyloid_mf dlbdx
+## 1                  2  0.71           2  4.77    5.40       7.87     2
+## 2                  2  0.24           2 18.33    1.17       1.42     2
+## 3                  3  0.34           3 15.17    2.47       5.06     0
+## 4                  4  0.09           3  6.50    0.00       0.00     0
+## 5                  2  0.89           2  7.42    7.78      18.42     0
+## 6                  2  0.85           2  3.93    8.49      13.82     3
+##   mglia123_mf mglia23_mf mglia3_mf  nft tangles tangles_mf tdp_cs_6reg tdp_st4
+## 1          NA         NA        NA 0.17    2.07       0.00        0.67       1
+## 2          NA         NA        NA 0.44    3.55       0.02        1.83       2
+## 3          NA         NA        NA 0.71    4.95       0.00        0.00       0
+## 4      170.35       3.91         0 0.28    3.02       0.00        0.17       1
+## 5          NA         NA        NA 0.48    3.40       0.03        0.00       0
+## 6          NA         NA        NA 0.43    5.12       0.00        0.00       0
+##   brainwt CERAD JohnsonDx         Batch  GIS BatchColor
+## 1    1110     2    AsymAD ROSMAP.R1.400 &lt;NA&gt;  turquoise
+## 2    1138     2    AsymAD ROSMAP.R1.400 &lt;NA&gt;  turquoise
+## 3    1130     1    AsymAD ROSMAP.R1.400 &lt;NA&gt;  turquoise
+## 4    1250     0   Control ROSMAP.R1.400  GIS  turquoise
+## 5    1192     2    AsymAD ROSMAP.R1.400 &lt;NA&gt;  turquoise
+## 6    1300     2        AD ROSMAP.R1.400 &lt;NA&gt;  turquoise
+##                           tissue category    sex
+## 1 dorsolateral prefrontal cortex   AsymAD female
+## 2 dorsolateral prefrontal cortex   AsymAD female
+## 3 dorsolateral prefrontal cortex   AsymAD   male
+## 4 dorsolateral prefrontal cortex  Control female
+## 5 dorsolateral prefrontal cortex   AsymAD female
+## 6 dorsolateral prefrontal cortex       AD   male
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Step 3: Define Factor Levels for Ordered Sorting</span>
+<span class="hl def">category_levels</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span><span class="hl def">)</span>  <span class="hl com"># Define category order</span>
+<span class="hl def">sex_levels</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;female&quot;</span><span class="hl def">)</span>  <span class="hl com"># Define sex order</span>
+
+<span class="hl com"># Convert to factors with specified order</span>
+<span class="hl def">missingness_df</span><span class="hl opt">$</span><span class="hl def">category</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">category,</span> <span class="hl kwc">levels</span> <span class="hl def">= category_levels)</span>
+<span class="hl def">missingness_df</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">factor</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">sex,</span> <span class="hl kwc">levels</span> <span class="hl def">= sex_levels)</span>
+
+<span class="hl com"># Step 4: Sort Data by Category &amp; Sex</span>
+<span class="hl def">missingness_df</span> <span class="hl kwb">&lt;-</span> <span class="hl def">missingness_df</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">arrange</span><span class="hl def">(category, sex)</span>
+
+<span class="hl com"># Step 5: Update X-axis Order Based on Sorted Data</span>
+<span class="hl def">sorted_sample_ids</span> <span class="hl kwb">&lt;-</span> <span class="hl def">missingness_df</span><span class="hl opt">$</span><span class="hl def">SampleID</span>  <span class="hl com"># Extract sorted sample IDs</span>
+
+
+
+<span class="hl com"># Step 6: Generate Barplot with Reordered X-axis</span>
+
+<span class="hl com"># Define colors for each category-sex combination</span>
+<span class="hl def">category_sex_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span>
+  <span class="hl sng">&quot;Control.male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;skyblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Control.female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightpink&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AD.male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;mediumblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AD.female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;tomato&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;AsymAD.male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;dodgerblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD.female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;coral&quot;</span><span class="hl def">,</span>
+  <span class="hl sng">&quot;Exclude.male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray48&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude.female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray68&quot;</span>
+<span class="hl def">)</span>
+
+<span class="hl com"># Create a new column that combines category and sex</span>
+<span class="hl def">missingness_df</span><span class="hl opt">$</span><span class="hl def">Category_Sex</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">paste</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">category, missingness_df</span><span class="hl opt">$</span><span class="hl def">sex,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span> <span class="hl sng">&quot;.&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Assign colors based on category and sex</span>
+<span class="hl def">bar_colors</span> <span class="hl kwb">&lt;-</span> <span class="hl def">category_sex_colors[missingness_df</span><span class="hl opt">$</span><span class="hl def">Category_Sex]</span>
+
+<span class="hl kwd">par</span><span class="hl def">(</span><span class="hl kwc">mar</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">8</span><span class="hl def">,</span> <span class="hl num">8</span><span class="hl def">,</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl num">2</span><span class="hl def">))</span>  <span class="hl com"># Bottom, Left, Top, Right margins (in lines)</span>
+
+<span class="hl com"># Create barplot with sample order</span>
+<span class="hl def">bar_positions</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">barplot</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">MissingCount,</span>
+                         <span class="hl kwc">names.arg</span> <span class="hl def">=</span> <span class="hl kwd">rep</span><span class="hl def">(</span><span class="hl sng">&quot;&quot;</span><span class="hl def">,</span> <span class="hl kwd">length</span><span class="hl def">(sorted_sample_ids)),</span>  <span class="hl com"># Empty x labels</span>
+                         <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of Missing Values (Protein Abundance) in Each Individual&quot;</span><span class="hl def">,</span>
+                         <span class="hl kwc">xlab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Sample Categories (Ordered by Category &amp; Sex)&quot;</span><span class="hl def">,</span>
+                         <span class="hl kwc">ylab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of Missing Proteins&quot;</span><span class="hl def">,</span>
+                         <span class="hl kwc">col</span> <span class="hl def">= bar_colors,</span>
+                         <span class="hl kwc">las</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">,</span>
+                         <span class="hl kwc">cex.names</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">,</span>
+                         <span class="hl kwc">cex.axis</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+                         <span class="hl kwc">cex.lab</span> <span class="hl def">=</span> <span class="hl num">1.5</span><span class="hl def">)</span>
+
+<span class="hl com"># Get midpoints for category labels</span>
+<span class="hl def">category_midpoints</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">tapply</span><span class="hl def">(bar_positions, missingness_df</span><span class="hl opt">$</span><span class="hl def">category, mean)</span>
+
+<span class="hl com"># Add category labels below the x-axis</span>
+<span class="hl kwd">text</span><span class="hl def">(category_midpoints,</span> <span class="hl kwd">par</span><span class="hl def">(</span><span class="hl sng">&quot;usr&quot;</span><span class="hl def">)[</span><span class="hl num">3</span><span class="hl def">]</span> <span class="hl opt">-</span> <span class="hl kwd">max</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">MissingCount)</span> <span class="hl opt">*</span> <span class="hl num">0.05</span><span class="hl def">,</span>
+     <span class="hl kwc">labels</span> <span class="hl def">=</span> <span class="hl kwd">names</span><span class="hl def">(category_midpoints),</span> <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">&quot;black&quot;</span><span class="hl def">,</span> <span class="hl kwc">font</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">)</span>
+
+<span class="hl com"># Add separator lines between different categories</span>
+<span class="hl def">category_change_points</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">which</span><span class="hl def">(</span><span class="hl kwd">diff</span><span class="hl def">(</span><span class="hl kwd">as.numeric</span><span class="hl def">(</span><span class="hl kwd">factor</span><span class="hl def">(missingness_df</span><span class="hl opt">$</span><span class="hl def">category,</span> <span class="hl kwc">levels</span> <span class="hl def">= category_levels)))</span> <span class="hl opt">!=</span> <span class="hl num">0</span><span class="hl def">)</span>
+<span class="hl kwd">abline</span><span class="hl def">(</span><span class="hl kwc">v</span> <span class="hl def">= bar_positions[category_change_points]</span> <span class="hl opt">+</span> <span class="hl kwd">diff</span><span class="hl def">(bar_positions)[</span><span class="hl num">1</span><span class="hl def">]</span> <span class="hl opt">/</span> <span class="hl num">2</span><span class="hl def">,</span> <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray&quot;</span><span class="hl def">,</span> <span class="hl kwc">lty</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-3-1.png" alt="plot of chunk unnamed-chunk-3" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Add legend for category &amp; sex</span>
+<span class="hl com">#legend(&quot;topright&quot;, legend = names(category_sex_colors), fill = category_sex_colors, title = &quot;Category &amp; Sex&quot;, bty = &quot;n&quot;, cex = 0.8)</span>
+
+
+<span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">##Calculate the missingness for Protein</span>
+
+<span class="hl com"># Remove the first row &quot;Protein_name&quot; from the file</span>
+<span class="hl def">protein_data_ROSMAP_gene_missingness</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered[</span><span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Calculate the number of NA values in each row</span>
+<span class="hl def">na_counts_genes</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">apply</span><span class="hl def">(protein_data_ROSMAP_gene_missingness,</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">x</span><span class="hl def">)</span> <span class="hl kwd">sum</span><span class="hl def">(</span><span class="hl kwd">is.na</span><span class="hl def">(x)))</span>
+
+<span class="hl com"># Count the number of rows with at least one NA value</span>
+<span class="hl def">num_genes_with_na</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sum</span><span class="hl def">(na_counts_genes</span> <span class="hl opt">&gt;</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Print the total number of rows with at least one NA value</span>
+<span class="hl kwd">cat</span><span class="hl def">(</span><span class="hl sng">&quot;Total number of gene with at least one NA value:&quot;</span><span class="hl def">, num_genes_with_na,</span> <span class="hl sng">&quot;\n&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Total number of gene with at least one NA value: 2919
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Count the frequency of each unique NA value</span>
+<span class="hl def">na_counts_freq</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">table</span><span class="hl def">(na_counts_genes)</span>
+
+<span class="hl com">#write.table(na_counts_freq,&quot;/Users/poddea/Desktop/na_counts_freq.txt&quot;,sep=&quot;\t&quot;,quote=F)</span>
+
+<span class="hl com"># Remove the entry for 0 NAs</span>
+<span class="hl def">na_counts_freq</span> <span class="hl kwb">&lt;-</span> <span class="hl def">na_counts_freq[</span><span class="hl kwd">names</span><span class="hl def">(na_counts_freq)</span> <span class="hl opt">!=</span> <span class="hl sng">&quot;0&quot;</span><span class="hl def">]</span>
+
+
+<span class="hl com"># Convert named table to numeric vector</span>
+<span class="hl def">na_counts_numeric</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">as.numeric</span><span class="hl def">(</span><span class="hl kwd">names</span><span class="hl def">(na_counts_freq))</span>
+<span class="hl def">na_counts_values</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rep</span><span class="hl def">(na_counts_numeric,</span> <span class="hl kwc">times</span> <span class="hl def">= na_counts_freq)</span>
+
+<span class="hl com"># Create a histogram</span>
+<span class="hl kwd">hist</span><span class="hl def">(na_counts_values,</span>
+     <span class="hl kwc">breaks</span> <span class="hl def">=</span> <span class="hl num">50</span><span class="hl def">,</span>  <span class="hl com"># Adjust number of bins</span>
+     <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Distribution of Missing Proteins&quot;</span><span class="hl def">,</span>
+     <span class="hl kwc">xlab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Frequency of Individuals&quot;</span><span class="hl def">,</span>
+     <span class="hl kwc">ylab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of Missing Protein&quot;</span><span class="hl def">,</span>
+     <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span>
+     <span class="hl kwc">border</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-3-2.png" alt="plot of chunk unnamed-chunk-3" class="plot" /></div></div>
+#############################################################################################################################
+
+# Comparison of Individuals by Diagnosis (category) and Sex
+count_protein_metadata <- protein_metadata_ROSMAP %>%
+group_by(category, sex) %>%
+summarise(count = n())
+
+ggplot(count_protein_metadata, aes(x = sex, y = count, fill = category)) +
+geom_bar(stat = "identity", position = "dodge") +
+labs(title = "Comparison of Individuals by Sex and Diagnosis") +
+xlab("Sex") +
+ylab("Individual Count") +
+scale_fill_manual(values = c("AD" = "purple", "AsymAD" = "blue",   "Control" = "lightgreen", "Exclude" = "gray47")) +
+geom_text(aes(label = count), position = position_dodge(width = 0.9), vjust = -0.5, size =10) +
+theme(text = element_text(size=20))
+
+#############################################################################################################################
+
+# Group the data by tissue, JohnsonDx, and sex
+count_protein_metadata_2 <- protein_metadata_ROSMAP %>%
+  group_by(tissue, category, sex) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create a grouped and stacked bar plot
+ggplot(count_protein_metadata_2, aes(x = category, y = count, fill = sex)) +
+  geom_bar(stat = "identity", position = "stack") +  # Stacked by sex within each JohnsonDx
+  facet_wrap(~ tissue) +  # Create separate plots for each tissue
+  labs(title = "Comparison of Individuals by Tissue with JohnsonDx Staged by Sex",
+       x = "JohnsonDx",
+       y = "Individual Count") +
+  scale_fill_manual(values = c("male" = "lightblue", "female" = "pink")) +  # Custom colors for sex
+  geom_text(aes(label = count), position = position_stack(vjust = 0.5), size = 10) +  # Add counts inside bars
+  theme_minimal() +
+  theme(text = element_text(size = 30),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 30))  # Rotate x-axis labels for readability
+
+
+end.rcode-->
+
+<p>Removal of outlier samples </p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+
+# Read the outliers file
+outliers <- read.table("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/outliers.txt", header = TRUE)
+
+# Extract the IDs to be removed
+ids_to_remove <- outliers$Outliers
+
+ids_to_remove
+
+# Remove the specified columns from the TMT read count file
+protein_data_filtered <- protein_data_filtered[, !colnames(protein_data_filtered) %in% ids_to_remove]
+
+dim(protein_data_filtered)
+
+# Use the 'subset' function to remove rows with specified IDs (outliers) from the protein_metadata_ROSMAP
+protein_metadata_ROSMAP <- subset(protein_metadata_ROSMAP, !(batch.channel %in% ids_to_remove))
+
+dim(protein_metadata_ROSMAP)
+
+
+end.rcode-->
+
+<p>Preparation of the input files (Tissue: DLPFC)</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+
+# Get the list of proteins from the protein_data_filtered
+Protein_name <- protein_data_filtered$Protein_name
+
+# Get the list of samples from the protein_data_filtered
+common_samples <- colnames(protein_data_filtered)
+
+# Select a sub-set of the sample (Tissue: DLPFC) from protein_metadata_ROSMAP file
+sample_data_DLPFC <- filter(protein_metadata_ROSMAP, tissue == "dorsolateral prefrontal cortex")
+
+# Create a subset of the DLPFC sample description file with control samples only
+sample_data_DLPFC_contorl <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_contorl)
+
+# Create a subset of the DLPFC sample description file with AD samples only
+#sample_data_DLPFC_case <- sample_data_DLPFC[grep("AD", sample_data_DLPFC$JohnsonDx), ]
+sample_data_DLPFC_case <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AD", ]
+
+dim(sample_data_DLPFC_case)
+
+# Create a subset of the DLPFC sample description file with AsymAD samples only
+sample_data_DLPFC_AsymAD <- sample_data_DLPFC[grep("AsymAD", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_AsymAD)
+
+# Calculate the counts and percentages of each sex in control samples
+sex_counts_control <- table(sample_data_DLPFC_contorl$sex)
+sex_percentages_control <- prop.table(sex_counts_control) * 100
+
+# Create a pie chart to show the distribution of Male and Female ratio within the control samples
+pie_data_control <- data.frame(sex = names(sex_counts_control), count = as.numeric(sex_counts_control), percentage = sex_percentages_control)
+
+P1 <- ggplot(pie_data_control, aes(x = "", y = count, fill = sex)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(count, " (", round(sex_percentages_control, 1), "%)")), position = position_stack(vjust = 0.5)) +  # Add text labels with percentages
+  labs(title = "Male and Female Distribution in DLPFC Control Samples",
+       fill = "Sex") +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        legend.position = "right")
+
+
+# Calculate the counts and percentages of each sex in AD samples
+sex_counts_case <- table(sample_data_DLPFC_case$sex)
+sex_percentages_case <- prop.table(sex_counts_case) * 100
+
+# Create a pie chart to show the distribution of Male and Female ratio within the AD samples
+pie_data_case <- data.frame(sex = names(sex_counts_case), count = as.numeric(sex_counts_case), percentage = sex_percentages_case)
+
+P2 <- ggplot(pie_data_case, aes(x = "", y = count, fill = sex)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(count, " (", round(sex_percentages_case, 1), "%)")), position = position_stack(vjust = 0.5)) +  # Add text labels with percentages
+  labs(title = "Male and Female Distribution in DLPFC AD Samples",
+       fill = "Sex") +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        legend.position = "right")
+
+
+# Calculate the counts and percentages of each sex in AsymAD samples
+sex_counts_AsymAD <- table(sample_data_DLPFC_AsymAD$sex)
+sex_percentages_AsymAD <- prop.table(sex_counts_AsymAD) * 100
+
+# Create a pie chart to show the distribution of Male and Female ratio within the AsymAD samples
+pie_data_AsymAD <- data.frame(sex = names(sex_counts_AsymAD), count = as.numeric(sex_counts_AsymAD), percentage = sex_percentages_AsymAD)
+
+P3 <- ggplot(pie_data_AsymAD, aes(x = "", y = count, fill = sex)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(count, " (", round(sex_percentages_AsymAD, 1), "%)")), position = position_stack(vjust = 0.5)) +  # Add text labels with percentages
+  labs(title = "Male and Female Distribution in DLPFC AsymAD Samples",
+       fill = "Sex") +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        legend.position = "right")
+
+library(patchwork)
+
+P1 | P2 | P3
+
+end.rcode-->
+
+<p>Data Missingness calculation (DLPFC Sample Only) - exclude proteins with more than 50% missingness throughout the DLPFC Sample</p>
+
+#<!--begin.rcode fig.width=10, fig.height=15
+library(ggplot2)
+library(dplyr)
+library(ComplexHeatmap)
+library(circlize)
+library(factoextra)
+library(grid)
+
+## Filter DLPFC samples from the data
+
+# Select a sub-set of the sample (Tissue: DLPFC) from protein_metadata_ROSMAP file
+sample_data_DLPFC <- filter(protein_metadata_ROSMAP, tissue == "dorsolateral prefrontal cortex")
+
+dim(sample_data_DLPFC)
+
+
+# Create a list of DLPFC samples only
+DLPFC_samples <- sample_data_DLPFC$batch.channel
+
+# Create a subset of the protein abundant file with CT samples only
+protein_data_DLPFC <- protein_data_filtered[, intersect(common_samples, DLPFC_samples)]
+
+protein_data_DLPFC <- cbind(Protein_name, protein_data_DLPFC)
+
+dim(protein_data_DLPFC)
+
+
+# Step 1: Calculate the percentage of missing values (NA) for each row
+
+protein_data_DLPFC <- protein_data_DLPFC %>%
+  rowwise() %>%
+  mutate(missingness = sum(is.na(c_across(-Protein_name))) / (ncol(.) - 1) * 100)
+
+# Step 2: Filter out rows with more than 50% missingness and store the excluded rows
+excluded_protein_count <- protein_data_DLPFC %>%
+  filter(missingness > 50)
+
+cat("Total number of Protein_name entries excluded due to more than 50% missing values:", nrow(excluded_protein_count), "\n")
+
+# Step 3: Create the filtered dataset with valid rows
+protein_data_DLPFC <- protein_data_DLPFC %>%
+  filter(missingness <= 50) %>%
+  select(-missingness)  #  remove the 'missingness' column from the data
+
+dim(protein_data_DLPFC)
+
+############################################################################################################################################################
+##Calculate the missingness for samples
+
+# Remove the  "Protein_name" column from the file
+protein_data_DLPFC_missingness <- protein_data_DLPFC[, -1]
+
+#write.table(protein_data_ROSMAP_new,"/Users/poddea/Desktop/protein_data_ROSMAP_new.txt",sep="\t",quote=T)
+
+# Transpose gene expression data to have samples as rows
+protein_data_DLPFC_missingness_missingness_t <- t(protein_data_DLPFC_missingness)
+
+dim(protein_data_DLPFC_missingness_missingness_t)
+
+# Calculate the number of NA values in each row
+na_counts_sample <- apply(protein_data_DLPFC_missingness_missingness_t, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_samples_with_na <- sum(na_counts_sample > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of sample with at least one NA value:", num_samples_with_na, "\n")
+
+# Create a barplot for the NA counts with adjusted margins
+barplot(na_counts_sample, main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_sample, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_sample[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+############################################################################################################################################################
+
+##Calculate the missingness for Protein
+
+# Remove the first row "Protein_name" from the file
+protein_data_DLPFC_missingness <- protein_data_DLPFC[-1, ]
+
+# Calculate the number of NA values in each row
+na_counts_genes <- apply(protein_data_DLPFC_missingness, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_genes_with_na <- sum(na_counts_genes > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of gene with at least one NA value:", num_genes_with_na, "\n")
+
+# Count the frequency of each unique NA value
+na_counts_freq <- table(na_counts_genes)
+
+#write.table(na_counts_freq,"/Users/poddea/Desktop/na_counts_freq.txt",sep="\t",quote=F)
+
+# Remove the entry for 0 NAs
+na_counts_freq <- na_counts_freq[names(na_counts_freq) != "0"]
+
+
+# Create the barplot and store the bar positions
+bar_positions <- barplot(na_counts_freq,
+                         main = "Frequency of Individual Counts per Protein",
+                         xlab = "Number of missing Protein",
+                         ylab = "Frequency of Individual with Missing Protein",
+                         col = "blue",
+                         las = 2,
+                         cex.names = 0.8)
+
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_freq, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_freq[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Frequency of Individual Counts per Protein",
+        xlab = "Number of missing Protein",
+        ylab = "Frequency of Individual with Missing Protein",
+        col = "blue",
+        las = 2,
+        cex.names = 0.8)
+
+end.rcode-->
+############################################################################################################################################################
+
+## Sample-to-Sample distance matrix
+
+protein_data_DLPFC_new <- protein_data_DLPFC[, -1]
+
+# Transpose the protein abundant file to get sample_IDs in the rows
+protein_data_DLPFC_t <- t(protein_data_DLPFC_new)
+
+dim(protein_data_DLPFC_t)
+
+# Compute the Sample-to-Sample Distance Matrix using Euclidean distance
+distance_matrix <- dist(protein_data_DLPFC_t)
+
+# Convert the distance matrix to a data frame
+distance_df <- as.data.frame(as.matrix(distance_matrix))
+
+write.table(distance_df,"distance_matrix.txt",sep="\t",quote=FALSE, row.names=TRUE)
+
+max(distance_df)
+
+
+# Preparing a column annotation file 
+col_ha = HeatmapAnnotation(
+diagnosis = sample_data_DLPFC$JohnsonDx,
+sex = sample_data_DLPFC$sex,
+annotation_height = unit(c(12, 12), "cm"),
+col = list(
+    diagnosis = c("AD" = "purple", "Control" = "lightgreen", "AsymAD" = "royalblue", "Exclude" = "gray47"),
+    sex = c("male" = "lightblue", "female" = "lightpink")
+  )
+)
+
+
+# Create the heatmap object
+ht <- Heatmap(
+  as.matrix(distance_matrix),
+  name = "Sample-to-Sample Distance Matrix for DLPFC Sample Only",
+  top_annotation = col_ha,
+  row_names_gp =  gpar(fontsize = 10),  # Top 10 rows larger
+  column_names_gp = gpar(fontsize = 5)
+  )
+
+
+# Draw the heatmap
+draw(ht)
+
+
+end.rcode-->
+
+
+<p>Principal Component Analysis (DLPFC - Control Sample Only)</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(missMDA)
+
+
+## Filter CONTROL samples from the data
+
+# Create a subset of the DLPFC sample description file with control samples only
+sample_data_DLPFC_CT <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_CT)
+
+
+# Create a list of DLPFC control samples only
+DLPFC_CT_samples <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "Control"]
+
+# Create a subset of the protein abundant file with CT samples only
+protein_data_DLPFC_CT <- protein_data_DLPFC[, intersect(common_samples, DLPFC_CT_samples)]
+
+protein_data_DLPFC_CT <- cbind(Protein_name, protein_data_DLPFC_CT)
+
+dim(protein_data_DLPFC_CT)
+
+
+# Check for duplicates in the first column
+duplicate_genes <- duplicated(protein_data_DLPFC_CT[, 1])
+
+# Create a unique identifier for each row
+unique_ids <- make.unique(as.character(protein_data_DLPFC_CT[, 1]))
+
+# Set the unique identifiers as row names
+rownames(protein_data_DLPFC_CT) <- unique_ids
+
+# Assuming the first column is "Protein_name" and the rest are numeric
+numeric_data <- protein_data_DLPFC_CT[, -1]
+rownames(numeric_data) <- unique_ids
+
+# Impute missing values using PCA-based imputation
+imputed_data <- imputePCA(numeric_data, ncp = 2)$completeObs
+
+# Transpose the gene expression data to have samples as rows
+imputed_data <- t(imputed_data)
+
+# Perform PCA on the imputed data
+pca_result <- prcomp(imputed_data, scale. = TRUE)
+
+
+# Merge TPM data with sample description
+merged_data <- merge(
+data.frame(sampleID = rownames(imputed_data)),
+sample_data_DLPFC_CT,
+by.x = "sampleID",
+by.y = "batch.channel",
+all.x = TRUE
+)
+
+# Visualize the eigenvalues of PCA - percentage of variance explained by each principal component
+fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 85))
+
+# Check if the number of samples in the PCA result matches the number of rows in merged_data
+if (nrow(merged_data) != ncol(pca_result$x)) {
+     stop("Number of samples in merged_data and PCA result do not match.")
+ }
+
+# Create a data frame for plotting (including PC1 and PC2)
+plot_data <- data.frame(
+PC1 = pca_result$x[, 1],
+PC2 = pca_result$x[, 2],
+sampleID = rownames(pca_result$x),  # Use rownames of pca_result$x as sample IDs
+sex = merged_data$sex
+)
+
+# Create a biplot with colored samples based on sex status
+ggplot(plot_data, aes(x = PC1, y = PC2, color = sex, label = sampleID)) +
+     geom_point(size = 3) +
+     geom_text(hjust = 1, vjust = -1) +  # Adjust the position of labels
+     labs(title = "PCA Biplot: DLPFC - Control Sample Only", x = "Principal Component 1", y = "Principal Component 2") +
+     theme_minimal()
+
+
+end.rcode-->
+
+<p>Sample-Sample Distance Matrix (DLPFC - Control Sample Only)</p>
+
+#<!--begin.rcode fig.width=25, fig.height=25
+library(ggplot2)
+library(dplyr)
+library(ComplexHeatmap)
+library(circlize)
+library(factoextra)
+library(grid)
+## Sample-Sample Distance Matrix (DLPFC Sample Only)
+
+protein_data_DLPFC_CT_new <- protein_data_DLPFC_CT[, -1]
+
+# Transpose the protein abundant file to get sample_IDs in the rows
+protein_data_DLPFC_CT_t <- t(protein_data_DLPFC_CT_new)
+
+dim(protein_data_DLPFC_CT_t)
+
+# Compute the Sample-to-Sample Distance Matrix using Euclidean distance
+distance_matrix <- dist(protein_data_DLPFC_CT_t)
+
+# Convert the distance matrix to a data frame
+distance_df <- as.data.frame(as.matrix(distance_matrix))
+
+write.table(distance_df,"distance_matrix_CT.txt",sep="\t",quote=FALSE, row.names=TRUE)
+
+max(distance_df)
+
+
+# Preparing a column annotation file 
+col_ha = HeatmapAnnotation(
+sex = sample_data_DLPFC_CT$sex,
+col = list(
+    sex = c("male" = "lightblue", "female" = "lightpink")
+  )
+)
+
+
+# Create the heatmap object
+ht <- Heatmap(
+  as.matrix(distance_matrix),
+  name = "Sample-to-Sample Distance Matrix for DLPFC - CT Sample Only",
+  top_annotation = col_ha,
+  row_names_gp =  gpar(fontsize = 10),  # Top 10 rows larger
+  column_names_gp = gpar(fontsize = 10)
+  )
+
+
+# Draw the heatmap
+draw(ht)
+
+end.rcode-->
+
+<p>Separate Male and Female Sample Specific Files for Control, AD and AsymAD</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+library(gplots)
+
+## Filter CONTROL-FEMALE samples from the data
+
+# Create a list of DLPFC control (female) samples only
+DLPFC_CT_samples_female <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "Control" & sample_data_DLPFC$sex == "female"]
+
+# Create a subset of the protein abundant file with CT (female) samples only
+protein_data_DLPFC_CT_female <- protein_data_DLPFC[, intersect(common_samples, DLPFC_CT_samples_female)]
+
+protein_data_DLPFC_CT_female <- cbind(Protein_name, protein_data_DLPFC_CT_female)
+
+dim(protein_data_DLPFC_CT_female)
+
+datatable(protein_data_DLPFC_CT_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Create a subset of the description file with CT samples only
+sample_data_DLPFC_CT <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+# Create a subset of the CT sample description file with female samples only
+sample_data_DLPFC_CT_female <- sample_data_DLPFC_CT[grep("female", sample_data_DLPFC_CT$sex), ]
+
+dim(sample_data_DLPFC_CT_female)
+
+#########################################################################################################################################
+
+## Filter CONTROL-MALE samples from the data
+
+# Create a list of DLPFC CT (male) samples only
+DLPFC_CT_samples_male <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "Control" & sample_data_DLPFC$sex == "male"]
+
+# Create a subset of the protein abundant file with CT (male) samples only
+protein_data_DLPFC_CT_male <- protein_data_DLPFC[, intersect(common_samples, DLPFC_CT_samples_male)]
+
+protein_data_DLPFC_CT_male <- cbind(Protein_name, protein_data_DLPFC_CT_male)
+
+dim(protein_data_DLPFC_CT_male)
+
+datatable(protein_data_DLPFC_CT_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with CT samples only
+sample_data_DLPFC_CT <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+# Create a subset of the CT sample description file with male samples only
+sample_data_DLPFC_CT_male <- sample_data_DLPFC_CT[sample_data_DLPFC_CT$sex == "male", ]
+
+dim(sample_data_DLPFC_CT_male)
+
+#########################################################################################################################################
+
+## Filter AD-FEMALE samples from the data
+
+# Create a listof DLPFC AD (female) samples only
+DLPFC_AD_samples_female <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "AD" & sample_data_DLPFC$sex == "female"]
+
+# Create a subset of the protein abundant file with AD (female) samples only
+protein_data_DLPFC_AD_female <- protein_data_DLPFC[, intersect(common_samples, DLPFC_AD_samples_female)]
+
+protein_data_DLPFC_AD_female <- cbind(Protein_name, protein_data_DLPFC_AD_female)
+
+dim(protein_data_DLPFC_AD_female)
+
+datatable(protein_data_DLPFC_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with AD samples only
+sample_data_DLPFC_AD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AD", ]
+
+# Create a subset of the AD sample description file with female samples only
+sample_data_DLPFC_AD_female <- sample_data_DLPFC_AD[grep("female", sample_data_DLPFC_AD$sex), ]
+
+dim(sample_data_DLPFC_AD_female)
+
+#########################################################################################################################################
+
+## Filter AD-MALE samples from the data
+
+# Create a listof DLPFC AD (male) samples only
+DLPFC_AD_samples_male <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "AD" & sample_data_DLPFC$sex == "male"]
+
+# Create a subset of the protein abundant file with AD (male) samples only
+protein_data_DLPFC_AD_male <- protein_data_DLPFC[, intersect(common_samples, DLPFC_AD_samples_male)]
+
+protein_data_DLPFC_AD_male <- cbind(Protein_name, protein_data_DLPFC_AD_male)
+
+dim(protein_data_DLPFC_AD_male)
+
+datatable(protein_data_DLPFC_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with AD samples only
+sample_data_DLPFC_AD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AD", ]
+
+# Create a subset of the AD sample description file with male samples only
+sample_data_DLPFC_AD_male <- sample_data_DLPFC_AD[sample_data_DLPFC_AD$sex == "male", ]
+
+dim(sample_data_DLPFC_AD_male)
+
+#########################################################################################################################################
+
+## Filter AsymAD-FEMALE samples from the data
+
+# Create a listof DLPFC AsymAD (female) samples only
+DLPFC_AsymAD_samples_female <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "AsymAD" & sample_data_DLPFC$sex == "female"]
+
+# Create a subset of the protein abundant file with AsymAD (female) samples only
+protein_data_DLPFC_AsymAD_female <- protein_data_DLPFC[, intersect(common_samples, DLPFC_AsymAD_samples_female)]
+
+protein_data_DLPFC_AsymAD_female <- cbind(Protein_name, protein_data_DLPFC_AsymAD_female)
+
+dim(protein_data_DLPFC_AsymAD_female)
+
+datatable(protein_data_DLPFC_AsymAD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with AsymAD samples only
+sample_data_DLPFC_AsymAD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AsymAD", ]
+
+# Create a subset of the AsymAD sample description file with female samples only
+sample_data_DLPFC_AsymAD_female <- sample_data_DLPFC_AsymAD[grep("female", sample_data_DLPFC_AsymAD$sex), ]
+
+dim(sample_data_DLPFC_AsymAD_female)
+
+#########################################################################################################################################
+
+## Filter AsymAD-MALE samples from the data
+
+# Create a listof DLPFC AsymAD (male) samples only
+DLPFC_AsymAD_samples_male <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "AsymAD" & sample_data_DLPFC$sex == "male"]
+
+# Create a subset of the protein abundant file with AsymAD (male) samples only
+protein_data_DLPFC_AsymAD_male <- protein_data_DLPFC[, intersect(common_samples, DLPFC_AsymAD_samples_male)]
+
+protein_data_DLPFC_AsymAD_male <- cbind(Protein_name, protein_data_DLPFC_AsymAD_male)
+
+dim(protein_data_DLPFC_AsymAD_male)
+
+datatable(protein_data_DLPFC_AsymAD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with AsymAD samples only
+sample_data_DLPFC_AsymAD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AsymAD", ]
+
+# Create a subset of the AsymAD sample description file with male samples only
+sample_data_DLPFC_AsymAD_male <- sample_data_DLPFC_AsymAD[sample_data_DLPFC_AsymAD$sex == "male", ]
+
+dim(sample_data_DLPFC_AsymAD_male)
+
+end.rcode-->
+
+<p>Calculating AD and AsymAD Samples Specific Z-score by Averaging the Control Gruop</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+library(gplots)
+library(dplyr)
+library(tidyr)
+
+## Function to calculate MEAN and SD for each gene within the Control Female samples
+
+# Calculation of MEAN for each row
+protein_data_DLPFC_CT_female$MEAN <- rowMeans(protein_data_DLPFC_CT_female[, -1], na.rm=T)
+
+# Calculation of SD for each row
+protein_data_DLPFC_CT_female$SD <- apply( protein_data_DLPFC_CT_female[, -1], 1, sd, na.rm=TRUE)
+
+write.table(protein_data_DLPFC_CT_female,"protein_data_DLPFC_CT_female.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+
+# Print the table using DT
+datatable(protein_data_DLPFC_CT_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Plot the distribution of MEAN and SD for all the genes throughout the control female samples
+#ggplot(protein_data_DLPFC_CT_female, aes(x = Protein_name, y = MEAN)) +
+  #geom_boxplot(aes(group = Protein_name),
+               #position = position_dodge(0.8),
+               #outlier.shape = NA) +
+  #ggtitle("Distribution of expression statistics of the proteins in control samples (female)") +
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#########################################################################################################################################
+
+## Function to calculate MEAN and SD for each gene within the Control male samples
+
+# Calculation of MEAN for each row
+protein_data_DLPFC_CT_male$MEAN <- rowMeans(protein_data_DLPFC_CT_male[, -1], na.rm=T)
+
+# Calculation of SD for each row
+protein_data_DLPFC_CT_male$SD <- apply( protein_data_DLPFC_CT_male[, -1], 1, sd, na.rm=TRUE)
+
+write.table(protein_data_DLPFC_CT_male,"protein_data_DLPFC_CT_male.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Print the table using DT
+datatable(protein_data_DLPFC_CT_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Plot the distribution of MEAN and SD for all the genes throughout the control male samples
+#ggplot(protein_data_DLPFC_CT_male, aes(x = Protein_name, y = MEAN)) +
+  #geom_boxplot(aes(group = Protein_name),
+               #position = position_dodge(0.8),
+               #outlier.shape = NA) +
+  #ggtitle("Distribution of expression statistics of the proteins in control samples (male)") +
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#########################################################################################################################################
+
+## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AD female sample
+
+# Function define to calculate the Z statistics
+z_stat <- function(row, mean_val, sd_val) {
+  (row - mean_val) / sd_val
+}
+
+# Select the AD columns for calculation
+selected_AD_female <- protein_data_DLPFC_AD_female[, -1]
+
+# Calculate the Z statistics for each row using sweep
+z_stat_AD_female <- sweep(selected_AD_female, 1, protein_data_DLPFC_CT_female$MEAN, FUN = "-")
+
+z_stat_AD_female <- sweep(z_stat_AD_female, 1, protein_data_DLPFC_CT_female$SD, FUN = "/")
+
+# Create a new data frame with the results
+z_stat_result_AD_female <- data.frame(z_stat_AD_female)
+
+# Rename the columns of the result data frame
+colnames(z_stat_result_AD_female) <- paste0(colnames(selected_AD_female), "_Zscore")
+
+#Combine the Protein_name with the Z statistics result
+z_stat_result_plot_AD_female <- cbind(Protein_name, z_stat_result_AD_female)
+
+# Combine the original AD data frame with the Z statistics result data frame
+#z_stat_result_table_female <- cbind(AD_female, z_stat_result_female)
+
+# Print the table using DT
+datatable(z_stat_result_plot_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Print the Z statistics result final table
+write.table(z_stat_result_plot_AD_female,"z_stat_result_AD_female.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Remove the header from the file
+z_stat_result_matrix_AD_female <- z_stat_result_plot_AD_female[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_AD_female <- replace(z_stat_result_matrix_AD_female, is.na(z_stat_result_matrix_AD_female), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_AD_female <- heatmap.2(
+  as.matrix(cleaned_matrix_AD_female),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_AD_female$batch.channel,
+  labRow = z_stat_result_plot_AD_female$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the AD cases (female)"
+)
+
+
+#########################################################################################################################################
+
+## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AD male sample
+
+# Function define to calculate the Z statistics
+z_stat <- function(row, mean_val, sd_val) {
+  (row - mean_val) / sd_val
+}
+
+# Select the AD columns for calculation
+selected_AD_male <- protein_data_DLPFC_AD_male[, -1]
+
+# Calculate the Z statistics for each row using sweep
+z_stat_AD_male <- sweep(selected_AD_male, 1, protein_data_DLPFC_CT_male$MEAN, FUN = "-")
+
+z_stat_AD_male <- sweep(z_stat_AD_male, 1, protein_data_DLPFC_CT_male$SD, FUN = "/")
+
+# Create a new data frame with the results
+z_stat_result_AD_male <- data.frame(z_stat_AD_male)
+
+# Rename the columns of the result data frame
+colnames(z_stat_result_AD_male) <- paste0(colnames(selected_AD_male), "_Zscore")
+
+#Combine the Protein_name with the Z statistics result
+
+z_stat_result_plot_AD_male <- cbind(Protein_name, z_stat_result_AD_male)
+
+# Combine the original AD data frame with the Z statistics result data frame
+#z_stat_result_table_male <- cbind(AD_male, z_stat_result_male)
+
+# Print the table using DT
+datatable(z_stat_result_plot_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Print the Z statistics result final table
+write.table(z_stat_result_plot_AD_male,"z_stat_result_AD_male.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Remove the header from the file
+z_stat_result_matrix_AD_male <- z_stat_result_plot_AD_male[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_AD_male <- replace(z_stat_result_matrix_AD_male, is.na(z_stat_result_matrix_AD_male), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_AD_male <- heatmap.2(
+  as.matrix(cleaned_matrix_AD_male),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_AD_male$batch.channel,
+  labRow = z_stat_result_plot_AD_male$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the AD cases (male)"
+)
+
+#########################################################################################################################################
+
+## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AsymAD female sample
+
+# Function define to calculate the Z statistics
+z_stat <- function(row, mean_val, sd_val) {
+  (row - mean_val) / sd_val
+}
+
+# Select the AsymAD columns for calculation
+selected_AsymAD_female <- protein_data_DLPFC_AsymAD_female[, -1]
+
+# Calculate the Z statistics for each row using sweep
+z_stat_AsymAD_female <- sweep(selected_AsymAD_female, 1, protein_data_DLPFC_CT_female$MEAN, FUN = "-")
+
+z_stat_AsymAD_female <- sweep(z_stat_AsymAD_female, 1, protein_data_DLPFC_CT_female$SD, FUN = "/")
+
+# Create a new data frame with the results
+z_stat_result_AsymAD_female <- data.frame(z_stat_AsymAD_female)
+
+# Rename the columns of the result data frame
+colnames(z_stat_result_AsymAD_female) <- paste0(colnames(selected_AsymAD_female), "_Zscore")
+
+#Combine the Protein_name with the Z statistics result
+
+z_stat_result_plot_AsymAD_female <- cbind(Protein_name, z_stat_result_AsymAD_female)
+
+# Combine the original AsymAD data frame with the Z statistics result data frame
+#z_stat_result_table_female <- cbind(AsymAD_female, z_stat_result_female)
+
+# Print the table using DT
+datatable(z_stat_result_plot_AsymAD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Print the Z statistics result final table
+write.table(z_stat_result_plot_AsymAD_female,"z_stat_result_AsymAD_female.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Remove the header from the file
+z_stat_result_matrix_AsymAD_female <- z_stat_result_plot_AsymAD_female[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_AsymAD_female <- replace(z_stat_result_matrix_AsymAD_female, is.na(z_stat_result_matrix_AsymAD_female), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_AsymAD_female <- heatmap.2(
+  as.matrix(cleaned_matrix_AsymAD_female),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_AsymAD_female$batch.channel,
+  labRow = z_stat_result_plot_AsymAD_female$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the AsymAD cases (female)"
+)
+
+
+#########################################################################################################################################
+
+## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AsymAD male sample
+
+# Function define to calculate the Z statistics
+z_stat <- function(row, mean_val, sd_val) {
+  (row - mean_val) / sd_val
+}
+
+# Select the AsymAD columns for calculation
+selected_AsymAD_male <- protein_data_DLPFC_AsymAD_male[, -1]
+
+# Calculate the Z statistics for each row using sweep
+z_stat_AsymAD_male <- sweep(selected_AsymAD_male, 1, protein_data_DLPFC_CT_male$MEAN, FUN = "-")
+
+z_stat_AsymAD_male <- sweep(z_stat_AsymAD_male, 1, protein_data_DLPFC_CT_male$SD, FUN = "/")
+
+# Create a new data frame with the results
+z_stat_result_AsymAD_male <- data.frame(z_stat_AsymAD_male)
+
+# Rename the columns of the result data frame
+colnames(z_stat_result_AsymAD_male) <- paste0(colnames(selected_AsymAD_male), "_Zscore")
+
+#Combine the Protein_name with the Z statistics result
+
+z_stat_result_plot_AsymAD_male <- cbind(Protein_name, z_stat_result_AsymAD_male)
+
+# Combine the original AsymAD data frame with the Z statistics result data frame
+#z_stat_result_table_male <- cbind(AsymAD_male, z_stat_result_male)
+
+# Print the table using DT
+datatable(z_stat_result_plot_AsymAD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Print the Z statistics result final table
+write.table(z_stat_result_plot_AsymAD_male,"z_stat_result_AsymAD_male.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Remove the header from the file
+z_stat_result_matrix_AsymAD_male <- z_stat_result_plot_AsymAD_male[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_AsymAD_male <- replace(z_stat_result_matrix_AsymAD_male, is.na(z_stat_result_matrix_AsymAD_male), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_AsymAD_male <- heatmap.2(
+  as.matrix(cleaned_matrix_AsymAD_male),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_AsymAD_male$batch.channel,
+  labRow = z_stat_result_plot_AsymAD_male$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the AsymAD cases (male)"
+)
+
+end.rcode-->
+
+<p>Calculating Z score for Control Samples using Leave-one-out Method</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+library(gplots)
+library(dplyr)
+library(tidyr)
+
+## Function to calculate the Z-statistics for Indivual control samples (Female only)
+
+# Define a function to calculate z-score
+calculate_zscore <- function(one_sample_data, rest_data) {
+  # Calculate mean and standard deviation for each row (gene) in rest_data
+  rest_data_mean <- rowMeans(rest_data)
+  rest_data_sd <- apply(rest_data, 1, sd)
+
+  # Calculate z-score for each gene in gene_data
+  zscore <- (one_sample_data - rest_data_mean) / rest_data_sd
+
+  return(zscore)
+}
+
+# Remove the MEAN and SD columns from protein_data_DLPFC_CT_female file
+protein_data_DLPFC_CT_female <- subset(protein_data_DLPFC_CT_female, select = -c(MEAN, SD))
+
+# Create an empty data frame to store the z-scored data
+zscored_protein_data_DLPFC_CT_female <- data.frame(Protein_name = protein_data_DLPFC_CT_female$Protein_name)
+
+# Iterate through each column in the original data
+for (col in colnames(protein_data_DLPFC_CT_female)[-1]) {
+  # Split data into two data frames: one with current column and another with the rest
+  protein_data_DLPFC_CT_female_one_sample <- protein_data_DLPFC_CT_female[, c("Protein_name", col)]
+  protein_data_DLPFC_CT_female_rest <- protein_data_DLPFC_CT_female[, -which(names(protein_data_DLPFC_CT_female) == col)]
+
+  # Calculate z-score for current column
+  zscore <- calculate_zscore(protein_data_DLPFC_CT_female_one_sample[, 2], protein_data_DLPFC_CT_female_rest[, -1])
+
+  # Add z-score as a new column to zscored_data
+  zscored_protein_data_DLPFC_CT_female[paste0(col, "_Zscore")] <- zscore
+}
+
+# Write the z-scored data to a text file
+write.table(zscored_protein_data_DLPFC_CT_female, "z_stat_result_CT_female.txt", sep="\t", quote=FALSE, row.names=FALSE)
+
+# Print the table using DT
+datatable(zscored_protein_data_DLPFC_CT_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Remove the header from the file
+z_stat_result_matrix_DLPFC_CT_female <- zscored_protein_data_DLPFC_CT_female[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_DLPFC_CT_female <- replace(z_stat_result_matrix_DLPFC_CT_female, is.na(z_stat_result_matrix_DLPFC_CT_female), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_CT_female <- heatmap.2(
+  as.matrix(cleaned_matrix_DLPFC_CT_female),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_CT_female$batch.channel,
+  labRow = zscored_protein_data_DLPFC_CT_female$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the Control (female) - Leave-One-Out method"
+)
+
+
+#########################################################################################################################################
+
+
+## Function to calculate the Z-statistics for Indivual control samples (male only)
+
+# Define a function to calculate z-score
+calculate_zscore <- function(one_sample_data, rest_data) {
+  # Calculate mean and standard deviation for each row (gene) in rest_data
+  rest_data_mean <- rowMeans(rest_data)
+  rest_data_sd <- apply(rest_data, 1, sd)
+
+  # Calculate z-score for each gene in gene_data
+  zscore <- (one_sample_data - rest_data_mean) / rest_data_sd
+
+  return(zscore)
+}
+
+# Remove the MEAN and SD columns from protein_data_DLPFC_CT_male file
+protein_data_DLPFC_CT_male <- subset(protein_data_DLPFC_CT_male, select = -c(MEAN, SD))
+
+# Create an empty data frame to store the z-scored data
+zscored_protein_data_DLPFC_CT_male <- data.frame(Protein_name = protein_data_DLPFC_CT_male$Protein_name)
+
+# Iterate through each column in the original data
+for (col in colnames(protein_data_DLPFC_CT_male)[-1]) {
+  # Split data into two data frames: one with current column and another with the rest
+  protein_data_DLPFC_CT_male_one_sample <- protein_data_DLPFC_CT_male[, c("Protein_name", col)]
+  protein_data_DLPFC_CT_male_rest <- protein_data_DLPFC_CT_male[, -which(names(protein_data_DLPFC_CT_male) == col)]
+
+  # Calculate z-score for current column
+  zscore <- calculate_zscore(protein_data_DLPFC_CT_male_one_sample[, 2], protein_data_DLPFC_CT_male_rest[, -1])
+
+  # Add z-score as a new column to zscored_data
+  zscored_protein_data_DLPFC_CT_male[paste0(col, "_Zscore")] <- zscore
+}
+
+# Write the z-scored data to a text file
+write.table(zscored_protein_data_DLPFC_CT_male, "z_stat_result_CT_male.txt", sep="\t", quote=FALSE, row.names=FALSE)
+
+# Print the table using DT
+datatable(zscored_protein_data_DLPFC_CT_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Remove the header from the file
+z_stat_result_matrix_DLPFC_CT_male <- zscored_protein_data_DLPFC_CT_male[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_DLPFC_CT_male <- replace(z_stat_result_matrix_DLPFC_CT_male, is.na(z_stat_result_matrix_DLPFC_CT_male), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_CT_male <- heatmap.2(
+  as.matrix(cleaned_matrix_DLPFC_CT_male),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_CT_male$batch.channel,
+  labRow = zscored_protein_data_DLPFC_CT_male$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the Control (male) - Leave-One-Out method"
+)
+
+# Save the plot as a high-resolution PNG
+ggsave("out_zscore_CT_male.tiff", plot = out_zscore_CT_male, dpi = 300, width = 6, height = 4, units = "in")
+
+
+
+
+end.rcode-->
+
+
+
+</body>
+</html>

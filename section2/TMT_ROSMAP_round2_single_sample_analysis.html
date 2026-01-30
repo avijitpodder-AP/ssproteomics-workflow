@@ -1,0 +1,1779 @@
+<html>
+
+<head>
+<style type="text/css">
+.inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.sng {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.def {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+<title>Avijit Podder Date: Aug 26, 2024</title>
+
+<head color="blue">
+
+<h1><font color="blue">Single Sample Pathway-specific Heterogeneity Analysis using TMT Proteomics Data From The ROSMAP Cohort</font></h1>
+
+</head>
+
+<body>
+
+<p>PHASE 1 and 2 TMT PROTEOMICS MERGED: ROSMAP TMT-proteomics Data (read count file) </p>
+
+<div class="chunk" id="unnamed-chunk-1"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(stringr)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'dplyr'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+</pre></div>
+<div class="message"><pre class="knitr r">## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: package 'ggplot2' was built under R version 4.5.2
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(DT)</span>
+
+<span class="hl com"># Data set: ROSMAP (N=610), Minimally regressed, batch- and set-corrected protein abundance. Batch within set, and inter-set (ROSMAP set1 and set2) correction handled by separate repeats of TAMPOR (proteins kept with &lt;50% missing values within sets); 610 total cases (syn28723003)</span>
+
+<span class="hl def">protein_data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/2a.Zero-centered_log2(abundance)-ROSMAP610.R1+R2-2xTAMPORcorrected.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7814  611
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#head(protein_data)</span>
+
+<span class="hl com"># Split the protein_ID column by &quot;|&quot;</span>
+<span class="hl def">split_protein_data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">str_split_fixed</span><span class="hl def">(protein_data</span><span class="hl opt">$</span><span class="hl def">X,</span> <span class="hl sng">&quot;\\|&quot;</span><span class="hl def">,</span> <span class="hl num">2</span><span class="hl def">)</span>
+
+<span class="hl com"># Combine the split data with the original dataframe</span>
+<span class="hl def">protein_data</span><span class="hl opt">$</span><span class="hl def">Protein_name</span> <span class="hl kwb">&lt;-</span> <span class="hl def">split_protein_data[,</span> <span class="hl num">1</span><span class="hl def">]</span>
+<span class="hl def">protein_data</span><span class="hl opt">$</span><span class="hl def">Uniprot_ID</span> <span class="hl kwb">&lt;-</span> <span class="hl def">split_protein_data[,</span> <span class="hl num">2</span><span class="hl def">]</span>
+
+<span class="hl com"># Count the repetitive Protein_name</span>
+<span class="hl def">count_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">group_by</span><span class="hl def">(Protein_name)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">summarise</span><span class="hl def">(</span><span class="hl kwc">count</span> <span class="hl def">=</span> <span class="hl kwd">n</span><span class="hl def">())</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(count</span> <span class="hl opt">&gt;</span> <span class="hl num">1</span><span class="hl def">)</span>
+
+<span class="hl com"># Print the number of repetitive protein_name</span>
+<span class="hl kwd">cat</span><span class="hl def">(</span><span class="hl sng">&quot;Number of repetitive protein_name:&quot;</span><span class="hl def">,</span> <span class="hl kwd">nrow</span><span class="hl def">(count_data),</span> <span class="hl sng">&quot;\n&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Number of repetitive protein_name: 8
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a horizontal bar chart</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(count_data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl kwd">reorder</span><span class="hl def">(Protein_name,</span> <span class="hl opt">-</span><span class="hl def">count),</span> <span class="hl kwc">y</span> <span class="hl def">= count))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;steelblue&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count of Repetitive protein_names&quot;</span><span class="hl def">,</span> <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;Protein_name&quot;</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">&quot;Count&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">= count),</span> <span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl num">0.5</span><span class="hl def">,</span> <span class="hl kwc">size</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">)</span> <span class="hl opt">+</span>  <span class="hl com"># Add text annotations +</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">text</span> <span class="hl def">=</span> <span class="hl kwd">element_text</span><span class="hl def">(</span><span class="hl kwc">size</span><span class="hl def">=</span><span class="hl num">20</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-1.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Find the row (Protein_name) with the highest absolute row sum across all columns for each repetitive Protein_name</span>
+<span class="hl def">protein_data_filtered</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">group_by</span><span class="hl def">(Protein_name)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">slice</span><span class="hl def">(</span><span class="hl kwd">which.max</span><span class="hl def">(</span><span class="hl kwd">abs</span><span class="hl def">(</span><span class="hl kwd">rowSums</span><span class="hl def">(</span><span class="hl kwd">across</span><span class="hl def">(</span><span class="hl kwd">starts_with</span><span class="hl def">(</span><span class="hl sng">&quot;b&quot;</span><span class="hl def">), is.numeric),</span> <span class="hl kwc">na.rm</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))))</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">ungroup</span><span class="hl def">()</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_filtered)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7801  613
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#################################################################################################################################################################</span>
+<span class="hl com">## INPUT data File Filtering - Remove proteins without given name (symbol)</span>
+<span class="hl com">## Used &quot;Protein_name as first column in the data file&quot;</span>
+
+<span class="hl com"># Filter rows where Protein_name is not 0</span>
+<span class="hl def">protein_data_filtered</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered[protein_data_filtered</span><span class="hl opt">$</span><span class="hl def">Protein_name</span> <span class="hl opt">!=</span> <span class="hl sng">&quot;0&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Print the number of IDs with protein_name</span>
+<span class="hl kwd">cat</span><span class="hl def">(</span><span class="hl sng">&quot;Number of IDs with protein_name:&quot;</span><span class="hl def">,</span> <span class="hl kwd">nrow</span><span class="hl def">(protein_data_filtered),</span> <span class="hl sng">&quot;\n&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Number of IDs with protein_name: 7800
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Remove the Uniprot_ID column</span>
+<span class="hl def">protein_data_filtered</span><span class="hl opt">$</span><span class="hl def">Uniprot_ID</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">NULL</span>
+
+<span class="hl com"># Replace the first column with Protein_name</span>
+<span class="hl com">#protein_data_filtered$X &lt;- protein_data_filtered$Protein_name</span>
+
+<span class="hl com"># Move Protein_name to the first column</span>
+<span class="hl def">protein_data_filtered</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered[,</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Protein_name&quot;</span><span class="hl def">,</span> <span class="hl kwd">setdiff</span><span class="hl def">(</span><span class="hl kwd">names</span><span class="hl def">(protein_data_filtered),</span> <span class="hl sng">&quot;Protein_name&quot;</span><span class="hl def">))]</span>
+
+<span class="hl com"># Remove the &quot;X&quot; column</span>
+<span class="hl def">protein_data_filtered</span><span class="hl opt">$</span><span class="hl def">X</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">NULL</span>
+
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_filtered)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800  611
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_filtered,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-1-2.png" alt="plot of chunk unnamed-chunk-1" class="plot" /></div></div>
+
+<p>Data Missingness</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+
+##Calculate the missingness for samples
+
+# Remove the  "Protein_name" column from the file
+protein_data_ROSMAP_sample_missingness <- protein_data_filtered[, -1]
+
+#write.table(protein_data_ROSMAP_new,"/Users/poddea/Desktop/protein_data_ROSMAP_new.txt",sep="\t",quote=T)
+
+# Transpose gene expression data to have samples as rows
+protein_data_ROSMAP_sample_missingness_t <- t(protein_data_ROSMAP_sample_missingness)
+
+dim(protein_data_ROSMAP_sample_missingness_t)
+
+# Calculate the number of NA values in each row
+na_counts_sample <- apply(protein_data_ROSMAP_sample_missingness_t, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_samples_with_na <- sum(na_counts_sample > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of sample with at least one NA value:", num_samples_with_na, "\n")
+
+# Create a barplot for the NA counts with adjusted margins
+barplot(na_counts_sample, main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_sample, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_sample[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+#########################################################################################################################################
+
+##Calculate the missingness for Protein
+
+# Remove the first row "Protein_name" from the file
+protein_data_ROSMAP_gene_missingness <- protein_data_filtered[-1, ]
+
+# Calculate the number of NA values in each row
+na_counts_genes <- apply(protein_data_ROSMAP_gene_missingness, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_genes_with_na <- sum(na_counts_genes > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of gene with at least one NA value:", num_genes_with_na, "\n")
+
+# Count the frequency of each unique NA value
+na_counts_freq <- table(na_counts_genes)
+
+#write.table(na_counts_freq,"/Users/poddea/Desktop/na_counts_freq.txt",sep="\t",quote=F)
+
+# Remove the entry for 0 NAs
+na_counts_freq <- na_counts_freq[names(na_counts_freq) != "0"]
+
+
+# Create the barplot and store the bar positions
+bar_positions <- barplot(na_counts_freq,
+                         main = "Frequency of Individual Counts per Protein",
+                         xlab = "Number of missing Protein",
+                         ylab = "Frequency of Individual with Missing Protein",
+                         col = "blue",
+                         las = 2,
+                         cex.names = 0.8)
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_freq, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_freq[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Frequency of Individual Counts per Protein",
+        xlab = "Number of missing Protein",
+        ylab = "Frequency of Individual with Missing Protein",
+        col = "blue",
+        las = 2,
+        cex.names = 0.8)
+
+
+end.rcode-->
+
+<p>PHASE 1 and 2 TMT PROTEOMICS MERGED: ROSMAP TMT-proteomics Metadata (samples description file) </p>
+
+<div class="chunk" id="unnamed-chunk-2"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(stringr)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(DT)</span>
+
+<span class="hl com"># Read the TMT metadata file for ROSMAP individuals</span>
+<span class="hl def">protein_metadata_ROSMAP</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/2c.traits-ROSMAP610.R1+R2-2xTAMPORcorrected.csv&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span> <span class="hl def">=</span><span class="hl sng">&quot;,&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span> <span class="hl kwc">stringsAsFactors</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com">#protein_metadata_ROSMAP &lt;- read.table(&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/ROSMAP_Covariates_ages_censored.tsv&quot;, sep =&quot;\t&quot;, header = TRUE, stringsAsFactors = FALSE)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_metadata_ROSMAP)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 610  41
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Define the catagory (diagnosis) based on the braaksc, CERAD and cogdx</span>
+<span class="hl com">#protein_metadata_ROSMAP$category &lt;- with(protein_metadata_ROSMAP, ifelse(braaksc &gt;= 4 &amp; ceradsc_RADCnonStd &lt;= 2 &amp; cogdx == 4, &quot;AD&quot;,</span>
+                               <span class="hl com">#ifelse(braaksc &lt;= 3 &amp; ceradsc_RADCnonStd &gt;= 3 &amp; cogdx == 1, &quot;CT&quot;, &quot;OTHER&quot;)))</span>
+
+
+<span class="hl com"># Define the category based on Braak, CERAD, and MMSE (cognitive status)</span>
+<span class="hl def">protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">category</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">with</span><span class="hl def">(protein_metadata_ROSMAP,</span>
+    <span class="hl kwd">ifelse</span><span class="hl def">((CERAD</span> <span class="hl opt">%in%</span> <span class="hl num">0</span><span class="hl opt">:</span><span class="hl num">1</span> <span class="hl opt">&amp;</span> <span class="hl def">braaksc</span> <span class="hl opt">%in%</span> <span class="hl num">0</span><span class="hl opt">:</span><span class="hl num">2</span> <span class="hl opt">&amp;</span> <span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&gt;=</span> <span class="hl num">24</span><span class="hl def">)</span> <span class="hl opt">|</span>
+           <span class="hl def">(CERAD</span> <span class="hl opt">==</span> <span class="hl num">0</span> <span class="hl opt">&amp;</span> <span class="hl def">braaksc</span> <span class="hl opt">==</span> <span class="hl num">3</span> <span class="hl opt">&amp;</span> <span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&gt;=</span> <span class="hl num">24</span><span class="hl def">),</span> <span class="hl sng">&quot;Control&quot;</span><span class="hl def">,</span>
+    <span class="hl kwd">ifelse</span><span class="hl def">(CERAD</span> <span class="hl opt">%in%</span> <span class="hl num">1</span><span class="hl opt">:</span><span class="hl num">3</span> <span class="hl opt">&amp;</span> <span class="hl def">braaksc</span> <span class="hl opt">%in%</span> <span class="hl num">3</span><span class="hl opt">:</span><span class="hl num">6</span> <span class="hl opt">&amp;</span> <span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&gt;=</span> <span class="hl num">24</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">,</span>
+    <span class="hl kwd">ifelse</span><span class="hl def">(CERAD</span> <span class="hl opt">%in%</span> <span class="hl num">2</span><span class="hl opt">:</span><span class="hl num">3</span> <span class="hl opt">&amp;</span> <span class="hl def">braaksc</span> <span class="hl opt">%in%</span> <span class="hl num">3</span><span class="hl opt">:</span><span class="hl num">6</span> <span class="hl opt">&amp;</span> <span class="hl def">cts_mmse30_lv</span> <span class="hl opt">&lt;</span> <span class="hl num">24</span><span class="hl def">,</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span><span class="hl def">))))</span>
+
+
+<span class="hl com"># Define the category based on Braak, CERAD, and MMSE (cognitive status)</span>
+<span class="hl com">#protein_metadata_ROSMAP$category &lt;- with(protein_metadata_ROSMAP, </span>
+    <span class="hl com">#ifelse((CERAD %in% 0:1 &amp; braaksc %in% 0:2 &amp; cts_mmse30_lv &gt;= 24) | </span>
+           <span class="hl com">#(CERAD == 0 &amp; braaksc == 3 &amp; cts_mmse30_lv &gt;= 24), &quot;Control&quot;,</span>
+    <span class="hl com">#ifelse(CERAD %in% 1:3 &amp; braaksc %in% 3:6 &amp; cts_mmse30_lv &gt;= 24, &quot;AsymAD&quot;,</span>
+    <span class="hl com">#ifelse(CERAD %in% 2:3 &amp; braaksc %in% 3:6 &amp; cts_mmse30_lv &lt; 24, &quot;AD&quot;, &quot;Exclude&quot;))))</span>
+
+
+<span class="hl com"># Define the sex_type (sex) based on the msex value</span>
+<span class="hl def">protein_metadata_ROSMAP</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">with</span><span class="hl def">(protein_metadata_ROSMAP,</span> <span class="hl kwd">ifelse</span><span class="hl def">(msex</span> <span class="hl opt">==</span> <span class="hl num">0</span><span class="hl def">,</span> <span class="hl sng">&quot;female&quot;</span><span class="hl def">,</span>
+                                <span class="hl kwd">ifelse</span><span class="hl def">(msex</span> <span class="hl opt">==</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;NA&quot;</span><span class="hl def">)))</span>
+
+<span class="hl kwd">write.table</span><span class="hl def">(protein_metadata_ROSMAP,</span><span class="hl sng">&quot;Protein_metadata_ROSMAP_catagory.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=F)</span>
+
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(protein_metadata_ROSMAP,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2" class="plot" /></div></div>
+# Comparison of Individuals by Diagnosis (category) and Sex
+count_protein_metadata <- protein_metadata_ROSMAP %>%
+group_by(category, sex) %>%
+summarise(count = n())
+
+ggplot(count_protein_metadata, aes(x = sex, y = count, fill = category)) +
+geom_bar(stat = "identity", position = "dodge") +
+labs(title = "Comparison of Individuals by Sex and Diagnosis") +
+xlab("Sex") +
+ylab("Individual Count") +
+scale_fill_manual(values = c("AD" = "purple", "AsymAD" = "blue",   "Control" = "lightgreen", "Exclude" = "gray47")) +
+geom_text(aes(label = count), position = position_dodge(width = 0.9), vjust = -0.5, size =10) +
+theme(text = element_text(size=20))
+
+#############################################################################################################################
+
+# Group the data by tissue, JohnsonDx, and sex
+count_protein_metadata_2 <- protein_metadata_ROSMAP %>%
+  group_by(tissue, category, sex) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create a grouped and stacked bar plot
+ggplot(count_protein_metadata_2, aes(x = category, y = count, fill = sex)) +
+  geom_bar(stat = "identity", position = "stack") +  # Stacked by sex within each JohnsonDx
+  facet_wrap(~ tissue) +  # Create separate plots for each tissue
+  labs(title = "Comparison of Individuals by Tissue with JohnsonDx Staged by Sex",
+       x = "JohnsonDx",
+       y = "Individual Count") +
+  scale_fill_manual(values = c("male" = "lightblue", "female" = "pink")) +  # Custom colors for sex
+  geom_text(aes(label = count), position = position_stack(vjust = 0.5), size = 10) +  # Add counts inside bars
+  theme_minimal() +
+  theme(text = element_text(size = 30),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 30))  # Rotate x-axis labels for readability
+
+#############################################################################################################################
+
+
+
+end.rcode-->
+
+<p>Removal of outlier samples </p>
+
+<div class="chunk" id="unnamed-chunk-3"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl com"># Read the outliers file</span>
+<span class="hl def">outliers</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.table</span><span class="hl def">(</span><span class="hl sng">&quot;/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/outliers.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">header</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span>
+
+<span class="hl com"># Extract the IDs to be removed</span>
+<span class="hl def">ids_to_remove</span> <span class="hl kwb">&lt;-</span> <span class="hl def">outliers</span><span class="hl opt">$</span><span class="hl def">Outliers</span>
+
+<span class="hl def">ids_to_remove</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] "b22.130N" "b52.130N" "b56.131C"
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Remove the specified columns from the TMT read count file</span>
+<span class="hl def">protein_data_filtered</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered[,</span> <span class="hl opt">!</span><span class="hl kwd">colnames</span><span class="hl def">(protein_data_filtered)</span> <span class="hl opt">%in%</span> <span class="hl def">ids_to_remove]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_filtered)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800  608
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Use the 'subset' function to remove rows with specified IDs (outliers) from the protein_metadata_ROSMAP</span>
+<span class="hl def">protein_metadata_ROSMAP</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">subset</span><span class="hl def">(protein_metadata_ROSMAP,</span> <span class="hl opt">!</span><span class="hl def">(batch.channel</span> <span class="hl opt">%in%</span> <span class="hl def">ids_to_remove))</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_metadata_ROSMAP)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 607  43
+</pre></div>
+</div></div>
+
+<p>Preparation of the input files (Tissue: DLPFC)</p>
+
+<div class="chunk" id="unnamed-chunk-4"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl com"># Get the list of proteins from the protein_data_filtered</span>
+<span class="hl def">Protein_name</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered</span><span class="hl opt">$</span><span class="hl def">Protein_name</span>
+
+<span class="hl com"># Get the list of samples from the protein_data_filtered</span>
+<span class="hl def">common_samples</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colnames</span><span class="hl def">(protein_data_filtered)</span>
+
+<span class="hl com"># Select a sub-set of the sample (Tissue: DLPFC) from protein_metadata_ROSMAP file</span>
+<span class="hl def">sample_data_DLPFC</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">filter</span><span class="hl def">(protein_metadata_ROSMAP, tissue</span> <span class="hl opt">==</span> <span class="hl sng">&quot;dorsolateral prefrontal cortex&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Create a subset of the DLPFC sample description file with control samples only</span>
+<span class="hl def">sample_data_DLPFC_contorl</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span><span class="hl def">, sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx), ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_contorl)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 114  43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the DLPFC sample description file with AD samples only</span>
+<span class="hl com">#sample_data_DLPFC_case &lt;- sample_data_DLPFC[grep(&quot;AD&quot;, sample_data_DLPFC$JohnsonDx), ]</span>
+<span class="hl def">sample_data_DLPFC_case</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_case)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 174  43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the DLPFC sample description file with AsymAD samples only</span>
+<span class="hl def">sample_data_DLPFC_AsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">, sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx), ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_AsymAD)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 220  43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Calculate the counts and percentages of each sex in control samples</span>
+<span class="hl def">sex_counts_control</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">table</span><span class="hl def">(sample_data_DLPFC_contorl</span><span class="hl opt">$</span><span class="hl def">sex)</span>
+<span class="hl def">sex_percentages_control</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">prop.table</span><span class="hl def">(sex_counts_control)</span> <span class="hl opt">*</span> <span class="hl num">100</span>
+
+<span class="hl com"># Create a pie chart to show the distribution of Male and Female ratio within the control samples</span>
+<span class="hl def">pie_data_control</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(</span><span class="hl kwc">sex</span> <span class="hl def">=</span> <span class="hl kwd">names</span><span class="hl def">(sex_counts_control),</span> <span class="hl kwc">count</span> <span class="hl def">=</span> <span class="hl kwd">as.numeric</span><span class="hl def">(sex_counts_control),</span> <span class="hl kwc">percentage</span> <span class="hl def">= sex_percentages_control)</span>
+
+<span class="hl def">P1</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">ggplot</span><span class="hl def">(pie_data_control,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">= count,</span> <span class="hl kwc">fill</span> <span class="hl def">= sex))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">coord_polar</span><span class="hl def">(</span><span class="hl sng">&quot;y&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">paste0</span><span class="hl def">(count,</span> <span class="hl sng">&quot; (&quot;</span><span class="hl def">,</span> <span class="hl kwd">round</span><span class="hl def">(sex_percentages_control,</span> <span class="hl num">1</span><span class="hl def">),</span> <span class="hl sng">&quot;%)&quot;</span><span class="hl def">)),</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_stack</span><span class="hl def">(</span><span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">))</span> <span class="hl opt">+</span>  <span class="hl com"># Add text labels with percentages</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Male and Female Distribution in DLPFC Control Samples&quot;</span><span class="hl def">,</span>
+       <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Sex&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Calculate the counts and percentages of each sex in AD samples</span>
+<span class="hl def">sex_counts_case</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">table</span><span class="hl def">(sample_data_DLPFC_case</span><span class="hl opt">$</span><span class="hl def">sex)</span>
+<span class="hl def">sex_percentages_case</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">prop.table</span><span class="hl def">(sex_counts_case)</span> <span class="hl opt">*</span> <span class="hl num">100</span>
+
+<span class="hl com"># Create a pie chart to show the distribution of Male and Female ratio within the AD samples</span>
+<span class="hl def">pie_data_case</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(</span><span class="hl kwc">sex</span> <span class="hl def">=</span> <span class="hl kwd">names</span><span class="hl def">(sex_counts_case),</span> <span class="hl kwc">count</span> <span class="hl def">=</span> <span class="hl kwd">as.numeric</span><span class="hl def">(sex_counts_case),</span> <span class="hl kwc">percentage</span> <span class="hl def">= sex_percentages_case)</span>
+
+<span class="hl def">P2</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">ggplot</span><span class="hl def">(pie_data_case,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">= count,</span> <span class="hl kwc">fill</span> <span class="hl def">= sex))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">coord_polar</span><span class="hl def">(</span><span class="hl sng">&quot;y&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">paste0</span><span class="hl def">(count,</span> <span class="hl sng">&quot; (&quot;</span><span class="hl def">,</span> <span class="hl kwd">round</span><span class="hl def">(sex_percentages_case,</span> <span class="hl num">1</span><span class="hl def">),</span> <span class="hl sng">&quot;%)&quot;</span><span class="hl def">)),</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_stack</span><span class="hl def">(</span><span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">))</span> <span class="hl opt">+</span>  <span class="hl com"># Add text labels with percentages</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Male and Female Distribution in DLPFC AD Samples&quot;</span><span class="hl def">,</span>
+       <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Sex&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Calculate the counts and percentages of each sex in AsymAD samples</span>
+<span class="hl def">sex_counts_AsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">table</span><span class="hl def">(sample_data_DLPFC_AsymAD</span><span class="hl opt">$</span><span class="hl def">sex)</span>
+<span class="hl def">sex_percentages_AsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">prop.table</span><span class="hl def">(sex_counts_AsymAD)</span> <span class="hl opt">*</span> <span class="hl num">100</span>
+
+<span class="hl com"># Create a pie chart to show the distribution of Male and Female ratio within the AsymAD samples</span>
+<span class="hl def">pie_data_AsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(</span><span class="hl kwc">sex</span> <span class="hl def">=</span> <span class="hl kwd">names</span><span class="hl def">(sex_counts_AsymAD),</span> <span class="hl kwc">count</span> <span class="hl def">=</span> <span class="hl kwd">as.numeric</span><span class="hl def">(sex_counts_AsymAD),</span> <span class="hl kwc">percentage</span> <span class="hl def">= sex_percentages_AsymAD)</span>
+
+<span class="hl def">P3</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">ggplot</span><span class="hl def">(pie_data_AsymAD,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">&quot;&quot;</span><span class="hl def">,</span> <span class="hl kwc">y</span> <span class="hl def">= count,</span> <span class="hl kwc">fill</span> <span class="hl def">= sex))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_bar</span><span class="hl def">(</span><span class="hl kwc">stat</span> <span class="hl def">=</span> <span class="hl sng">&quot;identity&quot;</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwc">color</span> <span class="hl def">=</span> <span class="hl sng">&quot;white&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">coord_polar</span><span class="hl def">(</span><span class="hl sng">&quot;y&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_text</span><span class="hl def">(</span><span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">label</span> <span class="hl def">=</span> <span class="hl kwd">paste0</span><span class="hl def">(count,</span> <span class="hl sng">&quot; (&quot;</span><span class="hl def">,</span> <span class="hl kwd">round</span><span class="hl def">(sex_percentages_AsymAD,</span> <span class="hl num">1</span><span class="hl def">),</span> <span class="hl sng">&quot;%)&quot;</span><span class="hl def">)),</span> <span class="hl kwc">position</span> <span class="hl def">=</span> <span class="hl kwd">position_stack</span><span class="hl def">(</span><span class="hl kwc">vjust</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">))</span> <span class="hl opt">+</span>  <span class="hl com"># Add text labels with percentages</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">&quot;Male and Female Distribution in DLPFC AsymAD Samples&quot;</span><span class="hl def">,</span>
+       <span class="hl kwc">fill</span> <span class="hl def">=</span> <span class="hl sng">&quot;Sex&quot;</span><span class="hl def">)</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme_minimal</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">theme</span><span class="hl def">(</span><span class="hl kwc">axis.text</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">axis.title</span> <span class="hl def">=</span> <span class="hl kwd">element_blank</span><span class="hl def">(),</span>
+        <span class="hl kwc">legend.position</span> <span class="hl def">=</span> <span class="hl sng">&quot;right&quot;</span><span class="hl def">)</span>
+
+<span class="hl kwd">library</span><span class="hl def">(patchwork)</span>
+
+<span class="hl def">P1</span> <span class="hl opt">|</span> <span class="hl def">P2</span> <span class="hl opt">|</span> <span class="hl def">P3</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4" class="plot" /></div></div>
+
+<p>Data Missingness calculation (DLPFC Sample Only) - exclude proteins with more than 50% missingness throughout the DLPFC Sample</p>
+
+<div class="chunk" id="unnamed-chunk-5"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(ComplexHeatmap)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning: package 'ComplexHeatmap' was built under R version 4.5.1
+</pre></div>
+<div class="message"><pre class="knitr r">## Loading required package: grid
+</pre></div>
+<div class="message"><pre class="knitr r">## ========================================
+## ComplexHeatmap version 2.24.1
+## Bioconductor page: http://bioconductor.org/packages/ComplexHeatmap/
+## Github page: https://github.com/jokergoo/ComplexHeatmap
+## Documentation: http://jokergoo.github.io/ComplexHeatmap-reference
+## 
+## If you use it in published research, please cite either one:
+## - Gu, Z. Complex Heatmap Visualization. iMeta 2022.
+## - Gu, Z. Complex heatmaps reveal patterns and correlations in multidimensional 
+##     genomic data. Bioinformatics 2016.
+## 
+## 
+## The new InteractiveComplexHeatmap package can directly export static 
+## complex heatmaps into an interactive Shiny app with zero effort. Have a try!
+## 
+## This message can be suppressed by:
+##   suppressPackageStartupMessages(library(ComplexHeatmap))
+## ========================================
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(circlize)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## ========================================
+## circlize version 0.4.16
+## CRAN page: https://cran.r-project.org/package=circlize
+## Github page: https://github.com/jokergoo/circlize
+## Documentation: https://jokergoo.github.io/circlize_book/book/
+## 
+## If you use it in published research, please cite:
+## Gu, Z. circlize implements and enhances circular visualization
+##   in R. Bioinformatics 2014.
+## 
+## This message can be suppressed by:
+##   suppressPackageStartupMessages(library(circlize))
+## ========================================
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(factoextra)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## Welcome! Want to learn more? See two factoextra-related books at https://goo.gl/ve3WBa
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(grid)</span>
+
+<span class="hl com">## Filter DLPFC samples from the data</span>
+
+<span class="hl com"># Select a sub-set of the sample (Tissue: DLPFC) from protein_metadata_ROSMAP file</span>
+<span class="hl def">sample_data_DLPFC</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">filter</span><span class="hl def">(protein_metadata_ROSMAP, tissue</span> <span class="hl opt">==</span> <span class="hl sng">&quot;dorsolateral prefrontal cortex&quot;</span><span class="hl def">)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 607  43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a list of DLPFC samples only</span>
+<span class="hl def">DLPFC_samples</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">batch.channel</span>
+
+<span class="hl com"># Create a subset of the protein abundant file with CT samples only</span>
+<span class="hl def">protein_data_DLPFC</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_filtered[,</span> <span class="hl kwd">intersect</span><span class="hl def">(common_samples, DLPFC_samples)]</span>
+
+<span class="hl def">protein_data_DLPFC</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, protein_data_DLPFC)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800  608
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Step 1: Calculate the percentage of missing values (NA) for each row</span>
+
+<span class="hl def">protein_data_DLPFC</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">rowwise</span><span class="hl def">()</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">mutate</span><span class="hl def">(</span><span class="hl kwc">missingness</span> <span class="hl def">=</span> <span class="hl kwd">sum</span><span class="hl def">(</span><span class="hl kwd">is.na</span><span class="hl def">(</span><span class="hl kwd">c_across</span><span class="hl def">(</span><span class="hl opt">-</span><span class="hl def">Protein_name)))</span> <span class="hl opt">/</span> <span class="hl def">(</span><span class="hl kwd">ncol</span><span class="hl def">(.)</span> <span class="hl opt">-</span> <span class="hl num">1</span><span class="hl def">)</span> <span class="hl opt">*</span> <span class="hl num">100</span><span class="hl def">)</span>
+
+<span class="hl com"># Step 2: Filter out rows with more than 50% missingness and store the excluded rows</span>
+<span class="hl def">excluded_protein_count</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(missingness</span> <span class="hl opt">&gt;</span> <span class="hl num">50</span><span class="hl def">)</span>
+
+<span class="hl kwd">cat</span><span class="hl def">(</span><span class="hl sng">&quot;Total number of Protein_name entries excluded due to more than 50% missing values:&quot;</span><span class="hl def">,</span> <span class="hl kwd">nrow</span><span class="hl def">(excluded_protein_count),</span> <span class="hl sng">&quot;\n&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Total number of Protein_name entries excluded due to more than 50% missing values: 0
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Step 3: Create the filtered dataset with valid rows</span>
+<span class="hl def">protein_data_DLPFC</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">filter</span><span class="hl def">(missingness</span> <span class="hl opt">&lt;=</span> <span class="hl num">50</span><span class="hl def">)</span> <span class="hl opt">%&gt;%</span>
+  <span class="hl kwd">select</span><span class="hl def">(</span><span class="hl opt">-</span><span class="hl def">missingness)</span>  <span class="hl com">#  remove the 'missingness' column from the data</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800  608
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">############################################################################################################################################################</span>
+<span class="hl com">##Calculate the missingness for samples</span>
+
+<span class="hl com"># Remove the  &quot;Protein_name&quot; column from the file</span>
+<span class="hl def">protein_data_DLPFC_missingness</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com">#write.table(protein_data_ROSMAP_new,&quot;/Users/poddea/Desktop/protein_data_ROSMAP_new.txt&quot;,sep=&quot;\t&quot;,quote=T)</span>
+
+<span class="hl com"># Transpose gene expression data to have samples as rows</span>
+<span class="hl def">protein_data_DLPFC_missingness_missingness_t</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">t</span><span class="hl def">(protein_data_DLPFC_missingness)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC_missingness_missingness_t)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1]  607 7800
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Calculate the number of NA values in each row</span>
+<span class="hl def">na_counts_sample</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">apply</span><span class="hl def">(protein_data_DLPFC_missingness_missingness_t,</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">x</span><span class="hl def">)</span> <span class="hl kwd">sum</span><span class="hl def">(</span><span class="hl kwd">is.na</span><span class="hl def">(x)))</span>
+
+<span class="hl com"># Count the number of rows with at least one NA value</span>
+<span class="hl def">num_samples_with_na</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sum</span><span class="hl def">(na_counts_sample</span> <span class="hl opt">&gt;</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Print the total number of rows with at least one NA value</span>
+<span class="hl kwd">cat</span><span class="hl def">(</span><span class="hl sng">&quot;Total number of sample with at least one NA value:&quot;</span><span class="hl def">, num_samples_with_na,</span> <span class="hl sng">&quot;\n&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Total number of sample with at least one NA value: 607
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a barplot for the NA counts with adjusted margins</span>
+<span class="hl kwd">barplot</span><span class="hl def">(na_counts_sample,</span> <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of missing values (protein abundance) in each individual&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">xlab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Sample IDs&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">ylab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of missing Proteins&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">las</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">,</span>
+        <span class="hl kwc">cex.names</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-5-1.png" alt="plot of chunk unnamed-chunk-5" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Sort the data based on the Y-axis values (na_counts_freq) in descending order</span>
+<span class="hl def">sorted_indices</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">order</span><span class="hl def">(na_counts_sample,</span> <span class="hl kwc">decreasing</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span>
+<span class="hl def">na_counts_freq_sorted</span> <span class="hl kwb">&lt;-</span> <span class="hl def">na_counts_sample[sorted_indices]</span>
+<span class="hl def">bar_positions_sorted</span> <span class="hl kwb">&lt;-</span> <span class="hl def">bar_positions[sorted_indices]</span>
+</pre></div>
+<div class="error"><pre class="knitr r">## Error: object 'bar_positions' not found
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create the barplot with the sorted data</span>
+<span class="hl kwd">barplot</span><span class="hl def">(na_counts_freq_sorted,</span>
+        <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of missing values (protein abundance) in each individual&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">xlab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Sample IDs&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">ylab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of missing Proteins&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">las</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">,</span>
+        <span class="hl kwc">cex.names</span> <span class="hl def">=</span> <span class="hl num">0.5</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-5-2.png" alt="plot of chunk unnamed-chunk-5" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">############################################################################################################################################################</span>
+
+<span class="hl com">##Calculate the missingness for Protein</span>
+
+<span class="hl com"># Remove the first row &quot;Protein_name&quot; from the file</span>
+<span class="hl def">protein_data_DLPFC_missingness</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[</span><span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Calculate the number of NA values in each row</span>
+<span class="hl def">na_counts_genes</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">apply</span><span class="hl def">(protein_data_DLPFC_missingness,</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">x</span><span class="hl def">)</span> <span class="hl kwd">sum</span><span class="hl def">(</span><span class="hl kwd">is.na</span><span class="hl def">(x)))</span>
+
+<span class="hl com"># Count the number of rows with at least one NA value</span>
+<span class="hl def">num_genes_with_na</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sum</span><span class="hl def">(na_counts_genes</span> <span class="hl opt">&gt;</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Print the total number of rows with at least one NA value</span>
+<span class="hl kwd">cat</span><span class="hl def">(</span><span class="hl sng">&quot;Total number of gene with at least one NA value:&quot;</span><span class="hl def">, num_genes_with_na,</span> <span class="hl sng">&quot;\n&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Total number of gene with at least one NA value: 2907
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Count the frequency of each unique NA value</span>
+<span class="hl def">na_counts_freq</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">table</span><span class="hl def">(na_counts_genes)</span>
+
+<span class="hl com">#write.table(na_counts_freq,&quot;/Users/poddea/Desktop/na_counts_freq.txt&quot;,sep=&quot;\t&quot;,quote=F)</span>
+
+<span class="hl com"># Remove the entry for 0 NAs</span>
+<span class="hl def">na_counts_freq</span> <span class="hl kwb">&lt;-</span> <span class="hl def">na_counts_freq[</span><span class="hl kwd">names</span><span class="hl def">(na_counts_freq)</span> <span class="hl opt">!=</span> <span class="hl sng">&quot;0&quot;</span><span class="hl def">]</span>
+
+
+<span class="hl com"># Create the barplot and store the bar positions</span>
+<span class="hl def">bar_positions</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">barplot</span><span class="hl def">(na_counts_freq,</span>
+                         <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Frequency of Individual Counts per Protein&quot;</span><span class="hl def">,</span>
+                         <span class="hl kwc">xlab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of missing Protein&quot;</span><span class="hl def">,</span>
+                         <span class="hl kwc">ylab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Frequency of Individual with Missing Protein&quot;</span><span class="hl def">,</span>
+                         <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span>
+                         <span class="hl kwc">las</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">,</span>
+                         <span class="hl kwc">cex.names</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-5-3.png" alt="plot of chunk unnamed-chunk-5" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Sort the data based on the Y-axis values (na_counts_freq) in descending order</span>
+<span class="hl def">sorted_indices</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">order</span><span class="hl def">(na_counts_freq,</span> <span class="hl kwc">decreasing</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">)</span>
+<span class="hl def">na_counts_freq_sorted</span> <span class="hl kwb">&lt;-</span> <span class="hl def">na_counts_freq[sorted_indices]</span>
+<span class="hl def">bar_positions_sorted</span> <span class="hl kwb">&lt;-</span> <span class="hl def">bar_positions[sorted_indices]</span>
+
+<span class="hl com"># Create the barplot with the sorted data</span>
+<span class="hl kwd">barplot</span><span class="hl def">(na_counts_freq_sorted,</span>
+        <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Frequency of Individual Counts per Protein&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">xlab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Number of missing Protein&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">ylab</span> <span class="hl def">=</span> <span class="hl sng">&quot;Frequency of Individual with Missing Protein&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">&quot;blue&quot;</span><span class="hl def">,</span>
+        <span class="hl kwc">las</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">,</span>
+        <span class="hl kwc">cex.names</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-5-4.png" alt="plot of chunk unnamed-chunk-5" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">############################################################################################################################################################</span>
+
+<span class="hl com">## Sample-to-Sample distance matrix</span>
+
+<span class="hl def">protein_data_DLPFC_new</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Transpose the protein abundant file to get sample_IDs in the rows</span>
+<span class="hl def">protein_data_DLPFC_t</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">t</span><span class="hl def">(protein_data_DLPFC_new)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC_t)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1]  607 7800
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Compute the Sample-to-Sample Distance Matrix using Euclidean distance</span>
+<span class="hl def">distance_matrix</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">dist</span><span class="hl def">(protein_data_DLPFC_t)</span>
+
+<span class="hl com"># Convert the distance matrix to a data frame</span>
+<span class="hl def">distance_df</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">as.data.frame</span><span class="hl def">(</span><span class="hl kwd">as.matrix</span><span class="hl def">(distance_matrix))</span>
+
+<span class="hl kwd">write.table</span><span class="hl def">(distance_df,</span><span class="hl sng">&quot;distance_matrix.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">TRUE</span><span class="hl def">)</span>
+
+<span class="hl kwd">max</span><span class="hl def">(distance_df)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 76.10121
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Preparing a column annotation file </span>
+<span class="hl def">col_ha</span> <span class="hl kwb">=</span> <span class="hl kwd">HeatmapAnnotation</span><span class="hl def">(</span>
+<span class="hl kwc">diagnosis</span> <span class="hl def">= sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx,</span>
+<span class="hl kwc">sex</span> <span class="hl def">= sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">sex,</span>
+<span class="hl kwc">annotation_height</span> <span class="hl def">=</span> <span class="hl kwd">unit</span><span class="hl def">(</span><span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">12</span><span class="hl def">,</span> <span class="hl num">12</span><span class="hl def">),</span> <span class="hl sng">&quot;cm&quot;</span><span class="hl def">),</span>
+<span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span>
+    <span class="hl kwc">diagnosis</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;AD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;purple&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Control&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightgreen&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;AsymAD&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;royalblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;Exclude&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;gray47&quot;</span><span class="hl def">),</span>
+    <span class="hl kwc">sex</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;male&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightblue&quot;</span><span class="hl def">,</span> <span class="hl sng">&quot;female&quot;</span> <span class="hl def">=</span> <span class="hl sng">&quot;lightpink&quot;</span><span class="hl def">)</span>
+  <span class="hl def">)</span>
+<span class="hl def">)</span>
+
+
+<span class="hl com"># Create the heatmap object</span>
+<span class="hl def">ht</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">Heatmap</span><span class="hl def">(</span>
+  <span class="hl kwd">as.matrix</span><span class="hl def">(distance_matrix),</span>
+  <span class="hl kwc">name</span> <span class="hl def">=</span> <span class="hl sng">&quot;Sample-to-Sample Distance Matrix for DLPFC Sample Only&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">top_annotation</span> <span class="hl def">= col_ha,</span>
+  <span class="hl kwc">row_names_gp</span> <span class="hl def">=</span>  <span class="hl kwd">gpar</span><span class="hl def">(</span><span class="hl kwc">fontsize</span> <span class="hl def">=</span> <span class="hl num">10</span><span class="hl def">),</span>  <span class="hl com"># Top 10 rows larger</span>
+  <span class="hl kwc">column_names_gp</span> <span class="hl def">=</span> <span class="hl kwd">gpar</span><span class="hl def">(</span><span class="hl kwc">fontsize</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">)</span>
+  <span class="hl def">)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## The automatically generated colors map from the 1^st and 99^th of the
+## values in the matrix. There are outliers in the matrix whose patterns
+## might be hidden by this color mapping. You can manually set the color
+## to `col` argument.
+## 
+## Use `suppressMessages()` to turn off this message.
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Draw the heatmap</span>
+<span class="hl kwd">draw</span><span class="hl def">(ht)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-5-5.png" alt="plot of chunk unnamed-chunk-5" class="plot" /></div></div>
+
+
+<p>Principal Component Analysis (DLPFC - Control Sample Only)</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(missMDA)
+
+
+## Filter CONTROL samples from the data
+
+# Create a subset of the DLPFC sample description file with control samples only
+sample_data_DLPFC_CT <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_CT)
+
+
+# Create a list of DLPFC control samples only
+DLPFC_CT_samples <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "Control"]
+
+# Create a subset of the protein abundant file with CT samples only
+protein_data_DLPFC_CT <- protein_data_DLPFC[, intersect(common_samples, DLPFC_CT_samples)]
+
+protein_data_DLPFC_CT <- cbind(Protein_name, protein_data_DLPFC_CT)
+
+dim(protein_data_DLPFC_CT)
+
+
+# Check for duplicates in the first column
+duplicate_genes <- duplicated(protein_data_DLPFC_CT[, 1])
+
+# Create a unique identifier for each row
+unique_ids <- make.unique(as.character(protein_data_DLPFC_CT[, 1]))
+
+# Set the unique identifiers as row names
+rownames(protein_data_DLPFC_CT) <- unique_ids
+
+# Assuming the first column is "Protein_name" and the rest are numeric
+numeric_data <- protein_data_DLPFC_CT[, -1]
+rownames(numeric_data) <- unique_ids
+
+# Impute missing values using PCA-based imputation
+imputed_data <- imputePCA(numeric_data, ncp = 2)$completeObs
+
+# Transpose the gene expression data to have samples as rows
+imputed_data <- t(imputed_data)
+
+# Perform PCA on the imputed data
+pca_result <- prcomp(imputed_data, scale. = TRUE)
+
+
+# Merge TPM data with sample description
+merged_data <- merge(
+data.frame(sampleID = rownames(imputed_data)),
+sample_data_DLPFC_CT,
+by.x = "sampleID",
+by.y = "batch.channel",
+all.x = TRUE
+)
+
+# Visualize the eigenvalues of PCA - percentage of variance explained by each principal component
+fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 85))
+
+# Check if the number of samples in the PCA result matches the number of rows in merged_data
+if (nrow(merged_data) != ncol(pca_result$x)) {
+     stop("Number of samples in merged_data and PCA result do not match.")
+ }
+
+# Create a data frame for plotting (including PC1 and PC2)
+plot_data <- data.frame(
+PC1 = pca_result$x[, 1],
+PC2 = pca_result$x[, 2],
+sampleID = rownames(pca_result$x),  # Use rownames of pca_result$x as sample IDs
+sex = merged_data$sex
+)
+
+# Create a biplot with colored samples based on sex status
+ggplot(plot_data, aes(x = PC1, y = PC2, color = sex, label = sampleID)) +
+     geom_point(size = 3) +
+     geom_text(hjust = 1, vjust = -1) +  # Adjust the position of labels
+     labs(title = "PCA Biplot: DLPFC - Control Sample Only", x = "Principal Component 1", y = "Principal Component 2") +
+     theme_minimal()
+
+
+end.rcode-->
+
+<p>Sample-Sample Distance Matrix (DLPFC - Control Sample Only)</p>
+
+#<!--begin.rcode fig.width=25, fig.height=25
+library(ggplot2)
+library(dplyr)
+library(ComplexHeatmap)
+library(circlize)
+library(factoextra)
+library(grid)
+## Sample-Sample Distance Matrix (DLPFC Sample Only)
+
+protein_data_DLPFC_CT_new <- protein_data_DLPFC_CT[, -1]
+
+# Transpose the protein abundant file to get sample_IDs in the rows
+protein_data_DLPFC_CT_t <- t(protein_data_DLPFC_CT_new)
+
+dim(protein_data_DLPFC_CT_t)
+
+# Compute the Sample-to-Sample Distance Matrix using Euclidean distance
+distance_matrix <- dist(protein_data_DLPFC_CT_t)
+
+# Convert the distance matrix to a data frame
+distance_df <- as.data.frame(as.matrix(distance_matrix))
+
+write.table(distance_df,"distance_matrix_CT.txt",sep="\t",quote=FALSE, row.names=TRUE)
+
+max(distance_df)
+
+
+# Preparing a column annotation file 
+col_ha = HeatmapAnnotation(
+sex = sample_data_DLPFC_CT$sex,
+col = list(
+    sex = c("male" = "lightblue", "female" = "lightpink")
+  )
+)
+
+
+# Create the heatmap object
+ht <- Heatmap(
+  as.matrix(distance_matrix),
+  name = "Sample-to-Sample Distance Matrix for DLPFC - CT Sample Only",
+  top_annotation = col_ha,
+  row_names_gp =  gpar(fontsize = 10),  # Top 10 rows larger
+  column_names_gp = gpar(fontsize = 10)
+  )
+
+
+# Draw the heatmap
+draw(ht)
+
+end.rcode-->
+
+<p>Separate Male and Female Sample Specific Files for Control, AD and AsymAD</p>
+
+<div class="chunk" id="unnamed-chunk-6"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(gplots)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'gplots'
+</pre></div>
+<div class="message"><pre class="knitr r">## The following object is masked from 'package:stats':
+## 
+##     lowess
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">## Filter CONTROL-FEMALE samples from the data</span>
+
+<span class="hl com"># Create a list of DLPFC control (female) samples only</span>
+<span class="hl def">DLPFC_CT_samples_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">batch.channel[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;Control&quot;</span> <span class="hl opt">&amp;</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;female&quot;</span><span class="hl def">]</span>
+
+<span class="hl com"># Create a subset of the protein abundant file with CT (female) samples only</span>
+<span class="hl def">protein_data_DLPFC_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[,</span> <span class="hl kwd">intersect</span><span class="hl def">(common_samples, DLPFC_CT_samples_female)]</span>
+
+<span class="hl def">protein_data_DLPFC_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, protein_data_DLPFC_CT_female)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC_CT_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800   69
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">write.table</span><span class="hl def">(protein_data_DLPFC_CT_female,</span><span class="hl sng">&quot;protein_data_DLPFC_CT_female.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_DLPFC_CT_female,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-6-1.png" alt="plot of chunk unnamed-chunk-6" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the description file with CT samples only</span>
+<span class="hl def">sample_data_DLPFC_CT</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span><span class="hl def">, sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx), ]</span>
+
+<span class="hl com"># Create a subset of the CT sample description file with female samples only</span>
+<span class="hl def">sample_data_DLPFC_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC_CT[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;female&quot;</span><span class="hl def">, sample_data_DLPFC_CT</span><span class="hl opt">$</span><span class="hl def">sex), ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_CT_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 68 43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Filter CONTROL-MALE samples from the data</span>
+
+<span class="hl com"># Create a list of DLPFC CT (male) samples only</span>
+<span class="hl def">DLPFC_CT_samples_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">batch.channel[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;Control&quot;</span> <span class="hl opt">&amp;</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">]</span>
+
+<span class="hl com"># Create a subset of the protein abundant file with CT (male) samples only</span>
+<span class="hl def">protein_data_DLPFC_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[,</span> <span class="hl kwd">intersect</span><span class="hl def">(common_samples, DLPFC_CT_samples_male)]</span>
+
+<span class="hl def">protein_data_DLPFC_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, protein_data_DLPFC_CT_male)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC_CT_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800   47
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">write.table</span><span class="hl def">(protein_data_DLPFC_CT_male,</span><span class="hl sng">&quot;protein_data_DLPFC_CT_male.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_DLPFC_CT_male,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-6-2.png" alt="plot of chunk unnamed-chunk-6" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the description file with CT samples only</span>
+<span class="hl def">sample_data_DLPFC_CT</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;Control&quot;</span><span class="hl def">, sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx), ]</span>
+
+<span class="hl com"># Create a subset of the CT sample description file with male samples only</span>
+<span class="hl def">sample_data_DLPFC_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC_CT[sample_data_DLPFC_CT</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_CT_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 46 43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Filter AD-FEMALE samples from the data</span>
+
+<span class="hl com"># Create a listof DLPFC AD (female) samples only</span>
+<span class="hl def">DLPFC_AD_samples_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">batch.channel[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AD&quot;</span> <span class="hl opt">&amp;</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;female&quot;</span><span class="hl def">]</span>
+
+<span class="hl com"># Create a subset of the protein abundant file with AD (female) samples only</span>
+<span class="hl def">protein_data_DLPFC_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[,</span> <span class="hl kwd">intersect</span><span class="hl def">(common_samples, DLPFC_AD_samples_female)]</span>
+
+<span class="hl def">protein_data_DLPFC_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, protein_data_DLPFC_AD_female)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC_AD_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800  128
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">write.table</span><span class="hl def">(protein_data_DLPFC_AD_female,</span><span class="hl sng">&quot;protein_data_DLPFC_AD_female.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_DLPFC_AD_female,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-6-3.png" alt="plot of chunk unnamed-chunk-6" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the description file with AD samples only</span>
+<span class="hl def">sample_data_DLPFC_AD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Create a subset of the AD sample description file with female samples only</span>
+<span class="hl def">sample_data_DLPFC_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC_AD[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;female&quot;</span><span class="hl def">, sample_data_DLPFC_AD</span><span class="hl opt">$</span><span class="hl def">sex), ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_AD_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 127  43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Filter AD-MALE samples from the data</span>
+
+<span class="hl com"># Create a listof DLPFC AD (male) samples only</span>
+<span class="hl def">DLPFC_AD_samples_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">batch.channel[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AD&quot;</span> <span class="hl opt">&amp;</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">]</span>
+
+<span class="hl com"># Create a subset of the protein abundant file with AD (male) samples only</span>
+<span class="hl def">protein_data_DLPFC_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[,</span> <span class="hl kwd">intersect</span><span class="hl def">(common_samples, DLPFC_AD_samples_male)]</span>
+
+<span class="hl def">protein_data_DLPFC_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, protein_data_DLPFC_AD_male)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC_AD_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800   48
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">write.table</span><span class="hl def">(protein_data_DLPFC_AD_male,</span><span class="hl sng">&quot;protein_data_DLPFC_AD_male.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_DLPFC_AD_male,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-6-4.png" alt="plot of chunk unnamed-chunk-6" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the description file with AD samples only</span>
+<span class="hl def">sample_data_DLPFC_AD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AD&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Create a subset of the AD sample description file with male samples only</span>
+<span class="hl def">sample_data_DLPFC_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC_AD[sample_data_DLPFC_AD</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_AD_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 47 43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Filter AsymAD-FEMALE samples from the data</span>
+
+<span class="hl com"># Create a listof DLPFC AsymAD (female) samples only</span>
+<span class="hl def">DLPFC_AsymAD_samples_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">batch.channel[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AsymAD&quot;</span> <span class="hl opt">&amp;</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;female&quot;</span><span class="hl def">]</span>
+
+<span class="hl com"># Create a subset of the protein abundant file with AsymAD (female) samples only</span>
+<span class="hl def">protein_data_DLPFC_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[,</span> <span class="hl kwd">intersect</span><span class="hl def">(common_samples, DLPFC_AsymAD_samples_female)]</span>
+
+<span class="hl def">protein_data_DLPFC_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, protein_data_DLPFC_AsymAD_female)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC_AsymAD_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800  160
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">write.table</span><span class="hl def">(protein_data_DLPFC_AsymAD_female,</span><span class="hl sng">&quot;protein_data_DLPFC_AsymAD_female.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_DLPFC_AsymAD_female,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-6-5.png" alt="plot of chunk unnamed-chunk-6" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the description file with AsymAD samples only</span>
+<span class="hl def">sample_data_DLPFC_AsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Create a subset of the AsymAD sample description file with female samples only</span>
+<span class="hl def">sample_data_DLPFC_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC_AsymAD[</span><span class="hl kwd">grep</span><span class="hl def">(</span><span class="hl sng">&quot;female&quot;</span><span class="hl def">, sample_data_DLPFC_AsymAD</span><span class="hl opt">$</span><span class="hl def">sex), ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_AsymAD_female)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 159  43
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Filter AsymAD-MALE samples from the data</span>
+
+<span class="hl com"># Create a listof DLPFC AsymAD (male) samples only</span>
+<span class="hl def">DLPFC_AsymAD_samples_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">batch.channel[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AsymAD&quot;</span> <span class="hl opt">&amp;</span> <span class="hl def">sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">]</span>
+
+<span class="hl com"># Create a subset of the protein abundant file with AsymAD (male) samples only</span>
+<span class="hl def">protein_data_DLPFC_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC[,</span> <span class="hl kwd">intersect</span><span class="hl def">(common_samples, DLPFC_AsymAD_samples_male)]</span>
+
+<span class="hl def">protein_data_DLPFC_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, protein_data_DLPFC_AsymAD_male)</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(protein_data_DLPFC_AsymAD_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 7800   62
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">write.table</span><span class="hl def">(protein_data_DLPFC_AsymAD_male,</span><span class="hl sng">&quot;protein_data_DLPFC_AsymAD_male.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_DLPFC_AsymAD_male,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-6-6.png" alt="plot of chunk unnamed-chunk-6" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Create a subset of the description file with AsymAD samples only</span>
+<span class="hl def">sample_data_DLPFC_AsymAD</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC[sample_data_DLPFC</span><span class="hl opt">$</span><span class="hl def">JohnsonDx</span> <span class="hl opt">==</span> <span class="hl sng">&quot;AsymAD&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl com"># Create a subset of the AsymAD sample description file with male samples only</span>
+<span class="hl def">sample_data_DLPFC_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">sample_data_DLPFC_AsymAD[sample_data_DLPFC_AsymAD</span><span class="hl opt">$</span><span class="hl def">sex</span> <span class="hl opt">==</span> <span class="hl sng">&quot;male&quot;</span><span class="hl def">, ]</span>
+
+<span class="hl kwd">dim</span><span class="hl def">(sample_data_DLPFC_AsymAD_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 61 43
+</pre></div>
+</div></div>
+
+<p>Calculating AD and AsymAD Samples Specific Z-score by Averaging the Control Gruop</p>
+
+<div class="chunk" id="unnamed-chunk-7"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(RColorBrewer)</span>
+<span class="hl kwd">library</span><span class="hl def">(scales)</span>
+<span class="hl kwd">library</span><span class="hl def">(gplots)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+
+<span class="hl com">## Function to calculate MEAN and SD for each gene within the Control Female samples</span>
+
+<span class="hl com"># Calculation of MEAN for each row</span>
+<span class="hl def">protein_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">MEAN</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rowMeans</span><span class="hl def">(protein_data_DLPFC_CT_female[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">],</span> <span class="hl kwc">na.rm</span><span class="hl def">=T)</span>
+
+<span class="hl com"># Calculation of SD for each row</span>
+<span class="hl def">protein_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">SD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">apply</span><span class="hl def">( protein_data_DLPFC_CT_female[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">],</span> <span class="hl num">1</span><span class="hl def">, sd,</span> <span class="hl kwc">na.rm</span><span class="hl def">=</span><span class="hl num">TRUE</span><span class="hl def">)</span>
+
+<span class="hl com">#write.table(protein_data_DLPFC_CT_female,&quot;protein_data_DLPFC_CT_female.txt&quot;,sep=&quot;\t&quot;,quote=FALSE, row.names=FALSE)</span>
+
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_DLPFC_CT_female,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-1.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Plot the distribution of MEAN and SD for all the genes throughout the control female samples</span>
+<span class="hl com">#ggplot(protein_data_DLPFC_CT_female, aes(x = Protein_name, y = MEAN)) +</span>
+  <span class="hl com">#geom_boxplot(aes(group = Protein_name),</span>
+               <span class="hl com">#position = position_dodge(0.8),</span>
+               <span class="hl com">#outlier.shape = NA) +</span>
+  <span class="hl com">#ggtitle(&quot;Distribution of expression statistics of the proteins in control samples (female)&quot;) +</span>
+  <span class="hl com">#theme(axis.text.x = element_text(angle = 45, hjust = 1))</span>
+
+
+<span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Function to calculate MEAN and SD for each gene within the Control male samples</span>
+
+<span class="hl com"># Calculation of MEAN for each row</span>
+<span class="hl def">protein_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">MEAN</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rowMeans</span><span class="hl def">(protein_data_DLPFC_CT_male[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">],</span> <span class="hl kwc">na.rm</span><span class="hl def">=T)</span>
+
+<span class="hl com"># Calculation of SD for each row</span>
+<span class="hl def">protein_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">SD</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">apply</span><span class="hl def">( protein_data_DLPFC_CT_male[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">],</span> <span class="hl num">1</span><span class="hl def">, sd,</span> <span class="hl kwc">na.rm</span><span class="hl def">=</span><span class="hl num">TRUE</span><span class="hl def">)</span>
+
+<span class="hl com">#write.table(protein_data_DLPFC_CT_male,&quot;protein_data_DLPFC_CT_male.txt&quot;,sep=&quot;\t&quot;,quote=FALSE, row.names=FALSE)</span>
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(protein_data_DLPFC_CT_male,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-2.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Plot the distribution of MEAN and SD for all the genes throughout the control male samples</span>
+<span class="hl com">#ggplot(protein_data_DLPFC_CT_male, aes(x = Protein_name, y = MEAN)) +</span>
+  <span class="hl com">#geom_boxplot(aes(group = Protein_name),</span>
+               <span class="hl com">#position = position_dodge(0.8),</span>
+               <span class="hl com">#outlier.shape = NA) +</span>
+  <span class="hl com">#ggtitle(&quot;Distribution of expression statistics of the proteins in control samples (male)&quot;) +</span>
+  <span class="hl com">#theme(axis.text.x = element_text(angle = 45, hjust = 1))</span>
+
+
+<span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AD female sample</span>
+
+<span class="hl com"># Function define to calculate the Z statistics</span>
+<span class="hl def">z_stat</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">row</span><span class="hl def">,</span> <span class="hl kwc">mean_val</span><span class="hl def">,</span> <span class="hl kwc">sd_val</span><span class="hl def">) {</span>
+  <span class="hl def">(row</span> <span class="hl opt">-</span> <span class="hl def">mean_val)</span> <span class="hl opt">/</span> <span class="hl def">sd_val</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Select the AD columns for calculation</span>
+<span class="hl def">selected_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC_AD_female[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Calculate the Z statistics for each row using sweep</span>
+<span class="hl def">z_stat_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sweep</span><span class="hl def">(selected_AD_female,</span> <span class="hl num">1</span><span class="hl def">, protein_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">MEAN,</span> <span class="hl kwc">FUN</span> <span class="hl def">=</span> <span class="hl sng">&quot;-&quot;</span><span class="hl def">)</span>
+
+<span class="hl def">z_stat_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sweep</span><span class="hl def">(z_stat_AD_female,</span> <span class="hl num">1</span><span class="hl def">, protein_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">SD,</span> <span class="hl kwc">FUN</span> <span class="hl def">=</span> <span class="hl sng">&quot;/&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Create a new data frame with the results</span>
+<span class="hl def">z_stat_result_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(z_stat_AD_female)</span>
+
+<span class="hl com"># Rename the columns of the result data frame</span>
+<span class="hl kwd">colnames</span><span class="hl def">(z_stat_result_AD_female)</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">colnames</span><span class="hl def">(selected_AD_female),</span> <span class="hl sng">&quot;_Zscore&quot;</span><span class="hl def">)</span>
+
+<span class="hl com">#Combine the Protein_name with the Z statistics result</span>
+<span class="hl def">z_stat_result_plot_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, z_stat_result_AD_female)</span>
+
+<span class="hl com"># Combine the original AD data frame with the Z statistics result data frame</span>
+<span class="hl com">#z_stat_result_table_female &lt;- cbind(AD_female, z_stat_result_female)</span>
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(z_stat_result_plot_AD_female,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-3.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Print the Z statistics result final table</span>
+<span class="hl kwd">write.table</span><span class="hl def">(z_stat_result_plot_AD_female,</span><span class="hl sng">&quot;z_stat_result_AD_female.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com"># Remove the header from the file</span>
+<span class="hl def">z_stat_result_matrix_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">z_stat_result_plot_AD_female[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Replace NA, NaN, or Inf values with 0</span>
+<span class="hl def">cleaned_matrix_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">replace</span><span class="hl def">(z_stat_result_matrix_AD_female,</span> <span class="hl kwd">is.na</span><span class="hl def">(z_stat_result_matrix_AD_female),</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Set up the color scale using RColorBrewer</span>
+<span class="hl def">color_scale</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdYlGn&quot;</span><span class="hl def">))</span>
+
+<span class="hl com"># Plot the heatmap</span>
+
+<span class="hl def">out_zscore_AD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+  <span class="hl kwd">as.matrix</span><span class="hl def">(cleaned_matrix_AD_female),</span>
+  <span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">col</span> <span class="hl def">= color_scale,</span>
+  <span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl num">20</span><span class="hl def">),</span>
+  <span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">,</span>
+  <span class="hl kwc">labCol</span> <span class="hl def">= sample_data_DLPFC_AD_female</span><span class="hl opt">$</span><span class="hl def">batch.channel,</span>
+  <span class="hl kwc">labRow</span> <span class="hl def">= z_stat_result_plot_AD_female</span><span class="hl opt">$</span><span class="hl def">Protein_name,</span>
+  <span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;both&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Protein-wise distributions of Z statistics throughout the AD cases (female)&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-4.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AD male sample</span>
+
+<span class="hl com"># Function define to calculate the Z statistics</span>
+<span class="hl def">z_stat</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">row</span><span class="hl def">,</span> <span class="hl kwc">mean_val</span><span class="hl def">,</span> <span class="hl kwc">sd_val</span><span class="hl def">) {</span>
+  <span class="hl def">(row</span> <span class="hl opt">-</span> <span class="hl def">mean_val)</span> <span class="hl opt">/</span> <span class="hl def">sd_val</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Select the AD columns for calculation</span>
+<span class="hl def">selected_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC_AD_male[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Calculate the Z statistics for each row using sweep</span>
+<span class="hl def">z_stat_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sweep</span><span class="hl def">(selected_AD_male,</span> <span class="hl num">1</span><span class="hl def">, protein_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">MEAN,</span> <span class="hl kwc">FUN</span> <span class="hl def">=</span> <span class="hl sng">&quot;-&quot;</span><span class="hl def">)</span>
+
+<span class="hl def">z_stat_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sweep</span><span class="hl def">(z_stat_AD_male,</span> <span class="hl num">1</span><span class="hl def">, protein_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">SD,</span> <span class="hl kwc">FUN</span> <span class="hl def">=</span> <span class="hl sng">&quot;/&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Create a new data frame with the results</span>
+<span class="hl def">z_stat_result_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(z_stat_AD_male)</span>
+
+<span class="hl com"># Rename the columns of the result data frame</span>
+<span class="hl kwd">colnames</span><span class="hl def">(z_stat_result_AD_male)</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">colnames</span><span class="hl def">(selected_AD_male),</span> <span class="hl sng">&quot;_Zscore&quot;</span><span class="hl def">)</span>
+
+<span class="hl com">#Combine the Protein_name with the Z statistics result</span>
+
+<span class="hl def">z_stat_result_plot_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, z_stat_result_AD_male)</span>
+
+<span class="hl com"># Combine the original AD data frame with the Z statistics result data frame</span>
+<span class="hl com">#z_stat_result_table_male &lt;- cbind(AD_male, z_stat_result_male)</span>
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(z_stat_result_plot_AD_male,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-5.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Print the Z statistics result final table</span>
+<span class="hl kwd">write.table</span><span class="hl def">(z_stat_result_plot_AD_male,</span><span class="hl sng">&quot;z_stat_result_AD_male.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com"># Remove the header from the file</span>
+<span class="hl def">z_stat_result_matrix_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">z_stat_result_plot_AD_male[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Replace NA, NaN, or Inf values with 0</span>
+<span class="hl def">cleaned_matrix_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">replace</span><span class="hl def">(z_stat_result_matrix_AD_male,</span> <span class="hl kwd">is.na</span><span class="hl def">(z_stat_result_matrix_AD_male),</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Set up the color scale using RColorBrewer</span>
+<span class="hl def">color_scale</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdYlGn&quot;</span><span class="hl def">))</span>
+
+<span class="hl com"># Plot the heatmap</span>
+
+<span class="hl def">out_zscore_AD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+  <span class="hl kwd">as.matrix</span><span class="hl def">(cleaned_matrix_AD_male),</span>
+  <span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">col</span> <span class="hl def">= color_scale,</span>
+  <span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl num">20</span><span class="hl def">),</span>
+  <span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">,</span>
+  <span class="hl kwc">labCol</span> <span class="hl def">= sample_data_DLPFC_AD_male</span><span class="hl opt">$</span><span class="hl def">batch.channel,</span>
+  <span class="hl kwc">labRow</span> <span class="hl def">= z_stat_result_plot_AD_male</span><span class="hl opt">$</span><span class="hl def">Protein_name,</span>
+  <span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;both&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Protein-wise distributions of Z statistics throughout the AD cases (male)&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-6.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AsymAD female sample</span>
+
+<span class="hl com"># Function define to calculate the Z statistics</span>
+<span class="hl def">z_stat</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">row</span><span class="hl def">,</span> <span class="hl kwc">mean_val</span><span class="hl def">,</span> <span class="hl kwc">sd_val</span><span class="hl def">) {</span>
+  <span class="hl def">(row</span> <span class="hl opt">-</span> <span class="hl def">mean_val)</span> <span class="hl opt">/</span> <span class="hl def">sd_val</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Select the AsymAD columns for calculation</span>
+<span class="hl def">selected_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC_AsymAD_female[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Calculate the Z statistics for each row using sweep</span>
+<span class="hl def">z_stat_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sweep</span><span class="hl def">(selected_AsymAD_female,</span> <span class="hl num">1</span><span class="hl def">, protein_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">MEAN,</span> <span class="hl kwc">FUN</span> <span class="hl def">=</span> <span class="hl sng">&quot;-&quot;</span><span class="hl def">)</span>
+
+<span class="hl def">z_stat_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sweep</span><span class="hl def">(z_stat_AsymAD_female,</span> <span class="hl num">1</span><span class="hl def">, protein_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">SD,</span> <span class="hl kwc">FUN</span> <span class="hl def">=</span> <span class="hl sng">&quot;/&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Create a new data frame with the results</span>
+<span class="hl def">z_stat_result_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(z_stat_AsymAD_female)</span>
+
+<span class="hl com"># Rename the columns of the result data frame</span>
+<span class="hl kwd">colnames</span><span class="hl def">(z_stat_result_AsymAD_female)</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">colnames</span><span class="hl def">(selected_AsymAD_female),</span> <span class="hl sng">&quot;_Zscore&quot;</span><span class="hl def">)</span>
+
+<span class="hl com">#Combine the Protein_name with the Z statistics result</span>
+
+<span class="hl def">z_stat_result_plot_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, z_stat_result_AsymAD_female)</span>
+
+<span class="hl com"># Combine the original AsymAD data frame with the Z statistics result data frame</span>
+<span class="hl com">#z_stat_result_table_female &lt;- cbind(AsymAD_female, z_stat_result_female)</span>
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(z_stat_result_plot_AsymAD_female,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-7.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Print the Z statistics result final table</span>
+<span class="hl kwd">write.table</span><span class="hl def">(z_stat_result_plot_AsymAD_female,</span><span class="hl sng">&quot;z_stat_result_AsymAD_female.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com"># Remove the header from the file</span>
+<span class="hl def">z_stat_result_matrix_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">z_stat_result_plot_AsymAD_female[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Replace NA, NaN, or Inf values with 0</span>
+<span class="hl def">cleaned_matrix_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">replace</span><span class="hl def">(z_stat_result_matrix_AsymAD_female,</span> <span class="hl kwd">is.na</span><span class="hl def">(z_stat_result_matrix_AsymAD_female),</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Set up the color scale using RColorBrewer</span>
+<span class="hl def">color_scale</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdYlGn&quot;</span><span class="hl def">))</span>
+
+<span class="hl com"># Plot the heatmap</span>
+
+<span class="hl def">out_zscore_AsymAD_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+  <span class="hl kwd">as.matrix</span><span class="hl def">(cleaned_matrix_AsymAD_female),</span>
+  <span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">col</span> <span class="hl def">= color_scale,</span>
+  <span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl num">20</span><span class="hl def">),</span>
+  <span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">,</span>
+  <span class="hl kwc">labCol</span> <span class="hl def">= sample_data_DLPFC_AsymAD_female</span><span class="hl opt">$</span><span class="hl def">batch.channel,</span>
+  <span class="hl kwc">labRow</span> <span class="hl def">= z_stat_result_plot_AsymAD_female</span><span class="hl opt">$</span><span class="hl def">Protein_name,</span>
+  <span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;both&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Protein-wise distributions of Z statistics throughout the AsymAD cases (female)&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-8.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+<span class="hl com">## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AsymAD male sample</span>
+
+<span class="hl com"># Function define to calculate the Z statistics</span>
+<span class="hl def">z_stat</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">row</span><span class="hl def">,</span> <span class="hl kwc">mean_val</span><span class="hl def">,</span> <span class="hl kwc">sd_val</span><span class="hl def">) {</span>
+  <span class="hl def">(row</span> <span class="hl opt">-</span> <span class="hl def">mean_val)</span> <span class="hl opt">/</span> <span class="hl def">sd_val</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Select the AsymAD columns for calculation</span>
+<span class="hl def">selected_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC_AsymAD_male[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Calculate the Z statistics for each row using sweep</span>
+<span class="hl def">z_stat_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sweep</span><span class="hl def">(selected_AsymAD_male,</span> <span class="hl num">1</span><span class="hl def">, protein_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">MEAN,</span> <span class="hl kwc">FUN</span> <span class="hl def">=</span> <span class="hl sng">&quot;-&quot;</span><span class="hl def">)</span>
+
+<span class="hl def">z_stat_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sweep</span><span class="hl def">(z_stat_AsymAD_male,</span> <span class="hl num">1</span><span class="hl def">, protein_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">SD,</span> <span class="hl kwc">FUN</span> <span class="hl def">=</span> <span class="hl sng">&quot;/&quot;</span><span class="hl def">)</span>
+
+<span class="hl com"># Create a new data frame with the results</span>
+<span class="hl def">z_stat_result_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(z_stat_AsymAD_male)</span>
+
+<span class="hl com"># Rename the columns of the result data frame</span>
+<span class="hl kwd">colnames</span><span class="hl def">(z_stat_result_AsymAD_male)</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">paste0</span><span class="hl def">(</span><span class="hl kwd">colnames</span><span class="hl def">(selected_AsymAD_male),</span> <span class="hl sng">&quot;_Zscore&quot;</span><span class="hl def">)</span>
+
+<span class="hl com">#Combine the Protein_name with the Z statistics result</span>
+
+<span class="hl def">z_stat_result_plot_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">cbind</span><span class="hl def">(Protein_name, z_stat_result_AsymAD_male)</span>
+
+<span class="hl com"># Combine the original AsymAD data frame with the Z statistics result data frame</span>
+<span class="hl com">#z_stat_result_table_male &lt;- cbind(AsymAD_male, z_stat_result_male)</span>
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(z_stat_result_plot_AsymAD_male,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-9.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Print the Z statistics result final table</span>
+<span class="hl kwd">write.table</span><span class="hl def">(z_stat_result_plot_AsymAD_male,</span><span class="hl sng">&quot;z_stat_result_AsymAD_male.txt&quot;</span><span class="hl def">,</span><span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span><span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com"># Remove the header from the file</span>
+<span class="hl def">z_stat_result_matrix_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">z_stat_result_plot_AsymAD_male[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Replace NA, NaN, or Inf values with 0</span>
+<span class="hl def">cleaned_matrix_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">replace</span><span class="hl def">(z_stat_result_matrix_AsymAD_male,</span> <span class="hl kwd">is.na</span><span class="hl def">(z_stat_result_matrix_AsymAD_male),</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Set up the color scale using RColorBrewer</span>
+<span class="hl def">color_scale</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdYlGn&quot;</span><span class="hl def">))</span>
+
+<span class="hl com"># Plot the heatmap</span>
+
+<span class="hl def">out_zscore_AsymAD_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+  <span class="hl kwd">as.matrix</span><span class="hl def">(cleaned_matrix_AsymAD_male),</span>
+  <span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">col</span> <span class="hl def">= color_scale,</span>
+  <span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl num">20</span><span class="hl def">),</span>
+  <span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">,</span>
+  <span class="hl kwc">labCol</span> <span class="hl def">= sample_data_DLPFC_AsymAD_male</span><span class="hl opt">$</span><span class="hl def">batch.channel,</span>
+  <span class="hl kwc">labRow</span> <span class="hl def">= z_stat_result_plot_AsymAD_male</span><span class="hl opt">$</span><span class="hl def">Protein_name,</span>
+  <span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;both&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Protein-wise distributions of Z statistics throughout the AsymAD cases (male)&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-7-10.png" alt="plot of chunk unnamed-chunk-7" class="plot" /></div></div>
+
+<p>Calculating Z score for Control Samples using Leave-one-out Method</p>
+
+<div class="chunk" id="unnamed-chunk-8"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(RColorBrewer)</span>
+<span class="hl kwd">library</span><span class="hl def">(scales)</span>
+<span class="hl kwd">library</span><span class="hl def">(gplots)</span>
+<span class="hl kwd">library</span><span class="hl def">(dplyr)</span>
+<span class="hl kwd">library</span><span class="hl def">(tidyr)</span>
+
+<span class="hl com">## Function to calculate the Z-statistics for Indivual control samples (Female only)</span>
+
+<span class="hl com"># Define a function to calculate z-score</span>
+<span class="hl def">calculate_zscore</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">one_sample_data</span><span class="hl def">,</span> <span class="hl kwc">rest_data</span><span class="hl def">) {</span>
+  <span class="hl com"># Calculate mean and standard deviation for each row (gene) in rest_data</span>
+  <span class="hl def">rest_data_mean</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rowMeans</span><span class="hl def">(rest_data,</span> <span class="hl kwc">na.rm</span><span class="hl def">=T)</span>
+  <span class="hl def">rest_data_sd</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">apply</span><span class="hl def">(rest_data,</span> <span class="hl num">1</span><span class="hl def">, sd,</span> <span class="hl kwc">na.rm</span><span class="hl def">=</span><span class="hl num">TRUE</span><span class="hl def">)</span>
+
+  <span class="hl com"># Calculate z-score for each gene in gene_data</span>
+  <span class="hl def">zscore</span> <span class="hl kwb">&lt;-</span> <span class="hl def">(one_sample_data</span> <span class="hl opt">-</span> <span class="hl def">rest_data_mean)</span> <span class="hl opt">/</span> <span class="hl def">rest_data_sd</span>
+
+  <span class="hl kwd">return</span><span class="hl def">(zscore)</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Remove the MEAN and SD columns from protein_data_DLPFC_CT_female file</span>
+<span class="hl def">protein_data_DLPFC_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">subset</span><span class="hl def">(protein_data_DLPFC_CT_female,</span> <span class="hl kwc">select</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl kwd">c</span><span class="hl def">(MEAN, SD))</span>
+
+<span class="hl com"># Create an empty data frame to store the z-scored data</span>
+<span class="hl def">zscored_protein_data_DLPFC_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(</span><span class="hl kwc">Protein_name</span> <span class="hl def">= protein_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">Protein_name)</span>
+
+<span class="hl com"># Iterate through each column in the original data</span>
+<span class="hl kwa">for</span> <span class="hl def">(col</span> <span class="hl kwa">in</span> <span class="hl kwd">colnames</span><span class="hl def">(protein_data_DLPFC_CT_female)[</span><span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]) {</span>
+  <span class="hl com"># Split data into two data frames: one with current column and another with the rest</span>
+  <span class="hl def">protein_data_DLPFC_CT_female_one_sample</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC_CT_female[,</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Protein_name&quot;</span><span class="hl def">, col)]</span>
+  <span class="hl def">protein_data_DLPFC_CT_female_rest</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC_CT_female[,</span> <span class="hl opt">-</span><span class="hl kwd">which</span><span class="hl def">(</span><span class="hl kwd">names</span><span class="hl def">(protein_data_DLPFC_CT_female)</span> <span class="hl opt">==</span> <span class="hl def">col)]</span>
+
+  <span class="hl com"># Calculate z-score for current column</span>
+  <span class="hl def">zscore</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">calculate_zscore</span><span class="hl def">(protein_data_DLPFC_CT_female_one_sample[,</span> <span class="hl num">2</span><span class="hl def">], protein_data_DLPFC_CT_female_rest[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">])</span>
+
+  <span class="hl com"># Add z-score as a new column to zscored_data</span>
+  <span class="hl def">zscored_protein_data_DLPFC_CT_female[</span><span class="hl kwd">paste0</span><span class="hl def">(col,</span> <span class="hl sng">&quot;_Zscore&quot;</span><span class="hl def">)]</span> <span class="hl kwb">&lt;-</span> <span class="hl def">zscore</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Write the z-scored data to a text file</span>
+<span class="hl kwd">write.table</span><span class="hl def">(zscored_protein_data_DLPFC_CT_female,</span> <span class="hl sng">&quot;z_stat_result_CT_female.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span> <span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(zscored_protein_data_DLPFC_CT_female,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-8-1.png" alt="plot of chunk unnamed-chunk-8" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Remove the header from the file</span>
+<span class="hl def">z_stat_result_matrix_DLPFC_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl def">zscored_protein_data_DLPFC_CT_female[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Replace NA, NaN, or Inf values with 0</span>
+<span class="hl def">cleaned_matrix_DLPFC_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">replace</span><span class="hl def">(z_stat_result_matrix_DLPFC_CT_female,</span> <span class="hl kwd">is.na</span><span class="hl def">(z_stat_result_matrix_DLPFC_CT_female),</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Set up the color scale using RColorBrewer</span>
+<span class="hl def">color_scale</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdYlGn&quot;</span><span class="hl def">))</span>
+
+<span class="hl com"># Plot the heatmap</span>
+
+<span class="hl def">out_zscore_CT_female</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+  <span class="hl kwd">as.matrix</span><span class="hl def">(cleaned_matrix_DLPFC_CT_female),</span>
+  <span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">col</span> <span class="hl def">= color_scale,</span>
+  <span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl num">20</span><span class="hl def">),</span>
+  <span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">,</span>
+  <span class="hl kwc">labCol</span> <span class="hl def">= sample_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">batch.channel,</span>
+  <span class="hl kwc">labRow</span> <span class="hl def">= zscored_protein_data_DLPFC_CT_female</span><span class="hl opt">$</span><span class="hl def">Protein_name,</span>
+  <span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;both&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Protein-wise distributions of Z statistics throughout the Control (female) - Leave-One-Out method&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-8-2.png" alt="plot of chunk unnamed-chunk-8" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">#########################################################################################################################################</span>
+
+
+<span class="hl com">## Function to calculate the Z-statistics for Indivual control samples (male only)</span>
+
+<span class="hl com"># Define a function to calculate z-score</span>
+<span class="hl def">calculate_zscore</span> <span class="hl kwb">&lt;-</span> <span class="hl kwa">function</span><span class="hl def">(</span><span class="hl kwc">one_sample_data</span><span class="hl def">,</span> <span class="hl kwc">rest_data</span><span class="hl def">) {</span>
+  <span class="hl com"># Calculate mean and standard deviation for each row (gene) in rest_data</span>
+  <span class="hl def">rest_data_mean</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">rowMeans</span><span class="hl def">(rest_data,</span> <span class="hl kwc">na.rm</span><span class="hl def">=T)</span>
+  <span class="hl def">rest_data_sd</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">apply</span><span class="hl def">(rest_data,</span> <span class="hl num">1</span><span class="hl def">, sd,</span> <span class="hl kwc">na.rm</span><span class="hl def">=</span><span class="hl num">TRUE</span><span class="hl def">)</span>
+
+  <span class="hl com"># Calculate z-score for each gene in gene_data</span>
+  <span class="hl def">zscore</span> <span class="hl kwb">&lt;-</span> <span class="hl def">(one_sample_data</span> <span class="hl opt">-</span> <span class="hl def">rest_data_mean)</span> <span class="hl opt">/</span> <span class="hl def">rest_data_sd</span>
+
+  <span class="hl kwd">return</span><span class="hl def">(zscore)</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Remove the MEAN and SD columns from protein_data_DLPFC_CT_male file</span>
+<span class="hl def">protein_data_DLPFC_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">subset</span><span class="hl def">(protein_data_DLPFC_CT_male,</span> <span class="hl kwc">select</span> <span class="hl def">=</span> <span class="hl opt">-</span><span class="hl kwd">c</span><span class="hl def">(MEAN, SD))</span>
+
+<span class="hl kwd">head</span><span class="hl def">(protein_data_DLPFC_CT_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Protein_name    b01.130C    b03.130N    b05.129C     b08.128N    b10.127C
+## 1         A1BG  0.07522644  0.01049928 -0.38764997  0.243596496 -0.11007517
+## 2          A2M -0.01638754 -0.20882544 -0.42849554  0.346760627  0.22284874
+## 3         AAAS  0.09412167 -0.09733347 -0.01690533 -0.003941666  0.03645668
+## 4         AACS  0.27039774  0.34812819 -0.01998668  0.001447416  0.07696687
+## 5        AADAT          NA          NA          NA -0.055266808  0.07488265
+## 6        AAGAB          NA -0.01736552 -0.12735403 -0.094613738  0.01467970
+##       b10.129C    b13.127N    b13.128C    b13.130N     b15.129N    b15.129C
+## 1  0.039374980 -0.12334365  0.48285813 -0.11052001  0.265567204  0.03242793
+## 2 -0.122806181 -0.09547270  0.32944957  0.04372649  0.120811999 -0.27972574
+## 3 -0.013873596 -0.05095717  0.01962923 -0.03132893 -0.009604864 -0.15527844
+## 4 -0.184619029  0.34372445 -0.01271072 -0.16474579 -0.260986107  0.18793346
+## 5 -0.209884187 -0.05712880 -0.04914365  0.12234443  0.029881493  0.10766624
+## 6 -0.009005097 -0.04961470  0.03148344 -0.02336453  0.048023404  0.18872509
+##       b16.127C    b16.128C     b19.130N    b23.129N     b23.129C    b25.129N
+## 1 -0.658140957 -0.17522137 -0.152890682  0.56130018  0.134415815 -0.10115084
+## 2  0.005634151 -0.24931209  0.176318404  0.40036444 -0.149961247  0.61211720
+## 3 -0.128291987 -0.02081564 -0.277512318  0.14404367 -0.002412621  0.02929455
+## 4  0.358391164 -0.02660165 -0.009309738  0.05331121  0.020740996  0.06072607
+## 5  0.290407919 -0.05352320  0.033688091  0.13551743  0.178063071  0.04833438
+## 6 -0.095040661 -0.36811804 -0.356213312 -0.11204867  0.073960679  0.12072136
+##      b26.127N    b26.128C      b31.127C    b31.129C     b34.129C    b36.129C
+## 1 -0.05238164 -0.25842410 -0.2308913460  0.71573038 -0.173508009 -0.18383794
+## 2  0.12512938 -0.26555326 -0.7218818237  0.22319427  0.259500447 -0.03234746
+## 3  0.04252733  0.07708008            NA          NA  0.065509050  0.04760535
+## 4 -0.29199726  0.03346906 -0.1528273775 -0.32034408  0.061611148  0.01082155
+## 5 -0.18947445 -0.18257143  0.0008840581 -0.37638592  0.259482043 -0.06028534
+## 6  0.19956377 -0.06125976  0.0447929171 -0.07605593  0.002081567 -0.02907103
+##       b37.128C    b38.130N    b39.128N    b39.130N    b40.130N    b42.127N
+## 1  0.498970953  0.02205642 -0.22136009 -0.00362460 -0.18485373  0.03501994
+## 2  0.443124051  0.17287314 -0.55981690  0.18847658 -0.39522665  0.06299657
+## 3 -0.122572040  0.02863834 -0.06901860 -0.11647235          NA  0.28141848
+## 4 -0.196894485 -0.01979126  0.02328353 -0.08791205 -0.01082766 -0.05726040
+## 5 -0.232087826  0.18869156 -0.01661543 -0.24014309 -0.19842322 -0.10870400
+## 6 -0.002329597 -0.03122973  0.05709716 -0.61689105 -0.06272829 -0.15272340
+##      b42.129N     b43.128N    b47.130N    b50.128N    b50.129C     b51.127C
+## 1  0.23101010  0.054419708 -0.60656087 -0.05814381 -0.02985998  0.032201627
+## 2  0.20128122 -0.171382323 -0.48175771 -0.12562827 -0.03403016 -0.136486259
+## 3  0.10298537  0.085204069  0.04376354  0.01933100  0.03913369           NA
+## 4  0.14781649  0.003389672 -0.18459186  0.11597255  0.01739278 -0.002773757
+## 5 -0.06260333 -0.466799611  0.15574291          NA          NA  0.092747373
+## 6  0.61080645 -0.106022484 -0.15162345 -0.04979465 -0.11788490 -0.017378245
+##      b53.127C    b53.129C    b55.131N    b55.133C      b56.130N      b59.129C
+## 1 -0.07261611  0.05992517 -0.43664146  0.73679790 -3.072878e-01  6.148035e-06
+## 2 -0.14588297  0.22431556  0.29710128  0.23674698 -3.982171e-01  3.742567e-01
+## 3  0.03830866  0.03324911  0.10524136 -0.03546226  5.248207e-05 -3.138770e-01
+## 4  0.02662409 -0.02192296 -0.20019980  0.20536739  9.126714e-02  7.934208e-02
+## 5  0.05691488 -0.02852371 -0.03848905  0.16285916            NA            NA
+## 6  0.06535928 -0.04319939 -0.01325434  0.03065079 -2.002626e-02  6.176313e-02
+##      b60.129N      b60.131C    b63.130N     b63.130C     b63.133N
+## 1 -0.13667994 -7.034299e-06  0.38465783 -0.004959383 -0.613568495
+## 2  0.06725110  4.592642e-01 -0.04895121  0.164345878 -0.277948686
+## 3 -0.03907452 -1.880341e-01  0.01264241  0.062800631 -0.036283924
+## 4  0.08238154 -6.365986e-02  0.11197464  0.022128982  0.305786367
+## 5          NA            NA  0.25562735 -0.032157466 -0.003080984
+## 6  0.09101732  6.603022e-02  0.13557848 -0.091322905 -0.041514652
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Create an empty data frame to store the z-scored data</span>
+<span class="hl def">zscored_protein_data_DLPFC_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">data.frame</span><span class="hl def">(</span><span class="hl kwc">Protein_name</span> <span class="hl def">= protein_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">Protein_name)</span>
+
+<span class="hl com"># Iterate through each column in the original data</span>
+<span class="hl kwa">for</span> <span class="hl def">(col</span> <span class="hl kwa">in</span> <span class="hl kwd">colnames</span><span class="hl def">(protein_data_DLPFC_CT_male)[</span><span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]) {</span>
+  <span class="hl com"># Split data into two data frames: one with current column and another with the rest</span>
+  <span class="hl def">protein_data_DLPFC_CT_male_one_sample</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC_CT_male[,</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">&quot;Protein_name&quot;</span><span class="hl def">, col)]</span>
+  <span class="hl def">protein_data_DLPFC_CT_male_rest</span> <span class="hl kwb">&lt;-</span> <span class="hl def">protein_data_DLPFC_CT_male[,</span> <span class="hl opt">-</span><span class="hl kwd">which</span><span class="hl def">(</span><span class="hl kwd">names</span><span class="hl def">(protein_data_DLPFC_CT_male)</span> <span class="hl opt">==</span> <span class="hl def">col)]</span>
+
+  <span class="hl com"># Calculate z-score for current column</span>
+  <span class="hl def">zscore</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">calculate_zscore</span><span class="hl def">(protein_data_DLPFC_CT_male_one_sample[,</span> <span class="hl num">2</span><span class="hl def">], protein_data_DLPFC_CT_male_rest[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">])</span>
+
+  <span class="hl com"># Add z-score as a new column to zscored_data</span>
+  <span class="hl def">zscored_protein_data_DLPFC_CT_male[</span><span class="hl kwd">paste0</span><span class="hl def">(col,</span> <span class="hl sng">&quot;_Zscore&quot;</span><span class="hl def">)]</span> <span class="hl kwb">&lt;-</span> <span class="hl def">zscore</span>
+<span class="hl def">}</span>
+
+<span class="hl com"># Write the z-scored data to a text file</span>
+<span class="hl kwd">write.table</span><span class="hl def">(zscored_protein_data_DLPFC_CT_male,</span> <span class="hl sng">&quot;z_stat_result_CT_male.txt&quot;</span><span class="hl def">,</span> <span class="hl kwc">sep</span><span class="hl def">=</span><span class="hl sng">&quot;\t&quot;</span><span class="hl def">,</span> <span class="hl kwc">quote</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">,</span> <span class="hl kwc">row.names</span><span class="hl def">=</span><span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl kwd">head</span><span class="hl def">(zscored_protein_data_DLPFC_CT_male)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Protein_name b01.130C_Zscore b03.130N_Zscore b05.129C_Zscore b08.128N_Zscore
+## 1         A1BG      0.30441792      0.09048901     -1.24444800      0.86694330
+## 2          A2M     -0.08693332     -0.75175357     -1.53968130      1.17653293
+## 3         AAAS      0.97625021     -0.85862770     -0.08809257      0.03488646
+## 4         AACS      1.64483740      2.19608679     -0.23149790     -0.09637722
+## 5        AADAT              NA              NA              NA     -0.25267276
+## 6        AAGAB              NA      0.04117141     -0.61189965     -0.41650133
+##   b10.127C_Zscore b10.129C_Zscore b13.127N_Zscore b13.128C_Zscore
+## 1      -0.3077840      0.18585279      -0.3517341       1.7017132
+## 2       0.7381939     -0.45301997      -0.3587359       1.1145299
+## 3       0.4189895     -0.05932849      -0.4119421       0.2586848
+## 4       0.3798653     -1.29152383       2.1638420      -0.1856068
+## 5       0.5202211     -1.19087040      -0.2637299      -0.2163291
+## 6       0.2308287      0.09062339      -0.1495919       0.3304774
+##   b13.130N_Zscore b15.129N_Zscore b15.129C_Zscore b16.127C_Zscore
+## 1    -0.309256768      0.94144198       0.1629016     -2.23023248
+## 2     0.119311100      0.38435995      -1.0012707     -0.01138171
+## 3    -0.225041928     -0.01883387      -1.4354429     -1.16342359
+## 4    -1.160032336     -1.81189761       1.0923366      2.27177453
+## 5     0.806531096      0.25200780       0.7174939      1.88074437
+## 6     0.005691943      0.42878010       1.2833878     -0.41904124
+##   b16.128C_Zscore b19.130N_Zscore b23.129N_Zscore b23.129C_Zscore
+## 1      -0.5240600      -0.4497757       1.9906196      0.50084282
+## 2      -0.8937956       0.5762578       1.3704692     -0.54695403
+## 3      -0.1252004      -2.7932683       1.4764090      0.04939156
+## 4      -0.2732480      -0.1641654       0.2304089      0.02514467
+## 5      -0.2423210       0.2746151       0.8868847      1.14985957
+## 6      -2.1360868      -2.0548766      -0.5203889      0.58352802
+##   b25.129N_Zscore b26.127N_Zscore b26.128C_Zscore b31.127C_Zscore
+## 1      -0.2782459      -0.1170678      -0.8027574     -0.71014730
+## 2       2.1752444       0.3992464      -0.9510992     -2.70306629
+## 3       0.3506817       0.4769984       0.8098429              NA
+## 4       0.2772086      -2.0317688       0.1053193     -1.08180140
+## 5       0.3617167      -1.0635417      -1.0207976      0.08007465
+## 6       0.8650972       1.3513209      -0.2185424      0.40956008
+##   b31.129C_Zscore b34.129C_Zscore b36.129C_Zscore b37.128C_Zscore
+## 1       2.5923665      -0.5183540     -0.55277340       1.7602935
+## 2       0.7394009       0.8666407     -0.14170738       1.5275522
+## 3              NA       0.6977879      0.52561142      -1.1065864
+## 4      -2.2381245       0.2827975     -0.03732917      -1.3734591
+## 5      -2.3080576       1.6729573     -0.28248053      -1.3311784
+## 6      -0.3062558       0.1562258     -0.02805706       0.1301195
+##   b38.130N_Zscore b39.128N_Zscore b39.130N_Zscore b40.130N_Zscore
+## 1      0.12864736     -0.67818360      0.04386759      -0.5561603
+## 2      0.56431060     -2.03934694      0.61846340      -1.4171310
+## 3      0.34442950     -0.58484396     -1.04625411              NA
+## 4     -0.23026497      0.04115824     -0.66236389      -0.1737345
+## 5      1.21651027     -0.02356184     -1.38258940      -1.1191890
+## 6     -0.04082435      0.48282427     -4.12796286      -0.2272422
+##   b42.127N_Zscore b42.129N_Zscore b43.128N_Zscore b47.130N_Zscore
+## 1       0.1714642       0.8244086      0.23557994      -2.0335443
+## 2       0.1854682       0.6629921     -0.62127680      -1.7390278
+## 3       3.0341466       1.0635527      0.88895071       0.4888251
+## 4      -0.4672414       0.8317960     -0.08414149      -1.2913431
+## 5      -0.5714718      -0.2962553     -3.00896160       1.0111887
+## 6      -0.7643756       4.5578943     -0.48444209      -0.7577415
+##   b50.128N_Zscore b50.129C_Zscore b51.127C_Zscore b53.127C_Zscore
+## 1      -0.1360953    -0.042720851      0.16215407     -0.18390042
+## 2      -0.4627688    -0.147483829     -0.50030514     -0.53282749
+## 3       0.2558490     0.444556567              NA      0.43667481
+## 4       0.6276475     0.004057279     -0.12297307      0.06219912
+## 5              NA              NA      0.62747319      0.41284761
+## 6      -0.1506570    -0.555246094      0.04109617      0.53211733
+##   b53.129C_Zscore b55.131N_Zscore b55.133C_Zscore b56.130N_Zscore
+## 1      0.25378635     -1.41578265       2.6786106     -0.96827282
+## 2      0.74331813      0.99939707       0.7867988     -1.42808968
+## 3      0.38838152      1.08586366      -0.2643358      0.07277817
+## 4     -0.24371565     -1.39562106       1.2070151      0.47047446
+## 5     -0.09409214     -0.15314356       1.0552200              NA
+## 6     -0.11162899      0.06548769       0.3255349      0.02543496
+##   b59.129C_Zscore b60.129N_Zscore b60.131C_Zscore b63.130N_Zscore
+## 1      0.05585142      -0.3959544      0.05580791       1.3520082
+## 2      1.27562701       0.2000812      1.58745970      -0.1987213
+## 3     -3.26016098      -0.2987005     -1.77601906       0.1922852
+## 4      0.39489934       0.4141466     -0.50786556       0.6021503
+## 5              NA              NA              NA       1.6474572
+## 6      0.51065189       0.6857944      0.53612403       0.9554605
+##   b63.130C_Zscore b63.133N_Zscore
+## 1      0.03946205      -2.0599774
+## 2      0.53476308      -0.9949709
+## 3      0.67165425      -0.2721505
+## 4      0.03388651       1.8913789
+## 5     -0.11562052       0.0565897
+## 6     -0.39692911      -0.1016615
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Print the table using DT</span>
+<span class="hl kwd">datatable</span><span class="hl def">(zscored_protein_data_DLPFC_CT_male,</span> <span class="hl kwc">options</span> <span class="hl def">=</span> <span class="hl kwd">list</span><span class="hl def">(</span><span class="hl kwc">pageLength</span> <span class="hl def">=</span> <span class="hl num">5</span><span class="hl def">,</span> <span class="hl kwc">autoWidth</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">))</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in instance$preRenderHook(instance): It seems your data is too big for
+## client-side DataTables. You may consider server-side processing:
+## https://rstudio.github.io/DT/server.html
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-8-3.png" alt="plot of chunk unnamed-chunk-8" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Remove the header from the file</span>
+<span class="hl def">z_stat_result_matrix_DLPFC_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl def">zscored_protein_data_DLPFC_CT_male[,</span> <span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">]</span>
+
+<span class="hl com"># Replace NA, NaN, or Inf values with 0</span>
+<span class="hl def">cleaned_matrix_DLPFC_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">replace</span><span class="hl def">(z_stat_result_matrix_DLPFC_CT_male,</span> <span class="hl kwd">is.na</span><span class="hl def">(z_stat_result_matrix_DLPFC_CT_male),</span> <span class="hl num">0</span><span class="hl def">)</span>
+
+<span class="hl com"># Set up the color scale using RColorBrewer</span>
+<span class="hl def">color_scale</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">colorRampPalette</span><span class="hl def">(</span><span class="hl kwd">brewer.pal</span><span class="hl def">(</span><span class="hl num">9</span><span class="hl def">,</span> <span class="hl sng">&quot;RdYlGn&quot;</span><span class="hl def">))</span>
+
+<span class="hl com"># Plot the heatmap</span>
+
+<span class="hl def">out_zscore_CT_male</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">heatmap.2</span><span class="hl def">(</span>
+  <span class="hl kwd">as.matrix</span><span class="hl def">(cleaned_matrix_DLPFC_CT_male),</span>
+  <span class="hl kwc">Rowv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">Colv</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">col</span> <span class="hl def">= color_scale,</span>
+  <span class="hl kwc">scale</span> <span class="hl def">=</span> <span class="hl sng">&quot;row&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">trace</span> <span class="hl def">=</span> <span class="hl sng">&quot;none&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">margins</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">10</span><span class="hl def">,</span> <span class="hl num">20</span><span class="hl def">),</span>
+  <span class="hl kwc">key</span> <span class="hl def">=</span> <span class="hl num">TRUE</span><span class="hl def">,</span>
+  <span class="hl kwc">keysize</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexCol</span> <span class="hl def">=</span> <span class="hl num">1</span><span class="hl def">,</span>
+  <span class="hl kwc">cexRow</span> <span class="hl def">=</span> <span class="hl num">0.8</span><span class="hl def">,</span>
+  <span class="hl kwc">labCol</span> <span class="hl def">= sample_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">batch.channel,</span>
+  <span class="hl kwc">labRow</span> <span class="hl def">= zscored_protein_data_DLPFC_CT_male</span><span class="hl opt">$</span><span class="hl def">Protein_name,</span>
+  <span class="hl kwc">dendrogram</span> <span class="hl def">=</span> <span class="hl sng">&quot;both&quot;</span><span class="hl def">,</span>
+  <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">&quot;Protein-wise distributions of Z statistics throughout the Control (male) - Leave-One-Out method&quot;</span>
+<span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="figure/unnamed-chunk-8-4.png" alt="plot of chunk unnamed-chunk-8" class="plot" /></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Save the plot as a high-resolution PNG</span>
+<span class="hl kwd">ggsave</span><span class="hl def">(</span><span class="hl sng">&quot;out_zscore_CT_male.tiff&quot;</span><span class="hl def">,</span> <span class="hl kwc">plot</span> <span class="hl def">= out_zscore_CT_male,</span> <span class="hl kwc">dpi</span> <span class="hl def">=</span> <span class="hl num">300</span><span class="hl def">,</span> <span class="hl kwc">width</span> <span class="hl def">=</span> <span class="hl num">6</span><span class="hl def">,</span> <span class="hl kwc">height</span> <span class="hl def">=</span> <span class="hl num">4</span><span class="hl def">,</span> <span class="hl kwc">units</span> <span class="hl def">=</span> <span class="hl sng">&quot;in&quot;</span><span class="hl def">)</span>
+</pre></div>
+<div class="error"><pre class="knitr r">## Error in UseMethod("grid.draw"): no applicable method for 'grid.draw' applied to an object of class "c('integer', 'numeric')"
+</pre></div>
+</div></div>
+
+
+
+</body>
+</html>

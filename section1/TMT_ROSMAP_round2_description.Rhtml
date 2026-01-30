@@ -1,0 +1,1876 @@
+<html>
+
+<head>
+<title>Avijit Podder Date: Aug 26, 2024</title>
+
+<head color="blue">
+
+<h1><font color="blue">Single Sample Pathway-specific Heterogeneity Analysis using TMT Proteomics Data From The ROSMAP Cohort</font></h1>
+
+</head>
+
+<body>
+
+<p>PHASE 1 and 2 TMT PROTEOMICS MERGED: ROSMAP TMT-proteomics Data (read count file) </p>
+
+<!--begin.rcode fig.width=15, fig.height=10
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(DT)
+
+# Data set: ROSMAP (N=610), Minimally regressed, batch- and set-corrected protein abundance. Batch within set, and inter-set (ROSMAP set1 and set2) correction handled by separate repeats of TAMPOR (proteins kept with <50% missing values within sets); 610 total cases (syn28723003)
+
+protein_data <- read.csv("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/2a.Zero-centered_log2(abundance)-ROSMAP610.R1+R2-2xTAMPORcorrected.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+dim(protein_data)
+
+#head(protein_data)
+
+# Split the protein_ID column by "|"
+split_protein_data <- str_split_fixed(protein_data$X, "\\|", 2)
+
+# Combine the split data with the original dataframe
+protein_data$Protein_name <- split_protein_data[, 1]
+protein_data$Uniprot_ID <- split_protein_data[, 2]
+
+# Count the repetitive Protein_name
+count_data <- protein_data %>%
+  group_by(Protein_name) %>%
+  summarise(count = n()) %>%
+  filter(count > 1)
+
+# Print the number of repetitive protein_name
+cat("Number of repetitive protein_name:", nrow(count_data), "\n")
+
+# Create a horizontal bar chart
+ggplot(count_data, aes(x = reorder(Protein_name, -count), y = count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(title = "Count of Repetitive protein_names", x = "Protein_name", y = "Count") +
+  geom_text(aes(label = count), vjust = -0.5, size = 5) +  # Add text annotations +
+  theme_minimal() +
+  theme(text = element_text(size=16))
+
+# Find the row (Protein_name) with the highest absolute row sum across all columns for each repetitive Protein_name
+protein_data_filtered <- protein_data %>%
+  group_by(Protein_name) %>%
+  slice(which.max(abs(rowSums(across(starts_with("b"), is.numeric), na.rm = TRUE)))) %>%
+  ungroup()
+
+dim(protein_data_filtered)
+
+#################################################################################################################################################################
+## INPUT data File Filtering - Remove proteins without given name (symbol)
+## Used "Protein_name as first column in the data file"
+
+# Filter rows where Protein_name is not 0
+protein_data_filtered <- protein_data_filtered[protein_data_filtered$Protein_name != "0", ]
+
+# Print the number of IDs with protein_name
+cat("Number of IDs with protein_name:", nrow(protein_data_filtered), "\n")
+
+# Remove the Uniprot_ID column
+protein_data_filtered$Uniprot_ID <- NULL
+
+# Replace the first column with Protein_name
+#protein_data_filtered$X <- protein_data_filtered$Protein_name
+
+# Move Protein_name to the first column
+protein_data_filtered <- protein_data_filtered[, c("Protein_name", setdiff(names(protein_data_filtered), "Protein_name"))]
+
+# Remove the "X" column
+protein_data_filtered$X <- NULL
+
+
+dim(protein_data_filtered)
+
+# Print the table using DT
+datatable(protein_data_filtered, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+end.rcode-->
+
+<p>Data Missingness</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+
+##Calculate the missingness for samples
+
+# Remove the  "Protein_name" column from the file
+protein_data_ROSMAP_sample_missingness <- protein_data_filtered[, -1]
+
+#write.table(protein_data_ROSMAP_new,"/Users/poddea/Desktop/protein_data_ROSMAP_new.txt",sep="\t",quote=T)
+
+# Transpose gene expression data to have samples as rows
+protein_data_ROSMAP_sample_missingness_t <- t(protein_data_ROSMAP_sample_missingness)
+
+dim(protein_data_ROSMAP_sample_missingness_t)
+
+# Calculate the number of NA values in each row
+na_counts_sample <- apply(protein_data_ROSMAP_sample_missingness_t, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_samples_with_na <- sum(na_counts_sample > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of sample with at least one NA value:", num_samples_with_na, "\n")
+
+# Create a barplot for the NA counts with adjusted margins
+barplot(na_counts_sample, main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_sample, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_sample[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+#########################################################################################################################################
+
+##Calculate the missingness for Protein
+
+# Store the protein names separately before removing the first row
+protein_names <- protein_data_filtered$Protein_name
+
+# Remove the first row "Protein_name" from the file
+protein_data_ROSMAP_gene_missingness <- protein_data_filtered[-1, ]
+
+# Calculate the number of NA values in each row
+na_counts_genes <- apply(protein_data_ROSMAP_gene_missingness, 1, function(x) sum(is.na(x)))
+
+
+write.table(na_counts_genes,"na_counts_genes.txt",sep="\t",quote=F)
+
+# Ensure the length of protein_names and na_counts_genes matches
+if (length(protein_names) == length(na_counts_genes)) {
+  # Create a new data frame with Protein_name and NA_count
+  na_counts_df <- data.frame(
+    Protein_name = protein_names,  # Add the Protein_name column back
+    NA_count = na_counts_genes  # Count of NAs per row
+  )
+
+  # Write the table to a file
+  write.table(na_counts_df, "protein_na_counts.txt",
+              sep = "\t", quote = FALSE, row.names = FALSE)
+
+  # Print the first few rows to verify
+  head(na_counts_df)
+} else {
+  cat("Error: Mismatch in the number of rows between protein names and NA counts.\n")
+}
+
+
+
+# Count the number of rows with at least one NA value
+num_genes_with_na <- sum(na_counts_genes > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of gene with at least one NA value:", num_genes_with_na, "\n")
+
+# Count the frequency of each unique NA value
+na_counts_freq <- table(na_counts_genes)
+
+#write.table(na_counts_freq,"/Users/poddea/Desktop/na_counts_freq.txt",sep="\t",quote=F)
+
+# Remove the entry for 0 NAs
+na_counts_freq <- na_counts_freq[names(na_counts_freq) != "0"]
+
+
+# Create the barplot and store the bar positions
+bar_positions <- barplot(na_counts_freq,
+                         main = "Frequency of Individual Counts per Protein",
+                         xlab = "Number of missing Protein",
+                         ylab = "Frequency of Individual with Missing Protein",
+                         col = "blue",
+                         las = 2,
+                         cex.names = 0.8)
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_freq, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_freq[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Frequency of Individual Counts per Protein",
+        xlab = "Number of missing Protein",
+        ylab = "Frequency of Individual with Missing Protein",
+        col = "blue",
+        las = 2,
+        cex.names = 0.8)
+
+
+end.rcode-->
+
+<p>PHASE 1 and 2 TMT PROTEOMICS MERGED: ROSMAP TMT-proteomics Metadata (samples description file) </p>
+
+<!--begin.rcode fig.width=25, fig.height=15
+library(stringr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(DT)
+
+# Read the TMT metadata file for ROSMAP individuals
+protein_metadata_ROSMAP <- read.csv("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/2c.traits-ROSMAP610.R1+R2-2xTAMPORcorrected.csv", sep =",", header = TRUE, stringsAsFactors = FALSE)
+
+#protein_metadata_ROSMAP <- read.table("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/ROSMAP_Covariates_ages_censored.tsv", sep ="\t", header = TRUE, stringsAsFactors = FALSE)
+
+dim(protein_metadata_ROSMAP)
+
+# Define the catagory (diagnosis) based on the braaksc, CERAD and cogdx
+#protein_metadata_ROSMAP$category <- with(protein_metadata_ROSMAP, ifelse(braaksc >= 4 & ceradsc_RADCnonStd <= 2 & cogdx == 4, "AD",
+                               #ifelse(braaksc <= 3 & ceradsc_RADCnonStd >= 3 & cogdx == 1, "CT", "OTHER")))
+
+
+# Define the category based on Braak, CERAD, and MMSE (cognitive status)
+protein_metadata_ROSMAP$category <- with(protein_metadata_ROSMAP, 
+    ifelse((CERAD %in% 0:1 & braaksc %in% 0:2 & cts_mmse30_lv >= 24) | 
+           (CERAD == 0 & braaksc == 3 & cts_mmse30_lv >= 24), "Control",
+    ifelse(CERAD %in% 1:3 & braaksc %in% 3:6 & cts_mmse30_lv >= 24, "AsymAD",
+    ifelse(CERAD %in% 2:3 & braaksc %in% 3:6 & cts_mmse30_lv < 24, "AD", "Exclude"))))
+
+
+# Define the category based on Braak, CERAD, and MMSE (cognitive status)
+#protein_metadata_ROSMAP$category <- with(protein_metadata_ROSMAP, 
+    #ifelse((CERAD %in% 0:1 & braaksc %in% 0:2 & cts_mmse30_lv >= 24) | 
+           #(CERAD == 0 & braaksc == 3 & cts_mmse30_lv >= 24), "Control",
+    #ifelse(CERAD %in% 1:3 & braaksc %in% 3:6 & cts_mmse30_lv >= 24, "AsymAD",
+    #ifelse(CERAD %in% 2:3 & braaksc %in% 3:6 & cts_mmse30_lv < 24, "AD", "Exclude"))))
+
+
+# Define the sex_type (sex) based on the msex value
+protein_metadata_ROSMAP$sex <- with(protein_metadata_ROSMAP, ifelse(msex == 0, "female",
+                                ifelse(msex == 1, "male", "NA")))
+
+write.table(protein_metadata_ROSMAP,"Protein_metadata_ROSMAP_catagory.txt",sep="\t",quote=F)
+
+
+# Print the table using DT
+datatable(protein_metadata_ROSMAP, options = list(pageLength = 5, autoWidth = TRUE))
+
+#####################################################################################################################################################################################
+#####################################################################################################################################################################################
+
+# Group the data by tissue, JohnsonDx, and sex
+# Ensure JohnsonDx is ordered as CT, AsymAD, AD, Exclude
+
+count_protein_metadata <- protein_metadata_ROSMAP %>%
+  group_by(tissue, category, sex) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  mutate(
+    JohnsonDx = factor(category, levels = c("Control", "AsymAD", "AD", "Exclude"))
+  )
+
+# Create a grouped and stacked bar plot with manual color coding
+ggplot(count_protein_metadata, aes(x = category, y = count, fill = interaction(sex, category))) +
+  geom_bar(stat = "identity", position = "stack") +  # Stacked by sex within each JohnsonDx
+  facet_wrap(~ tissue) +  # Create separate plots for each tissue
+  labs(
+    title = "Comparison of Individuals by Tissue with JohnsonDx Staged by Sex",
+    x = "JohnsonDx",
+    y = "Individual Count"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "male.AD" = "mediumblue",
+      "female.AD" = "tomato",
+      "male.AsymAD" = "dodgerblue",
+      "female.AsymAD" = "coral",
+      "male.Control" = "skyblue",
+      "female.Control" = "lightpink",
+      "male.Exclude" = "gray48",
+      "female.Exclude" = "gray68"
+    )
+  ) +
+  geom_text(aes(label = count), position = position_stack(vjust = 0.5), size = 15, color = "white") +  # Add counts inside bars
+  theme_minimal() +
+  theme(
+    text = element_text(size = 60),
+    axis.text.x = element_text(size = 50)  # Adjust axis text size
+  )
+
+#####################################################################################################################################################################################
+#####################################################################################################################################################################################
+
+
+#  Alluvial plots implemented here to visualize frequency distributions of braaksc, CERAD and MMSE stages over the diagnosis catagories 
+
+library(ggalluvial)
+
+
+# Create a subset of the DLPFC sample description file with male samples only
+sample_data_DLPFC_male <- protein_metadata_ROSMAP[protein_metadata_ROSMAP$sex == "male", ]
+
+# Create a subset of the DLPFC sample description file with female samples only
+sample_data_DLPFC_female <- protein_metadata_ROSMAP[protein_metadata_ROSMAP$sex == "female", ]
+
+## Male
+
+# Prepare the data for the alluvial plot
+sample_data_DLPFC_male <- sample_data_DLPFC_male %>%
+    mutate(
+        BRAAK = factor(BRAAKSC, levels = sort(unique(BRAAKSC))),
+        CERAD = factor(ceradsc_RADCnonStd, levels = sort(unique(ceradsc_RADCnonStd))),
+        JohnsonDx = factor(category, levels = c("Control", "AsymAD", "AD", "Exclude"))
+    )
+
+
+# Create the plot with the updated intervals and proper labels
+
+ggplot(sample_data_DLPFC_male,
+       aes(
+           axis1 = BRAAK,
+           axis2 = CERAD,
+           axis3 = cts_mmse30_lv,
+           fill = JohnsonDx
+       )) +
+    geom_alluvium(aes(fill = JohnsonDx), alpha = 0.7, width = 1/12) +  # Ribbons
+    geom_stratum(fill = "white", color = "black", width = 1/12) +  # Stratum rectangles in white
+    scale_fill_manual(
+        values = c("Control" = "skyblue", "AsymAD" = "dodgerblue", "AD" = "blue", "Exclude" = "black")
+    ) +
+    labs(
+        title = "Alluvial Plot of BRAAK, CERAD, and MMSE with JohnsonDx Classification",
+        x = "",
+        y = "Count",
+        fill = "Diagnosis"
+    ) +
+    theme_classic(base_size = 16) +
+    theme(
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.text.x = element_blank(),  # Remove X-axis text
+        axis.ticks.x = element_blank(),  # Remove X-axis ticks
+        axis.title.x = element_blank(),  # Remove X-axis title
+        axis.text.y = element_text(size = 16),
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 16),
+        plot.margin = margin(t = 10, r = 10, b = 40, l = 10)  # Extra space for labels
+    ) +
+    annotate("text", x = 1, y = -10, label = "BRAAK", size = 10, fontface = "bold", angle = 45) +
+    annotate("text", x = 2, y = -10, label = "CERAD", size = 10, fontface = "bold", angle = 45) +
+    annotate("text", x = 3, y = -10, label = "MMSE", size = 10, fontface = "bold", angle = 45)
+
+
+#####################################################################################################################################################################################
+
+## Female
+
+# Prepare the data for the alluvial plot
+sample_data_DLPFC_female <- sample_data_DLPFC_female %>%
+    mutate(
+        BRAAK = factor(BRAAKSC, levels = sort(unique(BRAAKSC))),
+        ceradsc = factor(ceradsc_RADCnonStd, levels = sort(unique(ceradsc_RADCnonStd))),
+        JohnsonDx = factor(category, levels = c("Control", "AsymAD", "AD", "Exclude"))
+    )
+
+
+# Create the plot with the updated intervals and proper labels
+
+ggplot(sample_data_DLPFC_female,
+       aes(
+           axis1 = BRAAK,
+           axis2 = ceradsc,
+           axis3 = cts_mmse30_lv,
+           fill = JohnsonDx
+       )) +
+    geom_alluvium(aes(fill = JohnsonDx), alpha = 0.7, width = 1/12) +  # Ribbons
+    geom_stratum(fill = "white", color = "black", width = 1/12) +  # Stratum rectangles in white
+    scale_fill_manual(
+        values = c("Control" = "pink", "AsymAD" = "coral", "AD" = "red", "Exclude" = "black")
+    ) +
+    labs(
+        title = "Alluvial Plot of BRAAK, CERAD, and MMSE with JohnsonDx Classification",
+        x = "",
+        y = "Count",
+        fill = "Diagnosis"
+    ) +
+    theme_classic(base_size = 16) +
+    theme(
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.text.x = element_blank(),  # Remove X-axis text
+        axis.ticks.x = element_blank(),  # Remove X-axis ticks
+        axis.title.x = element_blank(),  # Remove X-axis title
+        axis.text.y = element_text(size = 16),
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 16),
+        plot.margin = margin(t = 10, r = 10, b = 40, l = 10)  # Extra space for labels
+    ) +
+    annotate("text", x = 1, y = -15, label = "BRAAK", size = 10, fontface = "bold", angle = 45) +
+    annotate("text", x = 2, y = -15, label = "CERAD", size = 10, fontface = "bold", angle = 45) +
+    annotate("text", x = 3, y = -15, label = "MMSE", size = 10, fontface = "bold", angle = 45)
+
+
+end.rcode-->
+
+<p>Genes by Variance: PCA plot for most variance genes in the read count data (Tissue: DLPFC) </p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+
+# Genes by Variance: PCA plot for most variance genes in the read count data (Tissue: DLPFC)
+
+# Load the necessary library for row-wise variance
+library(matrixStats)
+library(tidyverse)
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(FactoMineR)
+library(impute)  # Load impute package
+
+
+# Get the list of proteins from the protein_data_filtered
+protein_name <- protein_data_filtered$Protein_name
+
+# Remove the protein_name column from the data file
+protein_data_filtered <- protein_data_filtered[, -1]
+
+# Convert the data to a matrix
+protein_matrix <- as.matrix(protein_data_filtered)
+
+# Calculate variance while **ignoring NA values**
+protein_variances <- rowVars(protein_matrix, na.rm = TRUE)
+
+# Calculate protein variances
+#protein_variances <- rowVars(as.matrix(protein_data_filtered))
+
+# Convert the protein_data_filtered matrix to a data frame
+protein_data_filtered <- as.data.frame(protein_data_filtered)
+
+# Add protein variances as a new column
+protein_data_filtered$Variance <- protein_variances
+
+# add protein names as a column
+protein_data_filtered$protein_name <- protein_name
+
+# Move the protein column to the first position (optional)
+protein_data_filtered <- protein_data_filtered[, c("protein_name", "Variance", setdiff(names(protein_data_filtered), c("protein_name", "Variance")))]
+
+
+write.table(protein_data_filtered,"protein_data_filtered_with_variance.txt",sep="\t",quote=F)
+
+
+# Filter the top n proteins based on variance (from high to low)
+top_500_proteins <- protein_data_filtered %>%
+  arrange(desc(Variance)) %>%  # Arrange rows by variance in descending order
+  slice_head(n = 14)          # Select the top 500 rows
+
+
+
+# Optionally, extract the protein names into a list
+top_500_protein_list <- top_500_proteins$protein_name
+
+head(top_500_protein_list, 20)
+
+# Extract the expression values (remove protein and Variance columns)
+top_500_expression <- top_500_proteins %>%
+  select(-Variance, -protein_name) %>%
+  as.matrix()  # Convert to matrix for PCA
+
+# Impute missing values using k-nearest neighbors (KNN) before performing PCA
+top_500_expression_imputed <- impute.knn(as.matrix(top_500_expression))$data
+
+
+# Ensure sample_data_DLPFC rows match columns of top_500_expression
+rownames(protein_metadata_ROSMAP) <- protein_metadata_ROSMAP$batch.channel  # Set rownames for metadata
+
+# Perform PCA on the top 500 protein expression matrix
+#pca_result <- prcomp(t(top_500_expression), scale. = TRUE)
+
+pca_result <- prcomp(t(top_500_expression_imputed), scale. = TRUE)
+
+# Extract PCA components into a dataframe
+pca_data <- data.frame(
+  Sample = colnames(top_500_expression),  # Sample IDs
+  PC1 = pca_result$x[, 1],               # First principal component
+  PC2 = pca_result$x[, 2]                # Second principal component
+)
+
+# Merge metadata with PCA results using Sample IDs
+pca_data <- pca_data %>%
+  left_join(protein_metadata_ROSMAP, by = c("Sample" = "batch.channel"))
+
+# Calculate variance explained by each principal component
+pca_variance <- pca_result$sdev^2 / sum(pca_result$sdev^2)
+pc1_variance <- round(pca_variance[1] * 100, 1)  # PC1 variance in percentage
+pc2_variance <- round(pca_variance[2] * 100, 1)  # PC2 variance in percentage
+
+
+# PCA plot with gene loading information on axes
+ggplot(pca_data, aes(x = PC1, y = PC2, color = sex, shape = JohnsonDx)) +
+  geom_point(size = 4, alpha = 0.8) +  # Plot points with size and transparency
+  stat_ellipse(aes(group = sex), type = "norm", linetype = "dashed", size = 1) +  # Ellipses by 'sex'
+  labs(
+    title = "PCA Plot for Top Most Variable Proteins",
+    x = paste0("Principal Component 1 (", pc1_variance, "%)"),
+    y = paste0("Principal Component 2 (", pc2_variance, "%)"),
+    color = "Sex",
+    shape = "Diagnosis (JohnsonDx)"
+  ) +
+  theme_minimal(base_size = 15) +
+  scale_color_manual(values = c("male" = "cadetblue", "female" = "brown")) +  # Custom colors
+  theme(
+    text = element_text(size = 30),
+    legend.position = "right",
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+    axis.text = element_text(size = 30),
+    axis.title = element_text(size = 30)
+  )
+
+
+#####################################################################################################################################################################################
+
+# Load necessary libraries
+library(biomaRt)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# Step 1: Connect to Ensembl Biomart to fetch chromosome info
+mart <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+
+# Step 2: Get Chromosome information for protein_name (Gene Symbols)
+gene_mapping <- getBM(
+  attributes = c("hgnc_symbol", "chromosome_name"),
+  filters = "hgnc_symbol",
+  values = protein_data_filtered$protein_name,
+  mart = mart
+)
+
+# Step 3: Merge chromosome info with variance data
+protein_data_annotated <- merge(protein_data_filtered, gene_mapping, 
+                                by.x = "protein_name", by.y = "hgnc_symbol", 
+                                all.x = TRUE)
+
+# Step 4: Keep **ALL** chromosomes (including X and Y)
+protein_data_annotated <- protein_data_annotated %>%
+  filter(chromosome_name %in% c(1:22, "X", "Y"))  # Include X & Y chromosomes
+
+# Step 5: Convert chromosome names to numeric where possible
+protein_data_annotated$chromosome_name <- factor(protein_data_annotated$chromosome_name, 
+                                                 levels = c(1:22, "X", "Y"))
+
+# Step 6: Assign positions for genes within chromosomes
+protein_data_annotated <- protein_data_annotated %>%
+  arrange(chromosome_name) %>%
+  mutate(BP = row_number())  # Assigning a sequential base-pair position
+
+write.table(protein_data_annotated,"protein_data_annotated_with_variance.txt",sep="\t",quote=F)
+
+# Create the ggplot
+ggplot(protein_data_annotated, aes(x = chromosome_name, y = Variance, color = chromosome_name)) +
+  geom_jitter(width = 0.2, size = 3, alpha = 0.7) +  # Jitter for better visibility
+  scale_color_manual(values = rep(c("blue", "orange"), length.out = length(unique(protein_data_annotated$chromosome_name)))) +
+  
+  # Highlight and label proteins with Variance > 1
+  geom_text_repel(data = subset(protein_data_annotated, Variance > 1), 
+                  aes(label = protein_name), 
+                  size = 10, 
+                  box.padding = 0.5, 
+                  point.padding = 0.3,
+                  segment.color = "black") +
+  
+  labs(title = "Chromosome-wise Variance Plot",
+       x = "Chromosome",
+       y = "Variance Effect") +
+   theme_minimal(base_size = 20) +
+  theme(axis.text.x = element_text(size = 20, hjust = 1),  # Bigger x-axis labels
+        axis.text.y = element_text(size = 20),  # Bigger y-axis labels
+        axis.title.x = element_text(size = 20, face = "bold"),  # Bigger x-axis title
+        axis.title.y = element_text(size = 20, face = "bold"),  # Bigger y-axis title
+        legend.position = "none")  # Remove legend
+
+
+end.rcode-->
+
+<p>Data Missingness</p>
+
+<!--begin.rcode fig.width=15, fig.height=10
+
+# Load required libraries
+library(dplyr)
+
+# Step 1: Calculate missing values per sample
+protein_data_ROSMAP_sample_missingness <- protein_data_filtered[, -1]  # Remove "Protein_name" column
+protein_data_ROSMAP_sample_missingness_t <- t(protein_data_ROSMAP_sample_missingness)  # Transpose
+
+# Calculate the number of NA values for each sample
+na_counts_sample <- apply(protein_data_ROSMAP_sample_missingness_t, 1, function(x) sum(is.na(x)))
+
+# Convert to DataFrame
+missingness_df <- data.frame(SampleID = rownames(protein_data_ROSMAP_sample_missingness_t),
+                             MissingCount = na_counts_sample)
+
+#####################################################################################################################################################################################
+
+
+print(dim(missingness_df))  # Check dimensions
+print(head(missingness_df))  # View first few rows
+
+# Check column names
+print(colnames(protein_metadata_ROSMAP))
+print(colnames(missingness_df))
+
+# Check if Sample IDs match between datasets
+print(setdiff(missingness_df$SampleID, protein_metadata_ROSMAP$batch.channel))  # SampleIDs in missingness_df but not in metadata
+print(setdiff(protein_metadata_ROSMAP$batch.channel, missingness_df$SampleID))  # SampleIDs in metadata but not in missingness_df
+
+
+protein_metadata_ROSMAP$batch.channel <- trimws(protein_metadata_ROSMAP$batch.channel)
+missingness_df$SampleID <- trimws(missingness_df$SampleID)
+
+missingness_df$SampleID <- tolower(missingness_df$SampleID)
+protein_metadata_ROSMAP$batch.channel <- tolower(protein_metadata_ROSMAP$batch.channel)
+
+
+# Step 2: Merge with Metadata (Fix column name mismatch)
+missingness_df <- merge(missingness_df, protein_metadata_ROSMAP, 
+                        by.x = "SampleID", by.y = "batch.channel", all.x = TRUE)
+
+print(dim(missingness_df))  # Should NOT be 0 rows
+print(head(missingness_df))  # Check merged data
+
+# Step 3: Define Factor Levels for Ordered Sorting
+category_levels <- c("Control", "AD", "AsymAD", "Exclude")  # Define category order
+sex_levels <- c("male", "female")  # Define sex order
+
+# Convert to factors with specified order
+missingness_df$category <- factor(missingness_df$category, levels = category_levels)
+missingness_df$sex <- factor(missingness_df$sex, levels = sex_levels)
+
+# Step 4: Sort Data by Category & Sex
+missingness_df <- missingness_df %>%
+  arrange(category, sex)
+
+# Step 5: Update X-axis Order Based on Sorted Data
+sorted_sample_ids <- missingness_df$SampleID  # Extract sorted sample IDs
+
+
+
+# Step 6: Generate Barplot with Reordered X-axis
+
+# Define colors for each category-sex combination
+category_sex_colors <- c(
+  "Control.male" = "skyblue", "Control.female" = "lightpink",
+  "AD.male" = "mediumblue", "AD.female" = "tomato",
+  "AsymAD.male" = "dodgerblue", "AsymAD.female" = "coral",
+  "Exclude.male" = "gray48", "Exclude.female" = "gray68"
+)
+
+# Create a new column that combines category and sex
+missingness_df$Category_Sex <- paste(missingness_df$category, missingness_df$sex, sep = ".")
+
+# Assign colors based on category and sex
+bar_colors <- category_sex_colors[missingness_df$Category_Sex]
+
+par(mar = c(8, 8, 4, 2))  # Bottom, Left, Top, Right margins (in lines)
+
+# Create barplot with sample order
+bar_positions <- barplot(missingness_df$MissingCount, 
+                         names.arg = rep("", length(sorted_sample_ids)),  # Empty x labels
+                         main = "Number of Missing Values (Protein Abundance) in Each Individual",
+                         xlab = "Sample Categories (Ordered by Category & Sex)",
+                         ylab = "Number of Missing Proteins",
+                         col = bar_colors,
+                         las = 2,  
+                         cex.names = 2,
+                         cex.axis = 1,
+                         cex.lab = 1.5)
+
+# Get midpoints for category labels
+category_midpoints <- tapply(bar_positions, missingness_df$category, mean)
+
+# Add category labels below the x-axis
+text(category_midpoints, par("usr")[3] - max(missingness_df$MissingCount) * 0.05, 
+     labels = names(category_midpoints), col = "black", font = 2)
+
+# Add separator lines between different categories
+category_change_points <- which(diff(as.numeric(factor(missingness_df$category, levels = category_levels))) != 0)
+abline(v = bar_positions[category_change_points] + diff(bar_positions)[1] / 2, col = "gray", lty = 2)
+
+# Add legend for category & sex
+#legend("topright", legend = names(category_sex_colors), fill = category_sex_colors, title = "Category & Sex", bty = "n", cex = 0.8)
+
+
+#########################################################################################################################################
+
+##Calculate the missingness for Protein
+
+# Remove the first row "Protein_name" from the file
+protein_data_ROSMAP_gene_missingness <- protein_data_filtered[-1, ]
+
+# Calculate the number of NA values in each row
+na_counts_genes <- apply(protein_data_ROSMAP_gene_missingness, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_genes_with_na <- sum(na_counts_genes > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of gene with at least one NA value:", num_genes_with_na, "\n")
+
+# Count the frequency of each unique NA value
+na_counts_freq <- table(na_counts_genes)
+
+#write.table(na_counts_freq,"/Users/poddea/Desktop/na_counts_freq.txt",sep="\t",quote=F)
+
+# Remove the entry for 0 NAs
+na_counts_freq <- na_counts_freq[names(na_counts_freq) != "0"]
+
+
+# Convert named table to numeric vector
+na_counts_numeric <- as.numeric(names(na_counts_freq))
+na_counts_values <- rep(na_counts_numeric, times = na_counts_freq)
+
+# Create a histogram
+hist(na_counts_values,
+     breaks = 50,  # Adjust number of bins
+     main = "Distribution of Missing Proteins",
+     xlab = "Frequency of Individuals",
+     ylab = "Number of Missing Protein",
+     col = "blue",
+     border = "white")
+
+end.rcode-->
+#############################################################################################################################
+
+# Comparison of Individuals by Diagnosis (category) and Sex
+count_protein_metadata <- protein_metadata_ROSMAP %>%
+group_by(category, sex) %>%
+summarise(count = n())
+
+ggplot(count_protein_metadata, aes(x = sex, y = count, fill = category)) +
+geom_bar(stat = "identity", position = "dodge") +
+labs(title = "Comparison of Individuals by Sex and Diagnosis") +
+xlab("Sex") +
+ylab("Individual Count") +
+scale_fill_manual(values = c("AD" = "purple", "AsymAD" = "blue",   "Control" = "lightgreen", "Exclude" = "gray47")) +
+geom_text(aes(label = count), position = position_dodge(width = 0.9), vjust = -0.5, size =10) +
+theme(text = element_text(size=20))
+
+#############################################################################################################################
+
+# Group the data by tissue, JohnsonDx, and sex
+count_protein_metadata_2 <- protein_metadata_ROSMAP %>%
+  group_by(tissue, category, sex) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create a grouped and stacked bar plot
+ggplot(count_protein_metadata_2, aes(x = category, y = count, fill = sex)) +
+  geom_bar(stat = "identity", position = "stack") +  # Stacked by sex within each JohnsonDx
+  facet_wrap(~ tissue) +  # Create separate plots for each tissue
+  labs(title = "Comparison of Individuals by Tissue with JohnsonDx Staged by Sex",
+       x = "JohnsonDx",
+       y = "Individual Count") +
+  scale_fill_manual(values = c("male" = "lightblue", "female" = "pink")) +  # Custom colors for sex
+  geom_text(aes(label = count), position = position_stack(vjust = 0.5), size = 10) +  # Add counts inside bars
+  theme_minimal() +
+  theme(text = element_text(size = 30),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 30))  # Rotate x-axis labels for readability
+
+
+end.rcode-->
+
+<p>Removal of outlier samples </p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+
+# Read the outliers file
+outliers <- read.table("/Users/poddea/Desktop/ROSMAP_data_100623/TMT_proteomics/Round2/outliers.txt", header = TRUE)
+
+# Extract the IDs to be removed
+ids_to_remove <- outliers$Outliers
+
+ids_to_remove
+
+# Remove the specified columns from the TMT read count file
+protein_data_filtered <- protein_data_filtered[, !colnames(protein_data_filtered) %in% ids_to_remove]
+
+dim(protein_data_filtered)
+
+# Use the 'subset' function to remove rows with specified IDs (outliers) from the protein_metadata_ROSMAP
+protein_metadata_ROSMAP <- subset(protein_metadata_ROSMAP, !(batch.channel %in% ids_to_remove))
+
+dim(protein_metadata_ROSMAP)
+
+
+end.rcode-->
+
+<p>Preparation of the input files (Tissue: DLPFC)</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+
+# Get the list of proteins from the protein_data_filtered
+Protein_name <- protein_data_filtered$Protein_name
+
+# Get the list of samples from the protein_data_filtered
+common_samples <- colnames(protein_data_filtered)
+
+# Select a sub-set of the sample (Tissue: DLPFC) from protein_metadata_ROSMAP file
+sample_data_DLPFC <- filter(protein_metadata_ROSMAP, tissue == "dorsolateral prefrontal cortex")
+
+# Create a subset of the DLPFC sample description file with control samples only
+sample_data_DLPFC_contorl <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_contorl)
+
+# Create a subset of the DLPFC sample description file with AD samples only
+#sample_data_DLPFC_case <- sample_data_DLPFC[grep("AD", sample_data_DLPFC$JohnsonDx), ]
+sample_data_DLPFC_case <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AD", ]
+
+dim(sample_data_DLPFC_case)
+
+# Create a subset of the DLPFC sample description file with AsymAD samples only
+sample_data_DLPFC_AsymAD <- sample_data_DLPFC[grep("AsymAD", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_AsymAD)
+
+# Calculate the counts and percentages of each sex in control samples
+sex_counts_control <- table(sample_data_DLPFC_contorl$sex)
+sex_percentages_control <- prop.table(sex_counts_control) * 100
+
+# Create a pie chart to show the distribution of Male and Female ratio within the control samples
+pie_data_control <- data.frame(sex = names(sex_counts_control), count = as.numeric(sex_counts_control), percentage = sex_percentages_control)
+
+P1 <- ggplot(pie_data_control, aes(x = "", y = count, fill = sex)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(count, " (", round(sex_percentages_control, 1), "%)")), position = position_stack(vjust = 0.5)) +  # Add text labels with percentages
+  labs(title = "Male and Female Distribution in DLPFC Control Samples",
+       fill = "Sex") +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        legend.position = "right")
+
+
+# Calculate the counts and percentages of each sex in AD samples
+sex_counts_case <- table(sample_data_DLPFC_case$sex)
+sex_percentages_case <- prop.table(sex_counts_case) * 100
+
+# Create a pie chart to show the distribution of Male and Female ratio within the AD samples
+pie_data_case <- data.frame(sex = names(sex_counts_case), count = as.numeric(sex_counts_case), percentage = sex_percentages_case)
+
+P2 <- ggplot(pie_data_case, aes(x = "", y = count, fill = sex)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(count, " (", round(sex_percentages_case, 1), "%)")), position = position_stack(vjust = 0.5)) +  # Add text labels with percentages
+  labs(title = "Male and Female Distribution in DLPFC AD Samples",
+       fill = "Sex") +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        legend.position = "right")
+
+
+# Calculate the counts and percentages of each sex in AsymAD samples
+sex_counts_AsymAD <- table(sample_data_DLPFC_AsymAD$sex)
+sex_percentages_AsymAD <- prop.table(sex_counts_AsymAD) * 100
+
+# Create a pie chart to show the distribution of Male and Female ratio within the AsymAD samples
+pie_data_AsymAD <- data.frame(sex = names(sex_counts_AsymAD), count = as.numeric(sex_counts_AsymAD), percentage = sex_percentages_AsymAD)
+
+P3 <- ggplot(pie_data_AsymAD, aes(x = "", y = count, fill = sex)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(count, " (", round(sex_percentages_AsymAD, 1), "%)")), position = position_stack(vjust = 0.5)) +  # Add text labels with percentages
+  labs(title = "Male and Female Distribution in DLPFC AsymAD Samples",
+       fill = "Sex") +
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        legend.position = "right")
+
+library(patchwork)
+
+P1 | P2 | P3
+
+end.rcode-->
+
+<p>Data Missingness calculation (DLPFC Sample Only) - exclude proteins with more than 50% missingness throughout the DLPFC Sample</p>
+
+#<!--begin.rcode fig.width=10, fig.height=15
+library(ggplot2)
+library(dplyr)
+library(ComplexHeatmap)
+library(circlize)
+library(factoextra)
+library(grid)
+
+## Filter DLPFC samples from the data
+
+# Select a sub-set of the sample (Tissue: DLPFC) from protein_metadata_ROSMAP file
+sample_data_DLPFC <- filter(protein_metadata_ROSMAP, tissue == "dorsolateral prefrontal cortex")
+
+dim(sample_data_DLPFC)
+
+
+# Create a list of DLPFC samples only
+DLPFC_samples <- sample_data_DLPFC$batch.channel
+
+# Create a subset of the protein abundant file with CT samples only
+protein_data_DLPFC <- protein_data_filtered[, intersect(common_samples, DLPFC_samples)]
+
+protein_data_DLPFC <- cbind(Protein_name, protein_data_DLPFC)
+
+dim(protein_data_DLPFC)
+
+
+# Step 1: Calculate the percentage of missing values (NA) for each row
+
+protein_data_DLPFC <- protein_data_DLPFC %>%
+  rowwise() %>%
+  mutate(missingness = sum(is.na(c_across(-Protein_name))) / (ncol(.) - 1) * 100)
+
+# Step 2: Filter out rows with more than 50% missingness and store the excluded rows
+excluded_protein_count <- protein_data_DLPFC %>%
+  filter(missingness > 50)
+
+cat("Total number of Protein_name entries excluded due to more than 50% missing values:", nrow(excluded_protein_count), "\n")
+
+# Step 3: Create the filtered dataset with valid rows
+protein_data_DLPFC <- protein_data_DLPFC %>%
+  filter(missingness <= 50) %>%
+  select(-missingness)  #  remove the 'missingness' column from the data
+
+dim(protein_data_DLPFC)
+
+############################################################################################################################################################
+##Calculate the missingness for samples
+
+# Remove the  "Protein_name" column from the file
+protein_data_DLPFC_missingness <- protein_data_DLPFC[, -1]
+
+#write.table(protein_data_ROSMAP_new,"/Users/poddea/Desktop/protein_data_ROSMAP_new.txt",sep="\t",quote=T)
+
+# Transpose gene expression data to have samples as rows
+protein_data_DLPFC_missingness_missingness_t <- t(protein_data_DLPFC_missingness)
+
+dim(protein_data_DLPFC_missingness_missingness_t)
+
+# Calculate the number of NA values in each row
+na_counts_sample <- apply(protein_data_DLPFC_missingness_missingness_t, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_samples_with_na <- sum(na_counts_sample > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of sample with at least one NA value:", num_samples_with_na, "\n")
+
+# Create a barplot for the NA counts with adjusted margins
+barplot(na_counts_sample, main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_sample, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_sample[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Number of missing values (protein abundance) in each individual",
+        xlab = "Sample IDs",
+        ylab = "Number of missing Proteins",
+        col = "blue",
+        las = 2,
+        cex.names = 0.5)
+
+############################################################################################################################################################
+
+##Calculate the missingness for Protein
+
+# Remove the first row "Protein_name" from the file
+protein_data_DLPFC_missingness <- protein_data_DLPFC[-1, ]
+
+# Calculate the number of NA values in each row
+na_counts_genes <- apply(protein_data_DLPFC_missingness, 1, function(x) sum(is.na(x)))
+
+# Count the number of rows with at least one NA value
+num_genes_with_na <- sum(na_counts_genes > 0)
+
+# Print the total number of rows with at least one NA value
+cat("Total number of gene with at least one NA value:", num_genes_with_na, "\n")
+
+# Count the frequency of each unique NA value
+na_counts_freq <- table(na_counts_genes)
+
+#write.table(na_counts_freq,"/Users/poddea/Desktop/na_counts_freq.txt",sep="\t",quote=F)
+
+# Remove the entry for 0 NAs
+na_counts_freq <- na_counts_freq[names(na_counts_freq) != "0"]
+
+
+# Create the barplot and store the bar positions
+bar_positions <- barplot(na_counts_freq,
+                         main = "Frequency of Individual Counts per Protein",
+                         xlab = "Number of missing Protein",
+                         ylab = "Frequency of Individual with Missing Protein",
+                         col = "blue",
+                         las = 2,
+                         cex.names = 0.8)
+
+
+# Sort the data based on the Y-axis values (na_counts_freq) in descending order
+sorted_indices <- order(na_counts_freq, decreasing = TRUE)
+na_counts_freq_sorted <- na_counts_freq[sorted_indices]
+bar_positions_sorted <- bar_positions[sorted_indices]
+
+# Create the barplot with the sorted data
+barplot(na_counts_freq_sorted,
+        main = "Frequency of Individual Counts per Protein",
+        xlab = "Number of missing Protein",
+        ylab = "Frequency of Individual with Missing Protein",
+        col = "blue",
+        las = 2,
+        cex.names = 0.8)
+
+end.rcode-->
+############################################################################################################################################################
+
+## Sample-to-Sample distance matrix
+
+protein_data_DLPFC_new <- protein_data_DLPFC[, -1]
+
+# Transpose the protein abundant file to get sample_IDs in the rows
+protein_data_DLPFC_t <- t(protein_data_DLPFC_new)
+
+dim(protein_data_DLPFC_t)
+
+# Compute the Sample-to-Sample Distance Matrix using Euclidean distance
+distance_matrix <- dist(protein_data_DLPFC_t)
+
+# Convert the distance matrix to a data frame
+distance_df <- as.data.frame(as.matrix(distance_matrix))
+
+write.table(distance_df,"distance_matrix.txt",sep="\t",quote=FALSE, row.names=TRUE)
+
+max(distance_df)
+
+
+# Preparing a column annotation file 
+col_ha = HeatmapAnnotation(
+diagnosis = sample_data_DLPFC$JohnsonDx,
+sex = sample_data_DLPFC$sex,
+annotation_height = unit(c(12, 12), "cm"),
+col = list(
+    diagnosis = c("AD" = "purple", "Control" = "lightgreen", "AsymAD" = "royalblue", "Exclude" = "gray47"),
+    sex = c("male" = "lightblue", "female" = "lightpink")
+  )
+)
+
+
+# Create the heatmap object
+ht <- Heatmap(
+  as.matrix(distance_matrix),
+  name = "Sample-to-Sample Distance Matrix for DLPFC Sample Only",
+  top_annotation = col_ha,
+  row_names_gp =  gpar(fontsize = 10),  # Top 10 rows larger
+  column_names_gp = gpar(fontsize = 5)
+  )
+
+
+# Draw the heatmap
+draw(ht)
+
+
+end.rcode-->
+
+
+<p>Principal Component Analysis (DLPFC - Control Sample Only)</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(missMDA)
+
+
+## Filter CONTROL samples from the data
+
+# Create a subset of the DLPFC sample description file with control samples only
+sample_data_DLPFC_CT <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+dim(sample_data_DLPFC_CT)
+
+
+# Create a list of DLPFC control samples only
+DLPFC_CT_samples <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "Control"]
+
+# Create a subset of the protein abundant file with CT samples only
+protein_data_DLPFC_CT <- protein_data_DLPFC[, intersect(common_samples, DLPFC_CT_samples)]
+
+protein_data_DLPFC_CT <- cbind(Protein_name, protein_data_DLPFC_CT)
+
+dim(protein_data_DLPFC_CT)
+
+
+# Check for duplicates in the first column
+duplicate_genes <- duplicated(protein_data_DLPFC_CT[, 1])
+
+# Create a unique identifier for each row
+unique_ids <- make.unique(as.character(protein_data_DLPFC_CT[, 1]))
+
+# Set the unique identifiers as row names
+rownames(protein_data_DLPFC_CT) <- unique_ids
+
+# Assuming the first column is "Protein_name" and the rest are numeric
+numeric_data <- protein_data_DLPFC_CT[, -1]
+rownames(numeric_data) <- unique_ids
+
+# Impute missing values using PCA-based imputation
+imputed_data <- imputePCA(numeric_data, ncp = 2)$completeObs
+
+# Transpose the gene expression data to have samples as rows
+imputed_data <- t(imputed_data)
+
+# Perform PCA on the imputed data
+pca_result <- prcomp(imputed_data, scale. = TRUE)
+
+
+# Merge TPM data with sample description
+merged_data <- merge(
+data.frame(sampleID = rownames(imputed_data)),
+sample_data_DLPFC_CT,
+by.x = "sampleID",
+by.y = "batch.channel",
+all.x = TRUE
+)
+
+# Visualize the eigenvalues of PCA - percentage of variance explained by each principal component
+fviz_eig(pca_result, addlabels = TRUE, ylim = c(0, 85))
+
+# Check if the number of samples in the PCA result matches the number of rows in merged_data
+if (nrow(merged_data) != ncol(pca_result$x)) {
+     stop("Number of samples in merged_data and PCA result do not match.")
+ }
+
+# Create a data frame for plotting (including PC1 and PC2)
+plot_data <- data.frame(
+PC1 = pca_result$x[, 1],
+PC2 = pca_result$x[, 2],
+sampleID = rownames(pca_result$x),  # Use rownames of pca_result$x as sample IDs
+sex = merged_data$sex
+)
+
+# Create a biplot with colored samples based on sex status
+ggplot(plot_data, aes(x = PC1, y = PC2, color = sex, label = sampleID)) +
+     geom_point(size = 3) +
+     geom_text(hjust = 1, vjust = -1) +  # Adjust the position of labels
+     labs(title = "PCA Biplot: DLPFC - Control Sample Only", x = "Principal Component 1", y = "Principal Component 2") +
+     theme_minimal()
+
+
+end.rcode-->
+
+<p>Sample-Sample Distance Matrix (DLPFC - Control Sample Only)</p>
+
+#<!--begin.rcode fig.width=25, fig.height=25
+library(ggplot2)
+library(dplyr)
+library(ComplexHeatmap)
+library(circlize)
+library(factoextra)
+library(grid)
+## Sample-Sample Distance Matrix (DLPFC Sample Only)
+
+protein_data_DLPFC_CT_new <- protein_data_DLPFC_CT[, -1]
+
+# Transpose the protein abundant file to get sample_IDs in the rows
+protein_data_DLPFC_CT_t <- t(protein_data_DLPFC_CT_new)
+
+dim(protein_data_DLPFC_CT_t)
+
+# Compute the Sample-to-Sample Distance Matrix using Euclidean distance
+distance_matrix <- dist(protein_data_DLPFC_CT_t)
+
+# Convert the distance matrix to a data frame
+distance_df <- as.data.frame(as.matrix(distance_matrix))
+
+write.table(distance_df,"distance_matrix_CT.txt",sep="\t",quote=FALSE, row.names=TRUE)
+
+max(distance_df)
+
+
+# Preparing a column annotation file 
+col_ha = HeatmapAnnotation(
+sex = sample_data_DLPFC_CT$sex,
+col = list(
+    sex = c("male" = "lightblue", "female" = "lightpink")
+  )
+)
+
+
+# Create the heatmap object
+ht <- Heatmap(
+  as.matrix(distance_matrix),
+  name = "Sample-to-Sample Distance Matrix for DLPFC - CT Sample Only",
+  top_annotation = col_ha,
+  row_names_gp =  gpar(fontsize = 10),  # Top 10 rows larger
+  column_names_gp = gpar(fontsize = 10)
+  )
+
+
+# Draw the heatmap
+draw(ht)
+
+end.rcode-->
+
+<p>Separate Male and Female Sample Specific Files for Control, AD and AsymAD</p>
+
+#<!--begin.rcode fig.width=15, fig.height=10
+library(gplots)
+
+## Filter CONTROL-FEMALE samples from the data
+
+# Create a list of DLPFC control (female) samples only
+DLPFC_CT_samples_female <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "Control" & sample_data_DLPFC$sex == "female"]
+
+# Create a subset of the protein abundant file with CT (female) samples only
+protein_data_DLPFC_CT_female <- protein_data_DLPFC[, intersect(common_samples, DLPFC_CT_samples_female)]
+
+protein_data_DLPFC_CT_female <- cbind(Protein_name, protein_data_DLPFC_CT_female)
+
+dim(protein_data_DLPFC_CT_female)
+
+datatable(protein_data_DLPFC_CT_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Create a subset of the description file with CT samples only
+sample_data_DLPFC_CT <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+# Create a subset of the CT sample description file with female samples only
+sample_data_DLPFC_CT_female <- sample_data_DLPFC_CT[grep("female", sample_data_DLPFC_CT$sex), ]
+
+dim(sample_data_DLPFC_CT_female)
+
+#########################################################################################################################################
+
+## Filter CONTROL-MALE samples from the data
+
+# Create a list of DLPFC CT (male) samples only
+DLPFC_CT_samples_male <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "Control" & sample_data_DLPFC$sex == "male"]
+
+# Create a subset of the protein abundant file with CT (male) samples only
+protein_data_DLPFC_CT_male <- protein_data_DLPFC[, intersect(common_samples, DLPFC_CT_samples_male)]
+
+protein_data_DLPFC_CT_male <- cbind(Protein_name, protein_data_DLPFC_CT_male)
+
+dim(protein_data_DLPFC_CT_male)
+
+datatable(protein_data_DLPFC_CT_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with CT samples only
+sample_data_DLPFC_CT <- sample_data_DLPFC[grep("Control", sample_data_DLPFC$JohnsonDx), ]
+
+# Create a subset of the CT sample description file with male samples only
+sample_data_DLPFC_CT_male <- sample_data_DLPFC_CT[sample_data_DLPFC_CT$sex == "male", ]
+
+dim(sample_data_DLPFC_CT_male)
+
+#########################################################################################################################################
+
+## Filter AD-FEMALE samples from the data
+
+# Create a listof DLPFC AD (female) samples only
+DLPFC_AD_samples_female <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "AD" & sample_data_DLPFC$sex == "female"]
+
+# Create a subset of the protein abundant file with AD (female) samples only
+protein_data_DLPFC_AD_female <- protein_data_DLPFC[, intersect(common_samples, DLPFC_AD_samples_female)]
+
+protein_data_DLPFC_AD_female <- cbind(Protein_name, protein_data_DLPFC_AD_female)
+
+dim(protein_data_DLPFC_AD_female)
+
+datatable(protein_data_DLPFC_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with AD samples only
+sample_data_DLPFC_AD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AD", ]
+
+# Create a subset of the AD sample description file with female samples only
+sample_data_DLPFC_AD_female <- sample_data_DLPFC_AD[grep("female", sample_data_DLPFC_AD$sex), ]
+
+dim(sample_data_DLPFC_AD_female)
+
+#########################################################################################################################################
+
+## Filter AD-MALE samples from the data
+
+# Create a listof DLPFC AD (male) samples only
+DLPFC_AD_samples_male <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "AD" & sample_data_DLPFC$sex == "male"]
+
+# Create a subset of the protein abundant file with AD (male) samples only
+protein_data_DLPFC_AD_male <- protein_data_DLPFC[, intersect(common_samples, DLPFC_AD_samples_male)]
+
+protein_data_DLPFC_AD_male <- cbind(Protein_name, protein_data_DLPFC_AD_male)
+
+dim(protein_data_DLPFC_AD_male)
+
+datatable(protein_data_DLPFC_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with AD samples only
+sample_data_DLPFC_AD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AD", ]
+
+# Create a subset of the AD sample description file with male samples only
+sample_data_DLPFC_AD_male <- sample_data_DLPFC_AD[sample_data_DLPFC_AD$sex == "male", ]
+
+dim(sample_data_DLPFC_AD_male)
+
+#########################################################################################################################################
+
+## Filter AsymAD-FEMALE samples from the data
+
+# Create a listof DLPFC AsymAD (female) samples only
+DLPFC_AsymAD_samples_female <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "AsymAD" & sample_data_DLPFC$sex == "female"]
+
+# Create a subset of the protein abundant file with AsymAD (female) samples only
+protein_data_DLPFC_AsymAD_female <- protein_data_DLPFC[, intersect(common_samples, DLPFC_AsymAD_samples_female)]
+
+protein_data_DLPFC_AsymAD_female <- cbind(Protein_name, protein_data_DLPFC_AsymAD_female)
+
+dim(protein_data_DLPFC_AsymAD_female)
+
+datatable(protein_data_DLPFC_AsymAD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with AsymAD samples only
+sample_data_DLPFC_AsymAD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AsymAD", ]
+
+# Create a subset of the AsymAD sample description file with female samples only
+sample_data_DLPFC_AsymAD_female <- sample_data_DLPFC_AsymAD[grep("female", sample_data_DLPFC_AsymAD$sex), ]
+
+dim(sample_data_DLPFC_AsymAD_female)
+
+#########################################################################################################################################
+
+## Filter AsymAD-MALE samples from the data
+
+# Create a listof DLPFC AsymAD (male) samples only
+DLPFC_AsymAD_samples_male <- sample_data_DLPFC$batch.channel[sample_data_DLPFC$JohnsonDx == "AsymAD" & sample_data_DLPFC$sex == "male"]
+
+# Create a subset of the protein abundant file with AsymAD (male) samples only
+protein_data_DLPFC_AsymAD_male <- protein_data_DLPFC[, intersect(common_samples, DLPFC_AsymAD_samples_male)]
+
+protein_data_DLPFC_AsymAD_male <- cbind(Protein_name, protein_data_DLPFC_AsymAD_male)
+
+dim(protein_data_DLPFC_AsymAD_male)
+
+datatable(protein_data_DLPFC_AsymAD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Create a subset of the description file with AsymAD samples only
+sample_data_DLPFC_AsymAD <- sample_data_DLPFC[sample_data_DLPFC$JohnsonDx == "AsymAD", ]
+
+# Create a subset of the AsymAD sample description file with male samples only
+sample_data_DLPFC_AsymAD_male <- sample_data_DLPFC_AsymAD[sample_data_DLPFC_AsymAD$sex == "male", ]
+
+dim(sample_data_DLPFC_AsymAD_male)
+
+end.rcode-->
+
+<p>Calculating AD and AsymAD Samples Specific Z-score by Averaging the Control Gruop</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+library(gplots)
+library(dplyr)
+library(tidyr)
+
+## Function to calculate MEAN and SD for each gene within the Control Female samples
+
+# Calculation of MEAN for each row
+protein_data_DLPFC_CT_female$MEAN <- rowMeans(protein_data_DLPFC_CT_female[, -1], na.rm=T)
+
+# Calculation of SD for each row
+protein_data_DLPFC_CT_female$SD <- apply( protein_data_DLPFC_CT_female[, -1], 1, sd, na.rm=TRUE)
+
+write.table(protein_data_DLPFC_CT_female,"protein_data_DLPFC_CT_female.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+
+# Print the table using DT
+datatable(protein_data_DLPFC_CT_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Plot the distribution of MEAN and SD for all the genes throughout the control female samples
+#ggplot(protein_data_DLPFC_CT_female, aes(x = Protein_name, y = MEAN)) +
+  #geom_boxplot(aes(group = Protein_name),
+               #position = position_dodge(0.8),
+               #outlier.shape = NA) +
+  #ggtitle("Distribution of expression statistics of the proteins in control samples (female)") +
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#########################################################################################################################################
+
+## Function to calculate MEAN and SD for each gene within the Control male samples
+
+# Calculation of MEAN for each row
+protein_data_DLPFC_CT_male$MEAN <- rowMeans(protein_data_DLPFC_CT_male[, -1], na.rm=T)
+
+# Calculation of SD for each row
+protein_data_DLPFC_CT_male$SD <- apply( protein_data_DLPFC_CT_male[, -1], 1, sd, na.rm=TRUE)
+
+write.table(protein_data_DLPFC_CT_male,"protein_data_DLPFC_CT_male.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Print the table using DT
+datatable(protein_data_DLPFC_CT_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Plot the distribution of MEAN and SD for all the genes throughout the control male samples
+#ggplot(protein_data_DLPFC_CT_male, aes(x = Protein_name, y = MEAN)) +
+  #geom_boxplot(aes(group = Protein_name),
+               #position = position_dodge(0.8),
+               #outlier.shape = NA) +
+  #ggtitle("Distribution of expression statistics of the proteins in control samples (male)") +
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#########################################################################################################################################
+
+## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AD female sample
+
+# Function define to calculate the Z statistics
+z_stat <- function(row, mean_val, sd_val) {
+  (row - mean_val) / sd_val
+}
+
+# Select the AD columns for calculation
+selected_AD_female <- protein_data_DLPFC_AD_female[, -1]
+
+# Calculate the Z statistics for each row using sweep
+z_stat_AD_female <- sweep(selected_AD_female, 1, protein_data_DLPFC_CT_female$MEAN, FUN = "-")
+
+z_stat_AD_female <- sweep(z_stat_AD_female, 1, protein_data_DLPFC_CT_female$SD, FUN = "/")
+
+# Create a new data frame with the results
+z_stat_result_AD_female <- data.frame(z_stat_AD_female)
+
+# Rename the columns of the result data frame
+colnames(z_stat_result_AD_female) <- paste0(colnames(selected_AD_female), "_Zscore")
+
+#Combine the Protein_name with the Z statistics result
+z_stat_result_plot_AD_female <- cbind(Protein_name, z_stat_result_AD_female)
+
+# Combine the original AD data frame with the Z statistics result data frame
+#z_stat_result_table_female <- cbind(AD_female, z_stat_result_female)
+
+# Print the table using DT
+datatable(z_stat_result_plot_AD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Print the Z statistics result final table
+write.table(z_stat_result_plot_AD_female,"z_stat_result_AD_female.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Remove the header from the file
+z_stat_result_matrix_AD_female <- z_stat_result_plot_AD_female[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_AD_female <- replace(z_stat_result_matrix_AD_female, is.na(z_stat_result_matrix_AD_female), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_AD_female <- heatmap.2(
+  as.matrix(cleaned_matrix_AD_female),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_AD_female$batch.channel,
+  labRow = z_stat_result_plot_AD_female$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the AD cases (female)"
+)
+
+
+#########################################################################################################################################
+
+## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AD male sample
+
+# Function define to calculate the Z statistics
+z_stat <- function(row, mean_val, sd_val) {
+  (row - mean_val) / sd_val
+}
+
+# Select the AD columns for calculation
+selected_AD_male <- protein_data_DLPFC_AD_male[, -1]
+
+# Calculate the Z statistics for each row using sweep
+z_stat_AD_male <- sweep(selected_AD_male, 1, protein_data_DLPFC_CT_male$MEAN, FUN = "-")
+
+z_stat_AD_male <- sweep(z_stat_AD_male, 1, protein_data_DLPFC_CT_male$SD, FUN = "/")
+
+# Create a new data frame with the results
+z_stat_result_AD_male <- data.frame(z_stat_AD_male)
+
+# Rename the columns of the result data frame
+colnames(z_stat_result_AD_male) <- paste0(colnames(selected_AD_male), "_Zscore")
+
+#Combine the Protein_name with the Z statistics result
+
+z_stat_result_plot_AD_male <- cbind(Protein_name, z_stat_result_AD_male)
+
+# Combine the original AD data frame with the Z statistics result data frame
+#z_stat_result_table_male <- cbind(AD_male, z_stat_result_male)
+
+# Print the table using DT
+datatable(z_stat_result_plot_AD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Print the Z statistics result final table
+write.table(z_stat_result_plot_AD_male,"z_stat_result_AD_male.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Remove the header from the file
+z_stat_result_matrix_AD_male <- z_stat_result_plot_AD_male[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_AD_male <- replace(z_stat_result_matrix_AD_male, is.na(z_stat_result_matrix_AD_male), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_AD_male <- heatmap.2(
+  as.matrix(cleaned_matrix_AD_male),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_AD_male$batch.channel,
+  labRow = z_stat_result_plot_AD_male$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the AD cases (male)"
+)
+
+#########################################################################################################################################
+
+## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AsymAD female sample
+
+# Function define to calculate the Z statistics
+z_stat <- function(row, mean_val, sd_val) {
+  (row - mean_val) / sd_val
+}
+
+# Select the AsymAD columns for calculation
+selected_AsymAD_female <- protein_data_DLPFC_AsymAD_female[, -1]
+
+# Calculate the Z statistics for each row using sweep
+z_stat_AsymAD_female <- sweep(selected_AsymAD_female, 1, protein_data_DLPFC_CT_female$MEAN, FUN = "-")
+
+z_stat_AsymAD_female <- sweep(z_stat_AsymAD_female, 1, protein_data_DLPFC_CT_female$SD, FUN = "/")
+
+# Create a new data frame with the results
+z_stat_result_AsymAD_female <- data.frame(z_stat_AsymAD_female)
+
+# Rename the columns of the result data frame
+colnames(z_stat_result_AsymAD_female) <- paste0(colnames(selected_AsymAD_female), "_Zscore")
+
+#Combine the Protein_name with the Z statistics result
+
+z_stat_result_plot_AsymAD_female <- cbind(Protein_name, z_stat_result_AsymAD_female)
+
+# Combine the original AsymAD data frame with the Z statistics result data frame
+#z_stat_result_table_female <- cbind(AsymAD_female, z_stat_result_female)
+
+# Print the table using DT
+datatable(z_stat_result_plot_AsymAD_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Print the Z statistics result final table
+write.table(z_stat_result_plot_AsymAD_female,"z_stat_result_AsymAD_female.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Remove the header from the file
+z_stat_result_matrix_AsymAD_female <- z_stat_result_plot_AsymAD_female[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_AsymAD_female <- replace(z_stat_result_matrix_AsymAD_female, is.na(z_stat_result_matrix_AsymAD_female), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_AsymAD_female <- heatmap.2(
+  as.matrix(cleaned_matrix_AsymAD_female),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_AsymAD_female$batch.channel,
+  labRow = z_stat_result_plot_AsymAD_female$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the AsymAD cases (female)"
+)
+
+
+#########################################################################################################################################
+
+## Function to calculate the Z-statistics i.e. (VALUE - MEAN) / SD for each protein where VALUE is a abundant count for each protein in each AsymAD male sample
+
+# Function define to calculate the Z statistics
+z_stat <- function(row, mean_val, sd_val) {
+  (row - mean_val) / sd_val
+}
+
+# Select the AsymAD columns for calculation
+selected_AsymAD_male <- protein_data_DLPFC_AsymAD_male[, -1]
+
+# Calculate the Z statistics for each row using sweep
+z_stat_AsymAD_male <- sweep(selected_AsymAD_male, 1, protein_data_DLPFC_CT_male$MEAN, FUN = "-")
+
+z_stat_AsymAD_male <- sweep(z_stat_AsymAD_male, 1, protein_data_DLPFC_CT_male$SD, FUN = "/")
+
+# Create a new data frame with the results
+z_stat_result_AsymAD_male <- data.frame(z_stat_AsymAD_male)
+
+# Rename the columns of the result data frame
+colnames(z_stat_result_AsymAD_male) <- paste0(colnames(selected_AsymAD_male), "_Zscore")
+
+#Combine the Protein_name with the Z statistics result
+
+z_stat_result_plot_AsymAD_male <- cbind(Protein_name, z_stat_result_AsymAD_male)
+
+# Combine the original AsymAD data frame with the Z statistics result data frame
+#z_stat_result_table_male <- cbind(AsymAD_male, z_stat_result_male)
+
+# Print the table using DT
+datatable(z_stat_result_plot_AsymAD_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+# Print the Z statistics result final table
+write.table(z_stat_result_plot_AsymAD_male,"z_stat_result_AsymAD_male.txt",sep="\t",quote=FALSE, row.names=FALSE)
+
+# Remove the header from the file
+z_stat_result_matrix_AsymAD_male <- z_stat_result_plot_AsymAD_male[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_AsymAD_male <- replace(z_stat_result_matrix_AsymAD_male, is.na(z_stat_result_matrix_AsymAD_male), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_AsymAD_male <- heatmap.2(
+  as.matrix(cleaned_matrix_AsymAD_male),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_AsymAD_male$batch.channel,
+  labRow = z_stat_result_plot_AsymAD_male$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the AsymAD cases (male)"
+)
+
+end.rcode-->
+
+<p>Calculating Z score for Control Samples using Leave-one-out Method</p>
+
+#<!--begin.rcode fig.width=25, fig.height=15
+library(ggplot2)
+library(RColorBrewer)
+library(scales)
+library(gplots)
+library(dplyr)
+library(tidyr)
+
+## Function to calculate the Z-statistics for Indivual control samples (Female only)
+
+# Define a function to calculate z-score
+calculate_zscore <- function(one_sample_data, rest_data) {
+  # Calculate mean and standard deviation for each row (gene) in rest_data
+  rest_data_mean <- rowMeans(rest_data)
+  rest_data_sd <- apply(rest_data, 1, sd)
+
+  # Calculate z-score for each gene in gene_data
+  zscore <- (one_sample_data - rest_data_mean) / rest_data_sd
+
+  return(zscore)
+}
+
+# Remove the MEAN and SD columns from protein_data_DLPFC_CT_female file
+protein_data_DLPFC_CT_female <- subset(protein_data_DLPFC_CT_female, select = -c(MEAN, SD))
+
+# Create an empty data frame to store the z-scored data
+zscored_protein_data_DLPFC_CT_female <- data.frame(Protein_name = protein_data_DLPFC_CT_female$Protein_name)
+
+# Iterate through each column in the original data
+for (col in colnames(protein_data_DLPFC_CT_female)[-1]) {
+  # Split data into two data frames: one with current column and another with the rest
+  protein_data_DLPFC_CT_female_one_sample <- protein_data_DLPFC_CT_female[, c("Protein_name", col)]
+  protein_data_DLPFC_CT_female_rest <- protein_data_DLPFC_CT_female[, -which(names(protein_data_DLPFC_CT_female) == col)]
+
+  # Calculate z-score for current column
+  zscore <- calculate_zscore(protein_data_DLPFC_CT_female_one_sample[, 2], protein_data_DLPFC_CT_female_rest[, -1])
+
+  # Add z-score as a new column to zscored_data
+  zscored_protein_data_DLPFC_CT_female[paste0(col, "_Zscore")] <- zscore
+}
+
+# Write the z-scored data to a text file
+write.table(zscored_protein_data_DLPFC_CT_female, "z_stat_result_CT_female.txt", sep="\t", quote=FALSE, row.names=FALSE)
+
+# Print the table using DT
+datatable(zscored_protein_data_DLPFC_CT_female, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Remove the header from the file
+z_stat_result_matrix_DLPFC_CT_female <- zscored_protein_data_DLPFC_CT_female[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_DLPFC_CT_female <- replace(z_stat_result_matrix_DLPFC_CT_female, is.na(z_stat_result_matrix_DLPFC_CT_female), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_CT_female <- heatmap.2(
+  as.matrix(cleaned_matrix_DLPFC_CT_female),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_CT_female$batch.channel,
+  labRow = zscored_protein_data_DLPFC_CT_female$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the Control (female) - Leave-One-Out method"
+)
+
+
+#########################################################################################################################################
+
+
+## Function to calculate the Z-statistics for Indivual control samples (male only)
+
+# Define a function to calculate z-score
+calculate_zscore <- function(one_sample_data, rest_data) {
+  # Calculate mean and standard deviation for each row (gene) in rest_data
+  rest_data_mean <- rowMeans(rest_data)
+  rest_data_sd <- apply(rest_data, 1, sd)
+
+  # Calculate z-score for each gene in gene_data
+  zscore <- (one_sample_data - rest_data_mean) / rest_data_sd
+
+  return(zscore)
+}
+
+# Remove the MEAN and SD columns from protein_data_DLPFC_CT_male file
+protein_data_DLPFC_CT_male <- subset(protein_data_DLPFC_CT_male, select = -c(MEAN, SD))
+
+# Create an empty data frame to store the z-scored data
+zscored_protein_data_DLPFC_CT_male <- data.frame(Protein_name = protein_data_DLPFC_CT_male$Protein_name)
+
+# Iterate through each column in the original data
+for (col in colnames(protein_data_DLPFC_CT_male)[-1]) {
+  # Split data into two data frames: one with current column and another with the rest
+  protein_data_DLPFC_CT_male_one_sample <- protein_data_DLPFC_CT_male[, c("Protein_name", col)]
+  protein_data_DLPFC_CT_male_rest <- protein_data_DLPFC_CT_male[, -which(names(protein_data_DLPFC_CT_male) == col)]
+
+  # Calculate z-score for current column
+  zscore <- calculate_zscore(protein_data_DLPFC_CT_male_one_sample[, 2], protein_data_DLPFC_CT_male_rest[, -1])
+
+  # Add z-score as a new column to zscored_data
+  zscored_protein_data_DLPFC_CT_male[paste0(col, "_Zscore")] <- zscore
+}
+
+# Write the z-scored data to a text file
+write.table(zscored_protein_data_DLPFC_CT_male, "z_stat_result_CT_male.txt", sep="\t", quote=FALSE, row.names=FALSE)
+
+# Print the table using DT
+datatable(zscored_protein_data_DLPFC_CT_male, options = list(pageLength = 5, autoWidth = TRUE))
+
+
+# Remove the header from the file
+z_stat_result_matrix_DLPFC_CT_male <- zscored_protein_data_DLPFC_CT_male[, -1]
+
+# Replace NA, NaN, or Inf values with 0
+cleaned_matrix_DLPFC_CT_male <- replace(z_stat_result_matrix_DLPFC_CT_male, is.na(z_stat_result_matrix_DLPFC_CT_male), 0)
+
+# Set up the color scale using RColorBrewer
+color_scale <- colorRampPalette(brewer.pal(9, "RdYlGn"))
+
+# Plot the heatmap
+
+out_zscore_CT_male <- heatmap.2(
+  as.matrix(cleaned_matrix_DLPFC_CT_male),
+  Rowv = TRUE,
+  Colv = TRUE,
+  col = color_scale,
+  scale = "none",
+  trace = "none",
+  margins = c(10, 20),
+  key = TRUE,
+  keysize = 1,
+  cexCol = 1,
+  cexRow = 0.8,
+  labCol = sample_data_DLPFC_CT_male$batch.channel,
+  labRow = zscored_protein_data_DLPFC_CT_male$Protein_name,
+  dendrogram = "both",
+  main = "Protein-wise distributions of Z statistics throughout the Control (male) - Leave-One-Out method"
+)
+
+# Save the plot as a high-resolution PNG
+ggsave("out_zscore_CT_male.tiff", plot = out_zscore_CT_male, dpi = 300, width = 6, height = 4, units = "in")
+
+
+
+
+end.rcode-->
+
+
+
+</body>
+</html>
