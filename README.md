@@ -1,2 +1,2 @@
-# ssproteomics-workflow
+# ssProteomics-workflow
 Analysis workflows and HTML reports for manuscript
