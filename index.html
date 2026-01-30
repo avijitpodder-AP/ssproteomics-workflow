@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Proteomics Analysis Workflows</title>
+  <title>Single-subject Proteomics Analysis Workflows</title>
   <style>
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -12,9 +12,23 @@
       padding: 0 16px;
       line-height: 1.6;
     }
-    h1 { margin-bottom: 0.4rem; }
+    h1 {
+      margin-bottom: 0.3rem;
+    }
+    .manuscript-title {
+      font-style: italic;
+      font-size: 1.05rem;
+      margin-bottom: 1rem;
+    }
+    .authors, .affiliations, .correspondence {
+      font-size: 0.95rem;
+      margin-bottom: 0.6rem;
+    }
+    .divider {
+      margin: 1.5rem 0;
+      border-top: 1px solid #ddd;
+    }
     .intro {
-      margin-top: 0;
       color: #333;
       font-size: 1.05rem;
       margin-bottom: 1.25rem;
@@ -34,33 +48,75 @@
       color: #555;
       margin-top: 0.5rem;
     }
-    h2 { margin-top: 2rem; }
-    ul { padding-left: 1.2rem; }
-    li { margin: 0.45rem 0; }
+    h2 {
+      margin-top: 2rem;
+    }
+    ul {
+      padding-left: 1.2rem;
+    }
+    li {
+      margin: 0.45rem 0;
+    }
+    .readme-link {
+      margin-top: 1rem;
+      font-size: 0.95rem;
+    }
   </style>
 </head>
 
 <body>
-  <h1>Singel-subject Proteomics Analysis Workflows</h1>
+
+  <h1>Single-subject Proteomics Analysis Workflows</h1>
+
+  <div class="manuscript-title">
+    Single-subject Proteomic Signatures in Alzheimer’s Disease Reflect Clinical Phenotypes
+    and Distinguish Asymptomatic from Symptomatic Cases
+  </div>
+
+  <div class="authors">
+    <strong>Authors:</strong><br>
+    Avijit Podder¹, Yi Juin Liew¹, Greg A. Cary², Gregory W. Carter¹², Asli Uyar¹
+  </div>
+
+  <div class="affiliations">
+    <strong>Affiliations:</strong><br>
+    ¹ The Jackson Laboratory for Genomic Medicine, Farmington, CT, USA<br>
+    ² The Jackson Laboratory, Bar Harbor, ME, USA
+  </div>
+
+  <div class="correspondence">
+    <strong>Corresponding authors:</strong><br>
+    Gregory W. Carter (gregory.carter@jax.org); Asli Uyar (asli.uyar@jax.org)
+  </div>
+
+  <div class="readme-link">
+    <strong>Repository documentation:</strong>
+    <a href="https://github.com/avijitpodder-AP/ssproteomics-workflow#readme" target="_blank">
+      README (manuscript details, data availability, and reproducibility notes)
+    </a>
+  </div>
+
+  <div class="divider"></div>
 
   <p class="intro">
-    This site provides the rendered HTML workflows and supporting code for the analyses reported in our manuscript "Single-subject Proteomic Signatures in Alzheimer’s Disease Reflect Clinical Phenotypes and Distinguish Asymptomatic from Symptomatic Cases".
-    
-    The reports cover TMT proteomics processing, single-subject differential expression analysis, pathway/subdomain profiling, graph-based clustering, and clinical correlation analyses.
+    This site provides the rendered HTML workflows and supporting code for the analyses
+    reported in the manuscript. The reports cover TMT proteomics processing,
+    single-subject differential expression analysis, pathway- and subdomain-level
+    profiling, graph-based clustering, and clinical correlation analyses.
   </p>
 
   <div class="schematic">
-    <!-- IMPORTANT: make sure the filename matches exactly what’s in your repo -->
-    <img src="assets/homepage_schematic.jpeg" alt="Overview schematic of the proteomics analysis workflow">
+    <img src="assets/homepage_schematic.jpeg"
+         alt="Overview schematic of the proteomics analysis workflow">
     <div class="caption">
-      Schematic overview of the analysis pipeline used in this study.
+      Schematic overview of the proteomics analysis pipeline used in this study.
     </div>
   </div>
 
-  <h2>Reports</h2>
+  <h2>Analysis reports</h2>
   <ul>
     <li><a href="section1/TMT_ROSMAP_round2_description.html">TMT ROSMAP Round 2 — Description</a></li>
-    <li><a href="section2/TMT_ROSMAP_round2_single_sample_analysis.html">TMT ROSMAP Round 2 — Single sample analysis</a></li>
+    <li><a href="section2/TMT_ROSMAP_round2_single_sample_analysis.html">TMT ROSMAP Round 2 — Single-sample analysis</a></li>
     <li><a href="section3/Pathway_specific_analysis.html">Pathway-specific analysis</a></li>
     <li><a href="section4/Comparative_pathway_profiling_TMT.html">Comparative pathway profiling (TMT)</a></li>
     <li><a href="section5/Subdomain_specific_analysis.html">Subdomain-specific analysis</a></li>
@@ -68,5 +124,6 @@
     <li><a href="section7/Clinical_correlation_proteomics_ADvsAsymAD.html">Clinical correlation — Proteomics (AD vs AsymAD)</a></li>
     <li><a href="section8/Graph_clustering_ptoteomics.html">Graph clustering — Proteomics</a></li>
   </ul>
+
 </body>
 </html>
